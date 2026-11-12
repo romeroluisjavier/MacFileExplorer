@@ -148,34 +148,31 @@ public struct CommandBarView: View {
         Menu {
             Section(loc.text(es: "Ordenar por", en: "Sort by")) {
                 ForEach(FileItem.SortField.allCases, id: \.self) { field in
-                    Toggle(
-                        loc.sortFieldTitle(field),
-                        isOn: Binding(
-                            get: { viewModel.sortField == field },
-                            set: { _ in viewModel.toggleSort(by: field) }
-                        )
-                    )
+                    Toggle(isOn: Binding(
+                        get: { viewModel.sortField == field },
+                        set: { _ in viewModel.toggleSort(by: field) }
+                    )) {
+                        Label(loc.sortFieldTitle(field), systemImage: field.systemImage)
+                    }
                 }
             }
 
             Divider()
 
             Section(loc.text(es: "Dirección", en: "Direction")) {
-                Toggle(
-                    loc.text(es: "Ascendente", en: "Ascending"),
-                    isOn: Binding(
-                        get: { viewModel.sortAscending },
-                        set: { _ in viewModel.sortAscending = true }
-                    )
-                )
+                Toggle(isOn: Binding(
+                    get: { viewModel.sortAscending },
+                    set: { _ in viewModel.sortAscending = true }
+                )) {
+                    Label(loc.text(es: "Ascendente", en: "Ascending"), systemImage: "arrow.up")
+                }
 
-                Toggle(
-                    loc.text(es: "Descendente", en: "Descending"),
-                    isOn: Binding(
-                        get: { !viewModel.sortAscending },
-                        set: { _ in viewModel.sortAscending = false }
-                    )
-                )
+                Toggle(isOn: Binding(
+                    get: { !viewModel.sortAscending },
+                    set: { _ in viewModel.sortAscending = false }
+                )) {
+                    Label(loc.text(es: "Descendente", en: "Descending"), systemImage: "arrow.down")
+                }
             }
         } label: {
             HStack(spacing: 5) {
@@ -224,15 +221,27 @@ public struct CommandBarView: View {
 
             Divider()
 
+            Section(loc.text(es: "Iconos en vista Lista:", en: "List view icons:")) {
+                ForEach(ListIconDisplayMode.allCases) { mode in
+                    Toggle(isOn: Binding(
+                        get: { ListIconPreferences.shared.mode == mode },
+                        set: { _ in ListIconPreferences.shared.mode = mode }
+                    )) {
+                        Label(loc.listIconDisplayModeTitle(mode), systemImage: mode.systemImage)
+                    }
+                }
+            }
+
+            Divider()
+
             Section(loc.text(es: "Abrir marcadores web en:", en: "Open web bookmarks in:")) {
                 ForEach(BookmarkOpenBehavior.allCases) { behavior in
-                    Toggle(
-                        behavior.localizedTitle,
-                        isOn: Binding(
-                            get: { bookmarksManager.openBehavior == behavior },
-                            set: { _ in bookmarksManager.openBehavior = behavior }
-                        )
-                    )
+                    Toggle(isOn: Binding(
+                        get: { bookmarksManager.openBehavior == behavior },
+                        set: { _ in bookmarksManager.openBehavior = behavior }
+                    )) {
+                        Label(behavior.localizedTitle, systemImage: behavior.systemImage)
+                    }
                 }
             }
         } label: {

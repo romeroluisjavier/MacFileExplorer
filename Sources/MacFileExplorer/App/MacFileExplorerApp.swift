@@ -102,16 +102,14 @@ struct MacFileExplorerApp: App {
 
             CommandGroup(after: .toolbar) {
                 Divider()
-                Toggle(
-                    loc.text(es: "Mostrar barra de marcadores", en: "Show Bookmarks Bar"),
-                    isOn: $bookmarksManager.isBookmarksBarVisible
-                )
+                Toggle(isOn: $bookmarksManager.isBookmarksBarVisible) {
+                    Label(loc.text(es: "Mostrar barra de marcadores", en: "Show Bookmarks Bar"), systemImage: "bookmark")
+                }
                 .keyboardShortcut("b", modifiers: [.command, .shift])
 
-                Toggle(
-                    loc.text(es: "Mostrar botón Nuevo", en: "Show New Button"),
-                    isOn: $toolbarPrefs.isNewButtonVisible
-                )
+                Toggle(isOn: $toolbarPrefs.isNewButtonVisible) {
+                    Label(loc.text(es: "Mostrar botón Nuevo", en: "Show New Button"), systemImage: "plus.circle")
+                }
 
                 Menu(loc.text(es: "Iconos en vista Lista", en: "List View Icons")) {
                     Picker(
@@ -119,7 +117,7 @@ struct MacFileExplorerApp: App {
                         selection: $listIconPrefs.mode
                     ) {
                         ForEach(ListIconDisplayMode.allCases) { mode in
-                            Text(loc.listIconDisplayModeTitle(mode))
+                            Label(loc.listIconDisplayModeTitle(mode), systemImage: mode.systemImage)
                                 .tag(mode)
                         }
                     }
@@ -132,7 +130,7 @@ struct MacFileExplorerApp: App {
                         selection: $bookmarksManager.openBehavior
                     ) {
                         ForEach(BookmarkOpenBehavior.allCases) { behavior in
-                            Text(behavior.localizedTitle)
+                            Label(behavior.localizedTitle, systemImage: behavior.systemImage)
                                 .tag(behavior)
                         }
                     }
@@ -141,42 +139,49 @@ struct MacFileExplorerApp: App {
 
                 Menu(loc.text(es: "Carpetas en Acceso rápido", en: "Quick Access Folders")) {
                     ForEach(QuickAccessFolder.allCases) { folder in
-                        Toggle(
-                            folder.localizedTitle(using: loc),
-                            isOn: quickAccessPrefs.binding(for: folder)
-                        )
+                        Toggle(isOn: quickAccessPrefs.binding(for: folder)) {
+                            Label(folder.localizedTitle(using: loc), systemImage: folder.systemImage)
+                        }
                     }
 
                     Divider()
 
-                    Button(loc.text(es: "Restablecer predeterminadas", en: "Reset to Defaults")) {
+                    Button {
                         quickAccessPrefs.resetToDefaults()
+                    } label: {
+                        Label(loc.text(es: "Restablecer predeterminadas", en: "Reset to Defaults"), systemImage: "arrow.counterclockwise")
                     }
                     .disabled(quickAccessPrefs.visibleFolders == QuickAccessFolder.defaultFolders)
                 }
 
                 Divider()
 
-                Button(loc.text(es: "Acercar página web", en: "Zoom In Web Page")) {
+                Button {
                     if let activeID = GoogleAccountsManager.shared.activeTabID {
                         GoogleAccountsManager.shared.zoomInTab(activeID)
                     }
+                } label: {
+                    Label(loc.text(es: "Acercar página web", en: "Zoom In Web Page"), systemImage: "plus.magnifyingglass")
                 }
                 .keyboardShortcut("+", modifiers: [.command])
                 .disabled(GoogleAccountsManager.shared.activeTabID == nil)
 
-                Button(loc.text(es: "Alejar página web", en: "Zoom Out Web Page")) {
+                Button {
                     if let activeID = GoogleAccountsManager.shared.activeTabID {
                         GoogleAccountsManager.shared.zoomOutTab(activeID)
                     }
+                } label: {
+                    Label(loc.text(es: "Alejar página web", en: "Zoom Out Web Page"), systemImage: "minus.magnifyingglass")
                 }
                 .keyboardShortcut("-", modifiers: [.command])
                 .disabled(GoogleAccountsManager.shared.activeTabID == nil)
 
-                Button(loc.text(es: "Restablecer zoom web (100%)", en: "Reset Web Zoom (100%)")) {
+                Button {
                     if let activeID = GoogleAccountsManager.shared.activeTabID {
                         GoogleAccountsManager.shared.resetZoomInTab(activeID)
                     }
+                } label: {
+                    Label(loc.text(es: "Restablecer zoom web (100%)", en: "Reset Web Zoom (100%)"), systemImage: "arrow.counterclockwise")
                 }
                 .keyboardShortcut("0", modifiers: [.command])
                 .disabled(GoogleAccountsManager.shared.activeTabID == nil)

@@ -84,6 +84,14 @@ public enum ReleaseNotesCatalog {
             dateLabelEN: "Nov 12, 2026",
             items: [
                 ReleaseNoteItem(
+                    id: "all-menu-icons",
+                    icon: "square.grid.2x2",
+                    titleES: "Iconos en todas las opciones de los menús",
+                    titleEN: "Icons across all menu options",
+                    summaryES: "Se agregaron iconos representativos a todas las opciones de los menús contextuales y menús desplegables (ordenar, dirección, vistas, marcadores y acciones de carpetas), asegurando que ninguna opción quede sin icono.",
+                    summaryEN: "Representative icons have been added to all dropdown and context menu options (sorting, direction, views, bookmarks, and folder actions), ensuring no item is left without an icon."
+                ),
+                ReleaseNoteItem(
                     id: "list-icon-modes",
                     icon: "app.badge.checkmark",
                     titleES: "Iconos por aplicación y miniaturas en modo Lista",

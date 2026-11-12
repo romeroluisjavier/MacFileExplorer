@@ -37,6 +37,16 @@ public enum BookmarkOpenBehavior: String, CaseIterable, Identifiable, Codable, S
             return loc.text(es: "Nueva ventana de Chrome", en: "New Chrome Window")
         }
     }
+
+    /// Nombre de icono SF Symbol representativo del comportamiento de apertura.
+    public var systemImage: String {
+        switch self {
+        case .inMacFileExplorer:
+            return "macwindow.badge.plus"
+        case .inNewChromeWindow:
+            return "arrow.up.right.square"
+        }
+    }
 }
 
 /// Modelo de un marcador / acceso directo estilo Favoritos de Chrome.

@@ -617,24 +617,37 @@ private struct SidebarTreeNodeView: View {
                 isRowHovered = hovering
             }
             .contextMenu {
-                Button(loc.text(es: "Abrir", en: "Open")) {
+                Button {
                     viewModel.selectSidebarFolder(node)
-                }
-                if canExpandNode {
-                    Button(isExpanded
-                        ? loc.text(es: "Contraer árbol", en: "Collapse tree")
-                        : loc.text(es: "Expandir árbol", en: "Expand tree")
-                    ) {
-                        toggleNodeExpansion()
-                    }
-                }
-                Divider()
-                Button(loc.text(es: "Mostrar en Finder", en: "Show in Finder")) {
-                    NSWorkspace.shared.activateFileViewerSelecting([node.url])
+                } label: {
+                    Label(loc.text(es: "Abrir", en: "Open"), systemImage: "folder")
                 }
 
-                Button(loc.text(es: "Abrir Terminal aquí...", en: "Open Terminal here...")) {
+                if canExpandNode {
+                    Button {
+                        toggleNodeExpansion()
+                    } label: {
+                        Label(
+                            isExpanded
+                                ? loc.text(es: "Contraer árbol", en: "Collapse tree")
+                                : loc.text(es: "Expandir árbol", en: "Expand tree"),
+                            systemImage: isExpanded ? "chevron.down" : "chevron.right"
+                        )
+                    }
+                }
+
+                Divider()
+
+                Button {
+                    NSWorkspace.shared.activateFileViewerSelecting([node.url])
+                } label: {
+                    Label(loc.text(es: "Mostrar en Finder", en: "Show in Finder"), systemImage: "macwindow")
+                }
+
+                Button {
                     viewModel.openTerminal(at: node.url)
+                } label: {
+                    Label(loc.text(es: "Abrir Terminal aquí...", en: "Open Terminal here..."), systemImage: "terminal")
                 }
 
                 if node.isCustomQuickAccessFavorite {

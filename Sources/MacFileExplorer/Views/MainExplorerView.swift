@@ -135,7 +135,9 @@ public struct MainExplorerView: View {
 
             Divider()
 
-            Toggle(loc.text(es: "Mostrar archivos ocultos", en: "Show hidden files"), isOn: $viewModel.showHiddenFiles)
+            Toggle(isOn: $viewModel.showHiddenFiles) {
+                Label(loc.text(es: "Mostrar archivos ocultos", en: "Show hidden files"), systemImage: "eye")
+            }
 
             Divider()
 

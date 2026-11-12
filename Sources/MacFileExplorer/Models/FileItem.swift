@@ -237,13 +237,27 @@ public struct FileItem: Identifiable, Hashable, Sendable {
 
     // MARK: - Ordenamiento Estilo Windows Explorer (Carpetas Primero)
 
-    /// Criterio de columna para ordenar elementos en la vista Detalles o Cuadrícula.
     public enum SortField: String, CaseIterable, Sendable {
         case name = "Nombre"
         case modificationDate = "Fecha de modificación"
         case modificationDateMix = "Fecha de modificación mix"
         case kind = "Tipo"
         case size = "Tamaño"
+
+        public var systemImage: String {
+            switch self {
+            case .name:
+                return "textformat"
+            case .modificationDate:
+                return "calendar"
+            case .modificationDateMix:
+                return "calendar.badge.clock"
+            case .kind:
+                return "doc"
+            case .size:
+                return "scalemass"
+            }
+        }
     }
 
     /// Ordena una colección de `FileItem` manteniendo siempre las carpetas agrupadas al principio

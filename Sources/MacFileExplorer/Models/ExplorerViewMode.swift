@@ -25,4 +25,15 @@ public enum ListIconDisplayMode: String, CaseIterable, Identifiable, Sendable {
     case thumbnail = "thumbnail"
 
     public var id: String { rawValue }
+
+    public var systemImage: String {
+        switch self {
+        case .basic:
+            return "doc.plaintext"
+        case .appIcon:
+            return "app.badge.checkmark"
+        case .thumbnail:
+            return "photo.on.rectangle"
+        }
+    }
 }
