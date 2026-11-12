@@ -112,6 +112,67 @@ struct MacFileExplorerApp: App {
                 .disabled(activeExplorerViewModel != nil && activeExplorerViewModel?.canRedo != true && !isTextOrWebResponderActive)
             }
 
+            CommandGroup(replacing: .pasteboard) {
+                Button {
+                    if isTextOrWebResponderActive || activeExplorerViewModel == nil {
+                        NSApp.sendAction(#selector(NSText.cut(_:)), to: nil, from: nil)
+                    } else {
+                        activeExplorerViewModel?.cutSelectedItems()
+                    }
+                } label: {
+                    Label(loc.text(es: "Cortar", en: "Cut"), systemImage: "scissors")
+                }
+                .keyboardShortcut("x", modifiers: [.command])
+                .disabled(activeExplorerViewModel != nil && activeExplorerViewModel?.canCutOrCopy != true && !isTextOrWebResponderActive)
+
+                Button {
+                    if isTextOrWebResponderActive || activeExplorerViewModel == nil {
+                        NSApp.sendAction(#selector(NSText.copy(_:)), to: nil, from: nil)
+                    } else {
+                        activeExplorerViewModel?.copySelectedItems()
+                    }
+                } label: {
+                    Label(loc.text(es: "Copiar", en: "Copy"), systemImage: "doc.on.doc")
+                }
+                .keyboardShortcut("c", modifiers: [.command])
+                .disabled(activeExplorerViewModel != nil && activeExplorerViewModel?.canCutOrCopy != true && !isTextOrWebResponderActive)
+
+                Button {
+                    if isTextOrWebResponderActive || activeExplorerViewModel == nil {
+                        NSApp.sendAction(#selector(NSText.paste(_:)), to: nil, from: nil)
+                    } else {
+                        activeExplorerViewModel?.pasteItems()
+                    }
+                } label: {
+                    Label(loc.text(es: "Pegar", en: "Paste"), systemImage: "doc.on.clipboard")
+                }
+                .keyboardShortcut("v", modifiers: [.command])
+                .disabled(activeExplorerViewModel != nil && activeExplorerViewModel?.canPaste != true && !isTextOrWebResponderActive)
+
+                Button {
+                    if isTextOrWebResponderActive || activeExplorerViewModel == nil {
+                        NSApp.sendAction(#selector(NSText.delete(_:)), to: nil, from: nil)
+                    } else {
+                        activeExplorerViewModel?.moveSelectedItemsToTrash()
+                    }
+                } label: {
+                    Label(loc.text(es: "Eliminar", en: "Delete"), systemImage: "trash")
+                }
+                .disabled(activeExplorerViewModel != nil && activeExplorerViewModel?.canDelete != true && !isTextOrWebResponderActive)
+
+                Button {
+                    if isTextOrWebResponderActive || activeExplorerViewModel == nil {
+                        NSApp.sendAction(#selector(NSText.selectAll(_:)), to: nil, from: nil)
+                    } else {
+                        activeExplorerViewModel?.selectAll()
+                    }
+                } label: {
+                    Label(loc.text(es: "Seleccionar todo", en: "Select All"), systemImage: "checkmark.circle")
+                }
+                .keyboardShortcut("a", modifiers: [.command])
+                .disabled(activeExplorerViewModel != nil && activeExplorerViewModel?.displayedItems.isEmpty == true && !isTextOrWebResponderActive)
+            }
+
             CommandGroup(after: .toolbar) {
                 Divider()
                 Toggle(isOn: $bookmarksManager.isBookmarksBarVisible) {

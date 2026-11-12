@@ -84,6 +84,14 @@ public enum ReleaseNotesCatalog {
             dateLabelEN: "Nov 12, 2026",
             items: [
                 ReleaseNoteItem(
+                    id: "edit-menu-action-icons",
+                    icon: "scissors",
+                    titleES: "Iconos en todas las opciones del menú Edición",
+                    titleEN: "Icons across all Edit menu options",
+                    summaryES: "Se agregaron iconos representativos a las acciones de Cortar, Copiar, Pegar, Eliminar y Seleccionar todo en el menú superior de macOS (Edición / Edit), completando el diseño visual de toda la barra de menús.",
+                    summaryEN: "Representative icons have been added to Cut, Copy, Paste, Delete, and Select All in the top macOS menu bar (Edit), completing the visual design across all application menus."
+                ),
+                ReleaseNoteItem(
                     id: "mouse-back-forward-buttons",
                     icon: "computermouse.fill",
                     titleES: "Navegación con botones laterales del ratón (Atrás y Adelante)",
