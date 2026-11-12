@@ -6,11 +6,21 @@ public struct CommandBarView: View {
     @Bindable var viewModel: ExplorerViewModel
     @Bindable private var bookmarksManager: BookmarksManager = .shared
     @Bindable private var toolbarPrefs: ToolbarPreferences = .shared
+    @ViewState private var barWidth: CGFloat = 1160
 
     private var loc: LocalizationManager { LocalizationManager.shared }
 
     public init(viewModel: ExplorerViewModel) {
         self.viewModel = viewModel
+    }
+
+    /// Determina si la barra debe mostrar los botones de acción en modo compacto (solo iconos)
+    /// para evitar que el texto se comprima o corte cuando la ventana es estrecha.
+    private var isCompactMode: Bool {
+        if bookmarksManager.isBookmarksBarVisible && !bookmarksManager.bookmarks.isEmpty {
+            return barWidth < 1060
+        }
+        return barWidth < 900
     }
 
     public var body: some View {
@@ -22,55 +32,14 @@ public struct CommandBarView: View {
                 commandDivider
             }
 
-            // 2. Grupo de Acciones de Portapapeles y Edición
-            HStack(spacing: 4) {
-                CommandActionButton(
-                    title: loc.text(es: "Cortar", en: "Cut"),
-                    systemImage: "scissors",
-                    shortcutHint: "⌘X",
-                    isEnabled: viewModel.canCutOrCopy,
-                    isActive: viewModel.clipboardManager.activeMode == .cut
-                ) {
-                    viewModel.cutSelectedItems()
+            // 2. Grupo de Acciones de Portapapeles y Edición (adaptable: icono+texto o solo icono)
+            ViewThatFits(in: .horizontal) {
+                if !isCompactMode {
+                    actionButtonsGroup(showTitle: true)
+                        .fixedSize(horizontal: true, vertical: false)
                 }
-
-                CommandActionButton(
-                    title: loc.text(es: "Copiar", en: "Copy"),
-                    systemImage: "doc.on.doc",
-                    shortcutHint: "⌘C",
-                    isEnabled: viewModel.canCutOrCopy
-                ) {
-                    viewModel.copySelectedItems()
-                }
-
-                CommandActionButton(
-                    title: loc.text(es: "Pegar", en: "Paste"),
-                    systemImage: "doc.on.clipboard",
-                    shortcutHint: "⌘V",
-                    isEnabled: viewModel.canPaste,
-                    prominentBadge: viewModel.clipboardManager.activeMode == .cut
-                ) {
-                    viewModel.pasteItems()
-                }
-
-                CommandActionButton(
-                    title: loc.text(es: "Renombrar", en: "Rename"),
-                    systemImage: "character.cursor.ibeam",
-                    shortcutHint: "F2 / ↩",
-                    isEnabled: viewModel.canRename
-                ) {
-                    viewModel.beginRenamingSelectedItem()
-                }
-
-                CommandActionButton(
-                    title: loc.text(es: "Eliminar", en: "Delete"),
-                    systemImage: "trash",
-                    shortcutHint: "⌫",
-                    isEnabled: viewModel.canDelete,
-                    isDestructive: true
-                ) {
-                    viewModel.moveSelectedItemsToTrash()
-                }
+                actionButtonsGroup(showTitle: false)
+                    .fixedSize(horizontal: true, vertical: false)
             }
 
             commandDivider
@@ -96,7 +65,79 @@ public struct CommandBarView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 7)
+        .background(
+            GeometryReader { proxy in
+                Color.clear
+                    .preference(key: CommandBarWidthPreferenceKey.self, value: proxy.size.width)
+            }
+        )
+        .onPreferenceChange(CommandBarWidthPreferenceKey.self) { newWidth in
+            if newWidth > 0 && abs(newWidth - barWidth) > 1 {
+                barWidth = newWidth
+            }
+        }
+        .animation(.easeInOut(duration: 0.15), value: isCompactMode)
         .background(.bar)
+    }
+
+    // MARK: - Subvistas
+
+    @ViewBuilder
+    private func actionButtonsGroup(showTitle: Bool) -> some View {
+        HStack(spacing: 4) {
+            CommandActionButton(
+                title: loc.text(es: "Cortar", en: "Cut"),
+                systemImage: "scissors",
+                shortcutHint: "⌘X",
+                isEnabled: viewModel.canCutOrCopy,
+                isActive: viewModel.clipboardManager.activeMode == .cut,
+                showTitle: showTitle
+            ) {
+                viewModel.cutSelectedItems()
+            }
+
+            CommandActionButton(
+                title: loc.text(es: "Copiar", en: "Copy"),
+                systemImage: "doc.on.doc",
+                shortcutHint: "⌘C",
+                isEnabled: viewModel.canCutOrCopy,
+                showTitle: showTitle
+            ) {
+                viewModel.copySelectedItems()
+            }
+
+            CommandActionButton(
+                title: loc.text(es: "Pegar", en: "Paste"),
+                systemImage: "doc.on.clipboard",
+                shortcutHint: "⌘V",
+                isEnabled: viewModel.canPaste,
+                prominentBadge: viewModel.clipboardManager.activeMode == .cut,
+                showTitle: showTitle
+            ) {
+                viewModel.pasteItems()
+            }
+
+            CommandActionButton(
+                title: loc.text(es: "Renombrar", en: "Rename"),
+                systemImage: "character.cursor.ibeam",
+                shortcutHint: "F2 / ↩",
+                isEnabled: viewModel.canRename,
+                showTitle: showTitle
+            ) {
+                viewModel.beginRenamingSelectedItem()
+            }
+
+            CommandActionButton(
+                title: loc.text(es: "Eliminar", en: "Delete"),
+                systemImage: "trash",
+                shortcutHint: "⌫",
+                isEnabled: viewModel.canDelete,
+                isDestructive: true,
+                showTitle: showTitle
+            ) {
+                viewModel.moveSelectedItemsToTrash()
+            }
+        }
     }
 
     // MARK: - Subvistas
@@ -125,6 +166,7 @@ public struct CommandBarView: View {
                     .font(.system(size: 14, weight: .semibold))
                 Text(loc.text(es: "Nuevo", en: "New"))
                     .font(.system(size: 12.5, weight: .medium))
+                    .lineLimit(1)
             }
             .padding(.horizontal, 6)
             .padding(.vertical, 3)
@@ -180,6 +222,7 @@ public struct CommandBarView: View {
                     .font(.system(size: 12, weight: .medium))
                 Text(loc.text(es: "Ordenar", en: "Sort"))
                     .font(.system(size: 12, weight: .regular))
+                    .lineLimit(1)
             }
             .padding(.horizontal, 8)
             .padding(.vertical, 5)
@@ -298,6 +341,7 @@ public struct CommandBarView: View {
                     .font(.system(size: 12, weight: .medium))
                 Text(loc.text(es: "Ver", en: "View"))
                     .font(.system(size: 12, weight: .regular))
+                    .lineLimit(1)
             }
             .padding(.horizontal, 8)
             .padding(.vertical, 5)
@@ -406,6 +450,7 @@ private struct CommandActionButton: View {
     var isActive: Bool = false
     var prominentBadge: Bool = false
     var isDestructive: Bool = false
+    var showTitle: Bool = true
     let action: () -> Void
 
     @ViewState private var isHovered: Bool = false
@@ -417,12 +462,16 @@ private struct CommandActionButton: View {
                     .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(iconColor)
 
-                Text(title)
-                    .font(.system(size: 12, weight: .regular))
-                    .foregroundStyle(isEnabled ? Color.primary : Color.secondary.opacity(0.55))
+                if showTitle {
+                    Text(title)
+                        .font(.system(size: 12, weight: .regular))
+                        .foregroundStyle(isEnabled ? Color.primary : Color.secondary.opacity(0.55))
+                        .lineLimit(1)
+                }
             }
-            .padding(.horizontal, 8)
+            .padding(.horizontal, showTitle ? 8 : 7)
             .padding(.vertical, 5)
+            .frame(minWidth: showTitle ? nil : 28, minHeight: 26)
             .background(
                 RoundedRectangle(cornerRadius: 6, style: .continuous)
                     .fill(backgroundColor)
@@ -470,5 +519,12 @@ private struct CommandActionButton: View {
             return Color.primary.opacity(0.10)
         }
         return .clear
+    }
+}
+
+private struct CommandBarWidthPreferenceKey: PreferenceKey, Sendable {
+    static let defaultValue: CGFloat = 1160
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
     }
 }

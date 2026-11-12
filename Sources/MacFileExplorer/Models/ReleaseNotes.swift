@@ -84,6 +84,14 @@ public enum ReleaseNotesCatalog {
             dateLabelEN: "Nov 12, 2026",
             items: [
                 ReleaseNoteItem(
+                    id: "responsive-command-bar-buttons",
+                    icon: "menubar.rectangle",
+                    titleES: "Botones adaptables en la barra de herramientas",
+                    titleEN: "Responsive toolbar action buttons",
+                    summaryES: "Al achicar la ventana, los botones de Cortar, Copiar, Pegar, Renombrar y Eliminar ocultan automáticamente su texto y muestran solo sus iconos característicos, evitando textos cortados y manteniendo la barra siempre limpia y ordenada.",
+                    summaryEN: "When resizing or narrowing the window, the Cut, Copy, Paste, Rename, and Delete buttons automatically hide their text labels and show only their icons, preventing awkward text wrapping and keeping the toolbar tidy."
+                ),
+                ReleaseNoteItem(
                     id: "add-to-slack",
                     icon: "bubble.left.and.bubble.right.fill",
                     titleES: "Compartir y enviar a Slack desde el menú contextual",
