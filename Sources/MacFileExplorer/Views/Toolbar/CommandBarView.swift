@@ -271,6 +271,27 @@ public struct CommandBarView: View {
                     }
                 }
             }
+
+            Divider()
+
+            Menu {
+                ForEach(QuickAccessFolder.allCases) { folder in
+                    Toggle(isOn: QuickAccessPreferences.shared.binding(for: folder)) {
+                        Label(folder.localizedTitle(using: loc), systemImage: folder.systemImage)
+                    }
+                }
+
+                Divider()
+
+                Button {
+                    QuickAccessPreferences.shared.resetToDefaults()
+                } label: {
+                    Label(loc.text(es: "Restablecer predeterminadas", en: "Reset to Defaults"), systemImage: "arrow.counterclockwise")
+                }
+                .disabled(QuickAccessPreferences.shared.visibleFolders == QuickAccessFolder.defaultFolders)
+            } label: {
+                Label(loc.text(es: "Carpetas en Acceso rápido", en: "Quick Access Folders"), systemImage: "star")
+            }
         } label: {
             HStack(spacing: 5) {
                 Image(systemName: viewModel.viewMode.systemImage)

@@ -514,6 +514,13 @@ private struct SidebarTreeNodeView: View {
         sidebarViewModel.isExpanded(node)
     }
 
+    private var isTrashNode: Bool {
+        guard let trashURL = FileManager.default.urls(for: .trashDirectory, in: .userDomainMask).first?.standardizedFileURL else {
+            return false
+        }
+        return node.url.standardizedFileURL == trashURL
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 1) {
             HStack(spacing: 2) {
@@ -650,6 +657,16 @@ private struct SidebarTreeNodeView: View {
                     Label(loc.text(es: "Abrir Terminal aquí...", en: "Open Terminal here..."), systemImage: "terminal")
                 }
 
+                if isTrashNode {
+                    Divider()
+
+                    Button {
+                        NSAppleScript(source: "tell application \"Finder\" to empty trash")?.executeAndReturnError(nil)
+                    } label: {
+                        Label(loc.text(es: "Vaciar Papelera...", en: "Empty Trash..."), systemImage: "trash.slash")
+                    }
+                }
+
                 if node.isCustomQuickAccessFavorite {
                     Divider()
                     Button {
@@ -752,6 +769,8 @@ private struct SidebarTreeNodeView: View {
             return .red
         case "film":
             return .mint
+        case "trash.fill", "trash":
+            return .secondary
         case "externaldrive.fill":
             return .orange
         case "internaldrive.fill":

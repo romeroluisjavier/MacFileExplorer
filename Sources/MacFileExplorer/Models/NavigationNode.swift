@@ -17,12 +17,13 @@ public enum QuickAccessFolder: String, CaseIterable, Identifiable, Codable, Send
     case pictures
     case music
     case movies
+    case trash
 
     public var id: String { rawValue }
 
     /// Conjunto predeterminado (coincide con las carpetas mostradas inicialmente en Acceso rápido).
     public static let defaultFolders: Set<QuickAccessFolder> = [
-        .home, .desktop, .downloads, .documents, .applications, .pictures
+        .home, .desktop, .downloads, .documents, .applications, .pictures, .trash
     ]
 
     public var systemImage: String {
@@ -35,6 +36,7 @@ public enum QuickAccessFolder: String, CaseIterable, Identifiable, Codable, Send
         case .pictures: return "photo.fill"
         case .music: return "music.note"
         case .movies: return "film"
+        case .trash: return "trash.fill"
         }
     }
 
@@ -58,6 +60,8 @@ public enum QuickAccessFolder: String, CaseIterable, Identifiable, Codable, Send
             return fm.urls(for: .musicDirectory, in: .userDomainMask).first?.standardizedFileURL
         case .movies:
             return fm.urls(for: .moviesDirectory, in: .userDomainMask).first?.standardizedFileURL
+        case .trash:
+            return fm.urls(for: .trashDirectory, in: .userDomainMask).first?.standardizedFileURL
         }
     }
 
@@ -74,6 +78,7 @@ public enum QuickAccessFolder: String, CaseIterable, Identifiable, Codable, Send
         case .pictures: return "Imágenes"
         case .music: return "Música"
         case .movies: return "Películas"
+        case .trash: return "Papelera"
         }
     }
 
@@ -97,6 +102,8 @@ public enum QuickAccessFolder: String, CaseIterable, Identifiable, Codable, Send
             return loc.text(es: "Música", en: "Music")
         case .movies:
             return loc.text(es: "Películas", en: "Movies")
+        case .trash:
+            return loc.text(es: "Papelera", en: "Trash")
         }
     }
 }

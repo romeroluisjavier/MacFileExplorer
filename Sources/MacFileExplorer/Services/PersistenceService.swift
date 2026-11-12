@@ -145,11 +145,19 @@ public final class PersistenceService {
         defaults.set(rawValues, forKey: Keys.visibleQuickAccessFolders)
     }
 
+    private static let trashMigrationKey = "com.macfileexplorer.state.hasMigratedTrashToQuickAccess.v1"
+
     public func loadVisibleQuickAccessFolders() -> Set<QuickAccessFolder> {
         guard let saved = defaults.stringArray(forKey: Keys.visibleQuickAccessFolders) else {
             return QuickAccessFolder.defaultFolders
         }
-        return Set(saved.compactMap { QuickAccessFolder(rawValue: $0) })
+        var set = Set(saved.compactMap { QuickAccessFolder(rawValue: $0) })
+        if !defaults.bool(forKey: Self.trashMigrationKey) {
+            defaults.set(true, forKey: Self.trashMigrationKey)
+            set.insert(.trash)
+            saveVisibleQuickAccessFolders(set)
+        }
+        return set
     }
 
     public func saveCustomQuickAccessFolderPaths(_ paths: [String]) {

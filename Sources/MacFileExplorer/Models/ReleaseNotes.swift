@@ -84,6 +84,14 @@ public enum ReleaseNotesCatalog {
             dateLabelEN: "Nov 12, 2026",
             items: [
                 ReleaseNoteItem(
+                    id: "trash-in-quick-access",
+                    icon: "trash.fill",
+                    titleES: "Papelera en Acceso rápido",
+                    titleEN: "Trash in Quick Access",
+                    summaryES: "Ahora puedes acceder directamente a la Papelera desde la sección Acceso rápido en la barra lateral izquierda (al igual que en Finder) y elegir mostrarla u ocultarla desde Ver > Carpetas en Acceso rápido.",
+                    summaryEN: "You can now access Trash directly from the Quick Access section in the left sidebar (just like in Finder), and show or hide it whenever you want under View > Quick Access Folders."
+                ),
+                ReleaseNoteItem(
                     id: "grid-icon-size-slider",
                     icon: "slider.horizontal.below.rectangle",
                     titleES: "Control deslizante de tamaño de iconos estilo Finder",

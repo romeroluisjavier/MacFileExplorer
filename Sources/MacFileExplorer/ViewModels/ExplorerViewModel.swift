@@ -241,6 +241,10 @@ public final class ExplorerViewModel {
         if currentDirectoryURL.path == "/" {
             return FileManager.default.displayName(atPath: "/")
         }
+        if let trashURL = FileManager.default.urls(for: .trashDirectory, in: .userDomainMask).first?.standardizedFileURL,
+           currentDirectoryURL.standardizedFileURL == trashURL {
+            return LocalizationManager.shared.text(es: "Papelera", en: "Trash")
+        }
         return currentDirectoryURL.lastPathComponent
     }
 
@@ -248,6 +252,7 @@ public final class ExplorerViewModel {
     public var breadcrumbSegments: [BreadcrumbSegment] {
         var segments: [BreadcrumbSegment] = []
         let components = currentDirectoryURL.standardizedFileURL.pathComponents
+        let trashURL = FileManager.default.urls(for: .trashDirectory, in: .userDomainMask).first?.standardizedFileURL
         var runningURL = URL(fileURLWithPath: "/")
 
         for component in components {
@@ -256,7 +261,13 @@ public final class ExplorerViewModel {
                 segments.append(BreadcrumbSegment(title: rootName, url: runningURL))
             } else {
                 runningURL.appendPathComponent(component)
-                segments.append(BreadcrumbSegment(title: component, url: runningURL))
+                let segmentTitle: String
+                if let trashURL, runningURL.standardizedFileURL == trashURL {
+                    segmentTitle = LocalizationManager.shared.text(es: "Papelera", en: "Trash")
+                } else {
+                    segmentTitle = component
+                }
+                segments.append(BreadcrumbSegment(title: segmentTitle, url: runningURL))
             }
         }
         return segments
@@ -1650,7 +1661,16 @@ public final class ExplorerViewModel {
                 self.isLoading = false
                 self.loadedDirectoryURL = targetURL
                 self.setAllItems([], precomputedDisplayed: [])
-                self.errorMessage = error.localizedDescription
+                if let trashURL = FileManager.default.urls(for: .trashDirectory, in: .userDomainMask).first?.standardizedFileURL,
+                   targetURL == trashURL {
+                    let loc = LocalizationManager.shared
+                    self.errorMessage = loc.text(
+                        es: "Para ver la Papelera dentro de MacFileExplorer, concede \"Acceso total al disco\" en Ajustes del Sistema > Privacidad y seguridad.",
+                        en: "To view Trash inside MacFileExplorer, grant \"Full Disk Access\" in System Settings > Privacy & Security."
+                    )
+                } else {
+                    self.errorMessage = error.localizedDescription
+                }
             }
         }
     }
