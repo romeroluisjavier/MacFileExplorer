@@ -9,7 +9,6 @@ public struct IsolatedGoogleWebTabView: View {
     @Bindable var googleManager: GoogleAccountsManager = .shared
 
     @ViewState private var urlDraft: String = ""
-    @ViewState private var mouseMonitor: Any? = nil
     @FocusState private var isURLFieldFocused: Bool
 
     private var loc: LocalizationManager { LocalizationManager.shared }
@@ -44,10 +43,6 @@ public struct IsolatedGoogleWebTabView: View {
                 }
                 .onAppear {
                     urlDraft = tab.currentURL.absoluteString
-                    installWebMouseMonitorIfNeeded()
-                }
-                .onDisappear {
-                    removeWebMouseMonitor()
                 }
                 .onChange(of: tab.currentURL) { _, newURL in
                     urlDraft = newURL.absoluteString
@@ -62,47 +57,6 @@ public struct IsolatedGoogleWebTabView: View {
             } else {
                 Color.clear
             }
-        }
-    }
-
-    @MainActor
-    private func installWebMouseMonitorIfNeeded() {
-        guard mouseMonitor == nil else { return }
-        mouseMonitor = NSEvent.addLocalMonitorForEvents(matching: [.otherMouseDown, .otherMouseUp]) { event in
-            guard event.buttonNumber == 3 || event.buttonNumber == 4 else { return event }
-            let button = event.buttonNumber
-            let type = event.type
-            let consumed = MainActor.assumeIsolated {
-                guard let activeWin = NSApp.keyWindow,
-                      let currentTab = googleManager.tab(for: tabID) else {
-                    return false
-                }
-                let targetWebView = googleManager.webView(for: currentTab)
-                guard targetWebView.window === activeWin else {
-                    return false
-                }
-                if button == 3 {
-                    if type == .otherMouseDown {
-                        googleManager.goBackInTab(tabID)
-                    }
-                    return true
-                } else if button == 4 {
-                    if type == .otherMouseDown {
-                        googleManager.goForwardInTab(tabID)
-                    }
-                    return true
-                }
-                return false
-            }
-            return consumed ? nil : event
-        }
-    }
-
-    @MainActor
-    private func removeWebMouseMonitor() {
-        if let m = mouseMonitor {
-            NSEvent.removeMonitor(m)
-            mouseMonitor = nil
         }
     }
 

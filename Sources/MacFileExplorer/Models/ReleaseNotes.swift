@@ -84,6 +84,14 @@ public enum ReleaseNotesCatalog {
             dateLabelEN: "Nov 12, 2026",
             items: [
                 ReleaseNoteItem(
+                    id: "mouse-side-buttons-and-go-menu",
+                    icon: "computermouse.fill",
+                    titleES: "Navegación completa con ratón (Atrás y Adelante) y menú Ir",
+                    titleEN: "Complete mouse navigation (Back & Forward) and Go menu",
+                    summaryES: "Se renovó la compatibilidad con los botones laterales de cualquier ratón (Logitech, Razer o genéricos) integrando un gestor global a nivel de aplicación, un nuevo menú «Ir» en la barra superior con los atajos estándar (⌘[ y ⌘]), y la opción de invertir los botones laterales según tu preferencia.",
+                    summaryEN: "Restored and perfected compatibility with mouse side buttons for any mouse (Logitech, Razer, or generic) with a global app-level manager, a new «Go» menu in the top bar with standard shortcuts (⌘[ and ⌘]), and an option to swap side buttons if desired."
+                ),
+                ReleaseNoteItem(
                     id: "slack-search-autocomplete-and-toggle",
                     icon: "magnifyingglass.circle.fill",
                     titleES: "Búsqueda y autocompletado para Slack, y opción para activar o desactivar",
@@ -99,14 +107,7 @@ public enum ReleaseNotesCatalog {
                     summaryES: "Se agregaron iconos representativos a las acciones de Cortar, Copiar, Pegar, Eliminar y Seleccionar todo en el menú superior de macOS (Edición / Edit), completando el diseño visual de toda la barra de menús.",
                     summaryEN: "Representative icons have been added to Cut, Copy, Paste, Delete, and Select All in the top macOS menu bar (Edit), completing the visual design across all application menus."
                 ),
-                ReleaseNoteItem(
-                    id: "mouse-back-forward-buttons",
-                    icon: "computermouse.fill",
-                    titleES: "Navegación con botones laterales del ratón (Atrás y Adelante)",
-                    titleEN: "Navigation with mouse side buttons (Back and Forward)",
-                    summaryES: "Ahora puedes usar los dos botones laterales de tu ratón para retroceder y avanzar rápidamente entre las carpetas visitadas (y en las pestañas web), exactamente igual a cómo funciona en navegadores como Google Chrome.",
-                    summaryEN: "You can now use your mouse's two side buttons to swiftly navigate back and forward through visited folders (and in web tabs), exactly like in web browsers such as Google Chrome."
-                ),
+
                 ReleaseNoteItem(
                     id: "responsive-command-bar-buttons",
                     icon: "menubar.rectangle",

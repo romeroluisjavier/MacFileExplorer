@@ -469,6 +469,13 @@ public final class GoogleAccountsManager: NSObject {
         }
     }
 
+    /// Devuelve el ID de pestaña web correspondiente a la ventana especificada, o `nil` si la ventana no es una pestaña web de Google.
+    public func activeTabID(for window: NSWindow?) -> UUID? {
+        guard let window else { return nil }
+        let effective = window.tabGroup?.selectedWindow ?? window
+        return windowsByTabID.first(where: { $0.value === effective })?.key
+    }
+
     private func syncActiveTabID(for window: NSWindow) {
         let effective = window.tabGroup?.selectedWindow ?? window
         if let match = windowsByTabID.first(where: { $0.value === effective }) {

@@ -268,6 +268,18 @@ public final class PersistenceService {
         }
         defaults.set(list, forKey: Self.slackRecentDestinationsKey)
     }
+
+    // MARK: - Navegación con Ratón
+
+    private static let swapMouseButtonsKey = "com.macfileexplorer.state.swapMouseButtons"
+
+    public func loadSwapMouseButtons() -> Bool {
+        defaults.bool(forKey: Self.swapMouseButtonsKey)
+    }
+
+    public func saveSwapMouseButtons(_ swap: Bool) {
+        defaults.set(swap, forKey: Self.swapMouseButtonsKey)
+    }
 }
 
 /// Anchos configurables de las columnas de la vista Detalles junto con la lógica de ajuste por divisores.
@@ -555,6 +567,24 @@ public final class SlackPreferences {
 
     public func resetDirectoryToDefaults() {
         savedDestinations = PersistenceService.defaultSlackDirectory
+    }
+}
+
+/// Preferencias reactivas y persistentes de la navegación con ratón (invertir botones laterales).
+@MainActor
+@Observable
+public final class MousePreferences {
+    public static let shared = MousePreferences()
+
+    public var swapSideButtons: Bool {
+        didSet {
+            guard swapSideButtons != oldValue else { return }
+            PersistenceService.shared.saveSwapMouseButtons(swapSideButtons)
+        }
+    }
+
+    private init() {
+        self.swapSideButtons = PersistenceService.shared.loadSwapMouseButtons()
     }
 }
 

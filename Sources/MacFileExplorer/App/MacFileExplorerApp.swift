@@ -11,6 +11,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if let icon = FileIconProvider.shared.currentAppIcon {
             NSApplication.shared.applicationIconImage = icon
         }
+        MouseNavigationManager.shared.installIfNeeded()
         LocalizationManager.shared.installMenuTrackingObserverIfNeeded()
         LocalizationManager.shared.applyLanguageToMainMenu()
         DispatchQueue.main.async {
@@ -37,6 +38,7 @@ struct MacFileExplorerApp: App {
     @Bindable private var toolbarPrefs = ToolbarPreferences.shared
     @Bindable private var listIconPrefs = ListIconPreferences.shared
     @Bindable private var slackPrefs = SlackPreferences.shared
+    @Bindable private var mousePrefs = MousePreferences.shared
     @FocusedValue(\.explorerViewModel) private var focusedExplorerViewModel
 
     var body: some Scene {
@@ -276,6 +278,10 @@ struct MacFileExplorerApp: App {
                     Label(loc.text(es: "Mostrar opción «Añadir a Slack»", en: "Show «Add to Slack» option"), systemImage: "bubble.left.and.bubble.right")
                 }
 
+                Toggle(isOn: $mousePrefs.swapSideButtons) {
+                    Label(loc.text(es: "Invertir botones laterales del ratón (Atrás/Adelante)", en: "Swap mouse side buttons (Back/Forward)"), systemImage: "computermouse")
+                }
+
                 Divider()
 
                 Button {
@@ -311,6 +317,43 @@ struct MacFileExplorerApp: App {
                 Divider()
             }
 
+            CommandMenu(loc.text(es: "Ir", en: "Go")) {
+                Button {
+                    navigateBack()
+                } label: {
+                    Label(loc.text(es: "Atrás", en: "Back"), systemImage: "chevron.backward")
+                }
+                .keyboardShortcut("[", modifiers: [.command])
+                .disabled(!canNavigateBack)
+
+                Button {
+                    navigateForward()
+                } label: {
+                    Label(loc.text(es: "Adelante", en: "Forward"), systemImage: "chevron.forward")
+                }
+                .keyboardShortcut("]", modifiers: [.command])
+                .disabled(!canNavigateForward)
+
+                Divider()
+
+                Button {
+                    navigateUp()
+                } label: {
+                    Label(loc.text(es: "Subir un nivel", en: "Enclosing Folder"), systemImage: "arrow.up")
+                }
+                .keyboardShortcut(.upArrow, modifiers: [.command])
+                .disabled(!canNavigateUp)
+
+                Divider()
+
+                Button {
+                    navigateToHome()
+                } label: {
+                    Label(loc.text(es: "Inicio", en: "Home"), systemImage: "house")
+                }
+                .keyboardShortcut("h", modifiers: [.command, .shift])
+            }
+
             CommandMenu(loc.text(es: "Idioma", en: "Language")) {
                 languageSelectionPicker
             }
@@ -332,7 +375,54 @@ struct MacFileExplorerApp: App {
     }
 
     private var activeExplorerViewModel: ExplorerViewModel? {
-        focusedExplorerViewModel ?? ExplorerWindowRegistry.shared.viewModel(for: NSApp.keyWindow)
+        focusedExplorerViewModel
+            ?? ExplorerWindowRegistry.shared.viewModel(for: NSApp.keyWindow)
+            ?? ExplorerWindowRegistry.shared.viewModel(for: NSApp.mainWindow)
+            ?? ExplorerWindowRegistry.shared.activeViewModel
+    }
+
+    private var activeGoogleWebTabID: UUID? {
+        let activeWindow = NSApp.keyWindow ?? NSApp.mainWindow
+        let effective = activeWindow?.tabGroup?.selectedWindow ?? activeWindow
+        return GoogleAccountsManager.shared.activeTabID(for: effective)
+            ?? (effective == nil ? GoogleAccountsManager.shared.activeTabID : nil)
+    }
+
+    private var canNavigateBack: Bool {
+        if let activeID = activeGoogleWebTabID {
+            return GoogleAccountsManager.shared.tab(for: activeID)?.canGoBack ?? false
+        }
+        return activeExplorerViewModel?.canGoBack ?? false
+    }
+
+    private var canNavigateForward: Bool {
+        if let activeID = activeGoogleWebTabID {
+            return GoogleAccountsManager.shared.tab(for: activeID)?.canGoForward ?? false
+        }
+        return activeExplorerViewModel?.canGoForward ?? false
+    }
+
+    private var canNavigateUp: Bool {
+        if activeGoogleWebTabID != nil {
+            return false
+        }
+        return activeExplorerViewModel?.canGoUp ?? false
+    }
+
+    private func navigateBack() {
+        MouseNavigationManager.shared.navigate(isBack: true)
+    }
+
+    private func navigateForward() {
+        MouseNavigationManager.shared.navigate(isBack: false)
+    }
+
+    private func navigateUp() {
+        activeExplorerViewModel?.goUp()
+    }
+
+    private func navigateToHome() {
+        activeExplorerViewModel?.navigate(to: FileManager.default.homeDirectoryForCurrentUser)
     }
 
     private var undoMenuItemTitle: String {

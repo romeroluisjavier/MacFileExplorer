@@ -44,8 +44,11 @@ public final class ExplorerWindowRegistry {
 
     private init() {}
 
+    public weak var lastActiveViewModel: ExplorerViewModel?
+
     public func register(viewModel: ExplorerViewModel, for window: NSWindow?) {
         pruneDeadEntries()
+        lastActiveViewModel = viewModel
         guard let window else { return }
         entries[ObjectIdentifier(window)] = WeakExplorerBox(window: window, viewModel: viewModel)
     }
@@ -54,6 +57,21 @@ public final class ExplorerWindowRegistry {
         pruneDeadEntries()
         guard let window else { return nil }
         return entries[ObjectIdentifier(window)]?.viewModel
+    }
+
+    public var activeViewModel: ExplorerViewModel? {
+        pruneDeadEntries()
+        if let keyWin = NSApp.keyWindow {
+            if let vm = viewModel(for: keyWin) ?? viewModel(for: keyWin.tabGroup?.selectedWindow) {
+                return vm
+            }
+        }
+        if let mainWin = NSApp.mainWindow {
+            if let vm = viewModel(for: mainWin) ?? viewModel(for: mainWin.tabGroup?.selectedWindow) {
+                return vm
+            }
+        }
+        return lastActiveViewModel ?? entries.values.compactMap(\.viewModel).first
     }
 
     private func pruneDeadEntries() {
@@ -83,7 +101,6 @@ public struct ExplorerKeyEventMonitorModifier: ViewModifier {
     let viewModel: ExplorerViewModel
 
     @ViewState private var eventMonitor: Any? = nil
-    @ViewState private var mouseMonitor: Any? = nil
     @ViewState private var hostWindowBox = WeakWindowBox()
 
     public func body(content: Content) -> some View {
@@ -116,22 +133,6 @@ public struct ExplorerKeyEventMonitorModifier: ViewModifier {
                 return consumed ? nil : event
             }
         }
-
-        if mouseMonitor == nil {
-            mouseMonitor = NSEvent.addLocalMonitorForEvents(matching: [.otherMouseDown, .otherMouseUp]) { event in
-                let buttonNumber = event.buttonNumber
-                let eventType = event.type
-                let eventWindow = event.window
-                let consumed = MainActor.assumeIsolated {
-                    handleOtherMouseEvent(
-                        buttonNumber: buttonNumber,
-                        eventType: eventType,
-                        eventWindow: eventWindow
-                    )
-                }
-                return consumed ? nil : event
-            }
-        }
     }
 
     @MainActor
@@ -139,10 +140,6 @@ public struct ExplorerKeyEventMonitorModifier: ViewModifier {
         if let monitor = eventMonitor {
             NSEvent.removeMonitor(monitor)
             eventMonitor = nil
-        }
-        if let mMonitor = mouseMonitor {
-            NSEvent.removeMonitor(mMonitor)
-            mouseMonitor = nil
         }
     }
 
@@ -275,16 +272,20 @@ public struct ExplorerKeyEventMonitorModifier: ViewModifier {
             }
         }
 
-        // Alt/Option + Left Arrow o Cmd + [ (keyCode 123 o carácter "[") -> Atrás
-        if (keyCode == 123 && (flags.contains(.option) || flags.contains(.command))) || (characters == "[" && flags.contains(.command)) {
+        // Alt/Option + Left Arrow, Cmd + Left Arrow o Cmd + [ (keyCode 123, keyCode 33 o carácter "[") -> Atrás
+        if (keyCode == 123 && (flags.contains(.option) || flags.contains(.command)))
+            || (keyCode == 33 && flags.contains(.command))
+            || (characters == "[" && flags.contains(.command)) {
             if viewModel.canGoBack {
                 viewModel.goBack()
                 return true
             }
         }
 
-        // Alt/Option + Right Arrow o Cmd + ] (keyCode 124 o carácter "]") -> Adelante
-        if (keyCode == 124 && (flags.contains(.option) || flags.contains(.command))) || (characters == "]" && flags.contains(.command)) {
+        // Alt/Option + Right Arrow, Cmd + Right Arrow o Cmd + ] (keyCode 124, keyCode 30 o carácter "]") -> Adelante
+        if (keyCode == 124 && (flags.contains(.option) || flags.contains(.command)))
+            || (keyCode == 30 && flags.contains(.command))
+            || (characters == "]" && flags.contains(.command)) {
             if viewModel.canGoForward {
                 viewModel.goForward()
                 return true
@@ -330,46 +331,7 @@ public struct ExplorerKeyEventMonitorModifier: ViewModifier {
 
     // MARK: - Eventos de Ratón (Botones Atrás / Adelante del Mouse)
 
-    @MainActor
-    private func handleOtherMouseEvent(
-        buttonNumber: Int,
-        eventType: NSEvent.EventType,
-        eventWindow: NSWindow?
-    ) -> Bool {
-        // En macOS / AppKit:
-        // buttonNumber == 3 es el botón lateral de retroceso (Atrás / Back).
-        // buttonNumber == 4 es el botón lateral de avance (Adelante / Forward).
-        guard buttonNumber == 3 || buttonNumber == 4 else {
-            return false
-        }
 
-        guard let hostWindow = hostWindowBox.window else {
-            return false
-        }
-        let selectedInGroup = hostWindow.tabGroup?.selectedWindow ?? hostWindow
-        guard selectedInGroup === hostWindow else {
-            return false
-        }
-        if let activeWin = eventWindow ?? NSApp.keyWindow {
-            let sameActiveTabGroup = (hostWindow.tabGroup != nil && activeWin.tabGroup === hostWindow.tabGroup)
-            guard activeWin === hostWindow || sameActiveTabGroup else {
-                return false
-            }
-        }
-
-        // Si hay una hoja modal activa (ej. propiedades, compartir en Slack), no navegar la carpeta de fondo
-        if hostWindow.attachedSheet != nil {
-            return true
-        }
-
-        let activeResponderWindow = selectedInGroup
-        return Self.handleMouseNavigation(
-            buttonNumber: buttonNumber,
-            eventType: eventType,
-            viewModel: viewModel,
-            activeWindow: activeResponderWindow
-        )
-    }
 
     /// Lógica centralizada para manejar la navegación por botones de ratón (3 = Atrás, 4 = Adelante).
     @MainActor
@@ -379,49 +341,48 @@ public struct ExplorerKeyEventMonitorModifier: ViewModifier {
         viewModel: ExplorerViewModel,
         activeWindow: NSWindow? = nil
     ) -> Bool {
-        guard buttonNumber == 3 || buttonNumber == 4 else {
+        guard buttonNumber >= 3 else {
             return false
         }
 
+        let swap = PersistenceService.shared.loadSwapMouseButtons()
+        let isBack: Bool
+        let isForward: Bool
+
         if buttonNumber == 3 {
-            // Botón 4 del ratón (Atrás / Back)
-            if eventType == .otherMouseDown {
-                if viewModel.renamingItemID != nil {
-                    viewModel.cancelRename()
-                    if let activeWindow {
-                        KeyboardShortcuts.resignTextFocus(in: activeWindow)
-                    }
+            isBack = !swap
+            isForward = swap
+        } else if buttonNumber == 4 || buttonNumber == 5 {
+            isBack = swap
+            isForward = !swap
+        } else {
+            return false
+        }
+
+        if eventType == .otherMouseDown {
+            if viewModel.renamingItemID != nil {
+                viewModel.cancelRename()
+                if let activeWindow {
+                    KeyboardShortcuts.resignTextFocus(in: activeWindow)
                 }
-                if viewModel.isEditingAddressBar {
-                    viewModel.cancelAddressBarEditing()
-                    if let activeWindow {
-                        KeyboardShortcuts.resignTextFocus(in: activeWindow)
-                    }
+            }
+            if viewModel.isEditingAddressBar {
+                viewModel.cancelAddressBarEditing()
+                if let activeWindow {
+                    KeyboardShortcuts.resignTextFocus(in: activeWindow)
                 }
+            }
+            if isBack {
                 if viewModel.canGoBack {
                     viewModel.goBack()
                 }
-            }
-            return true
-        } else if buttonNumber == 4 {
-            // Botón 5 del ratón (Adelante / Forward)
-            if eventType == .otherMouseDown {
-                if viewModel.renamingItemID != nil {
-                    viewModel.cancelRename()
-                    if let activeWindow {
-                        KeyboardShortcuts.resignTextFocus(in: activeWindow)
-                    }
-                }
-                if viewModel.isEditingAddressBar {
-                    viewModel.cancelAddressBarEditing()
-                    if let activeWindow {
-                        KeyboardShortcuts.resignTextFocus(in: activeWindow)
-                    }
-                }
+            } else if isForward {
                 if viewModel.canGoForward {
                     viewModel.goForward()
                 }
             }
+            return true
+        } else if eventType == .otherMouseUp {
             return true
         }
 

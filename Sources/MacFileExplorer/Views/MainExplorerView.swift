@@ -69,11 +69,21 @@ public struct MainExplorerView: View {
         .onChange(of: colorScheme) { _, newScheme in
             FileIconProvider.shared.syncApplicationDockIcon(for: newScheme)
         }
+        .onAppear {
+            MouseNavigationManager.shared.installIfNeeded()
+            ExplorerWindowRegistry.shared.lastActiveViewModel = viewModel
+            if let win = NSApp.keyWindow ?? NSApp.mainWindow {
+                ExplorerWindowRegistry.shared.register(viewModel: viewModel, for: win)
+            }
+        }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             viewModel.checkCurrentDirectoryForExternalChanges()
         }
-        .onReceive(NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)) { _ in
+        .onReceive(NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)) { notif in
             viewModel.checkCurrentDirectoryForExternalChanges()
+            if let win = notif.object as? NSWindow {
+                ExplorerWindowRegistry.shared.register(viewModel: viewModel, for: win)
+            }
         }
         .sheet(item: $viewModel.propertiesTargetItem) { targetItem in
             ItemPropertiesModalView(item: targetItem)

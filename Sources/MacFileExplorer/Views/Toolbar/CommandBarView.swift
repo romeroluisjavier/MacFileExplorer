@@ -347,6 +347,16 @@ public struct CommandBarView: View {
                     systemImage: "bubble.left.and.bubble.right"
                 )
             }
+
+            Toggle(isOn: Binding(
+                get: { MousePreferences.shared.swapSideButtons },
+                set: { MousePreferences.shared.swapSideButtons = $0 }
+            )) {
+                Label(
+                    loc.text(es: "Invertir botones laterales del ratón (Atrás/Adelante)", en: "Swap mouse side buttons (Back/Forward)"),
+                    systemImage: "computermouse"
+                )
+            }
         } label: {
             HStack(spacing: 5) {
                 Image(systemName: viewModel.viewMode.systemImage)
