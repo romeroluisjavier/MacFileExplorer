@@ -79,6 +79,58 @@ public struct StatusBarView: View {
                 }
             }
 
+            // Slider de tamaño de icono estilo Finder (visible en Large icons)
+            if viewModel.viewMode == .largeIcons {
+                Divider()
+                    .frame(height: 12)
+
+                HStack(spacing: 5) {
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.12)) {
+                            GridIconPreferences.shared.iconSize = max(
+                                GridIconPreferences.shared.iconSize - 16,
+                                GridIconPreferences.minIconSize
+                            )
+                        }
+                    } label: {
+                        Image(systemName: "photo")
+                            .font(.system(size: 9))
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .help(loc.text(es: "Reducir tamaño de icono", en: "Decrease icon size"))
+
+                    Slider(
+                        value: Binding(
+                            get: { GridIconPreferences.shared.iconSize },
+                            set: { GridIconPreferences.shared.iconSize = $0 }
+                        ),
+                        in: GridIconPreferences.minIconSize...GridIconPreferences.maxIconSize
+                    )
+                    .controlSize(.mini)
+                    .frame(width: 96)
+
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.12)) {
+                            GridIconPreferences.shared.iconSize = min(
+                                GridIconPreferences.shared.iconSize + 16,
+                                GridIconPreferences.maxIconSize
+                            )
+                        }
+                    } label: {
+                        Image(systemName: "photo")
+                            .font(.system(size: 13))
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .help(loc.text(es: "Aumentar tamaño de icono", en: "Increase icon size"))
+                }
+                .help(loc.text(
+                    es: "Tamaño de iconos: \(Int(GridIconPreferences.shared.iconSize)) px",
+                    en: "Icon size: \(Int(GridIconPreferences.shared.iconSize)) px"
+                ))
+            }
+
             Divider()
                 .frame(height: 12)
 

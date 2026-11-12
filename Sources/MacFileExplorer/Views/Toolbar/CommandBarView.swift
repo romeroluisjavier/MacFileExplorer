@@ -232,6 +232,33 @@ public struct CommandBarView: View {
                 }
             }
 
+            if viewModel.viewMode == .largeIcons {
+                Divider()
+
+                Section(loc.text(es: "Tamaño de iconos (Cuadrícula):", en: "Grid icon size:")) {
+                    Button {
+                        GridIconPreferences.shared.iconSize = 48
+                    } label: {
+                        Label(loc.text(es: "Pequeño (48 px)", en: "Small (48 px)"), systemImage: "photo")
+                    }
+                    Button {
+                        GridIconPreferences.shared.iconSize = 64
+                    } label: {
+                        Label(loc.text(es: "Mediano (64 px)", en: "Medium (64 px)"), systemImage: "photo")
+                    }
+                    Button {
+                        GridIconPreferences.shared.iconSize = 96
+                    } label: {
+                        Label(loc.text(es: "Grande (96 px)", en: "Large (96 px)"), systemImage: "photo")
+                    }
+                    Button {
+                        GridIconPreferences.shared.iconSize = 144
+                    } label: {
+                        Label(loc.text(es: "Muy grande (144 px)", en: "Extra Large (144 px)"), systemImage: "photo")
+                    }
+                }
+            }
+
             Divider()
 
             Section(loc.text(es: "Abrir marcadores web en:", en: "Open web bookmarks in:")) {

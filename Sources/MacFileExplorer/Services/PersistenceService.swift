@@ -32,6 +32,7 @@ public final class PersistenceService {
         static let detailsKindColumnWidth = "com.macfileexplorer.state.detailsKindColumnWidth"
         static let detailsSizeColumnWidth = "com.macfileexplorer.state.detailsSizeColumnWidth"
         static let listIconDisplayMode = "com.macfileexplorer.state.listIconDisplayMode"
+        static let gridIconSize = "com.macfileexplorer.state.gridIconSize"
     }
 
     private init() {}
@@ -195,6 +196,18 @@ public final class PersistenceService {
             return .appIcon
         }
         return mode
+    }
+
+    public func saveGridIconSize(_ size: Double) {
+        defaults.set(size, forKey: Keys.gridIconSize)
+    }
+
+    public func loadGridIconSize() -> Double {
+        let saved = defaults.double(forKey: Keys.gridIconSize)
+        if saved >= GridIconPreferences.minIconSize && saved <= GridIconPreferences.maxIconSize {
+            return saved
+        }
+        return GridIconPreferences.defaultIconSize
     }
 }
 
@@ -401,6 +414,36 @@ public final class ListIconPreferences {
 
     private init() {
         self.mode = PersistenceService.shared.loadListIconDisplayMode()
+    }
+}
+
+/// Preferencias reactivas y persistentes del tamaño de iconos en la vista de Cuadrícula / Iconos grandes estilo Finder.
+@MainActor
+@Observable
+public final class GridIconPreferences {
+    public static let shared = GridIconPreferences()
+
+    public static let minIconSize: Double = 40
+    public static let maxIconSize: Double = 192
+    public static let defaultIconSize: Double = 64
+
+    public var iconSize: Double {
+        didSet {
+            let clamped = min(max(iconSize, Self.minIconSize), Self.maxIconSize)
+            if clamped != iconSize {
+                iconSize = clamped
+                return
+            }
+            PersistenceService.shared.saveGridIconSize(clamped)
+        }
+    }
+
+    private init() {
+        self.iconSize = PersistenceService.shared.loadGridIconSize()
+    }
+
+    public func resetToDefault() {
+        iconSize = Self.defaultIconSize
     }
 }
 

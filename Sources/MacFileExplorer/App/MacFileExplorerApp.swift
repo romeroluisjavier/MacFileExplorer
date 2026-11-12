@@ -124,6 +124,42 @@ struct MacFileExplorerApp: App {
                     .pickerStyle(.inline)
                 }
 
+                Menu(loc.text(es: "Tamaño de iconos (Cuadrícula)", en: "Grid Icon Size")) {
+                    Button {
+                        GridIconPreferences.shared.iconSize = 48
+                    } label: {
+                        Label(loc.text(es: "Pequeño (48 px)", en: "Small (48 px)"), systemImage: "photo")
+                    }
+                    Button {
+                        GridIconPreferences.shared.iconSize = 64
+                    } label: {
+                        Label(loc.text(es: "Mediano (64 px - Predeterminado)", en: "Medium (64 px - Default)"), systemImage: "photo")
+                    }
+                    Button {
+                        GridIconPreferences.shared.iconSize = 96
+                    } label: {
+                        Label(loc.text(es: "Grande (96 px)", en: "Large (96 px)"), systemImage: "photo")
+                    }
+                    Button {
+                        GridIconPreferences.shared.iconSize = 144
+                    } label: {
+                        Label(loc.text(es: "Muy grande (144 px)", en: "Extra Large (144 px)"), systemImage: "photo")
+                    }
+                    Button {
+                        GridIconPreferences.shared.iconSize = 192
+                    } label: {
+                        Label(loc.text(es: "Máximo (192 px)", en: "Maximum (192 px)"), systemImage: "photo")
+                    }
+
+                    Divider()
+
+                    Button {
+                        GridIconPreferences.shared.resetToDefault()
+                    } label: {
+                        Label(loc.text(es: "Restablecer tamaño predeterminado", en: "Reset to Default Size"), systemImage: "arrow.counterclockwise")
+                    }
+                }
+
                 Menu(loc.text(es: "Abrir marcadores web en...", en: "Open web bookmarks in...")) {
                     Picker(
                         loc.text(es: "Abrir marcadores en", en: "Open bookmarks in"),

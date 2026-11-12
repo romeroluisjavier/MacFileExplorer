@@ -15,9 +15,16 @@ public struct FileGridView: View {
 
     private let coordinateSpaceName = "GridCanvasCoordinateSpace"
 
-    private let columns = [
-        GridItem(.adaptive(minimum: 114, maximum: 138), spacing: 12, alignment: .top)
-    ]
+    private var gridPrefs: GridIconPreferences { GridIconPreferences.shared }
+
+    private var columns: [GridItem] {
+        let size = gridPrefs.iconSize
+        let minTileWidth = size + 50
+        let maxTileWidth = minTileWidth + 24
+        return [
+            GridItem(.adaptive(minimum: minTileWidth, maximum: maxTileWidth), spacing: 12, alignment: .top)
+        ]
+    }
 
     public init(viewModel: ExplorerViewModel) {
         self.viewModel = viewModel
@@ -145,6 +152,7 @@ public struct FileGridView: View {
 private struct FileGridTileView: View {
     let item: FileItem
     @Bindable var viewModel: ExplorerViewModel
+    private var gridPrefs: GridIconPreferences { GridIconPreferences.shared }
 
     @ViewState private var isHovered: Bool = false
     @ViewState private var isDropTargeted: Bool = false
@@ -167,44 +175,53 @@ private struct FileGridTileView: View {
     }
 
     var body: some View {
-        VStack(spacing: 6) {
+        let iconSize = gridPrefs.iconSize
+        let containerWidth = max(iconSize * 1.08, iconSize + 4)
+        let containerHeight = iconSize
+        let fileIconSize = max(iconSize * 0.88, 32)
+        let fontSize = min(max(iconSize * 0.08 + 7.0, 10.5), 14.0)
+        let nameHeight = max(fontSize * 2.5, 28)
+        let tileMinWidth = iconSize + 50
+        let tileMaxWidth = tileMinWidth + 24
+
+        VStack(spacing: max(iconSize * 0.08, 4)) {
             ZStack(alignment: .topLeading) {
-                // Contenedor de miniatura (64x64 para fotos/multimedia) o icono grande (56x56)
+                // Contenedor de miniatura o icono grande
                 ZStack(alignment: .bottomTrailing) {
                     if let thumb = effectiveThumbnail {
                         Image(nsImage: thumb)
                             .resizable()
                             .interpolation(.high)
                             .scaledToFit()
-                            .frame(maxWidth: 68, maxHeight: 64)
-                            .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
+                            .frame(maxWidth: containerWidth, maxHeight: containerHeight)
+                            .clipShape(RoundedRectangle(cornerRadius: max(iconSize * 0.08, 4), style: .continuous))
                             .overlay(
-                                RoundedRectangle(cornerRadius: 5, style: .continuous)
+                                RoundedRectangle(cornerRadius: max(iconSize * 0.08, 4), style: .continuous)
                                     .strokeBorder(Color.primary.opacity(0.14), lineWidth: 0.6)
                             )
-                            .frame(width: 68, height: 64)
+                            .frame(width: containerWidth, height: containerHeight)
                             .opacity(isCut ? 0.42 : (item.isHidden ? 0.55 : 1.0))
-                            .shadow(color: .black.opacity(0.18), radius: 3, y: 1.5)
+                            .shadow(color: .black.opacity(0.18), radius: max(iconSize * 0.05, 2), y: 1.5)
                     } else {
-                        Image(nsImage: FileIconProvider.shared.icon(for: item, size: 56))
+                        Image(nsImage: FileIconProvider.shared.icon(for: item, size: fileIconSize))
                             .resizable()
                             .interpolation(.high)
-                            .frame(width: 56, height: 56)
-                            .frame(width: 68, height: 64)
+                            .frame(width: fileIconSize, height: fileIconSize)
+                            .frame(width: containerWidth, height: containerHeight)
                             .opacity(isCut ? 0.42 : (item.isHidden ? 0.55 : 1.0))
                             .shadow(color: .black.opacity(0.08), radius: 2, y: 1)
                     }
 
                     if isCut {
                         Image(systemName: "scissors")
-                            .font(.system(size: 10, weight: .bold))
+                            .font(.system(size: max(iconSize * 0.15, 9), weight: .bold))
                             .foregroundStyle(.white)
-                            .padding(3.5)
+                            .padding(max(iconSize * 0.05, 3))
                             .background(Circle().fill(Color.orange))
                             .offset(x: 4, y: 4)
                     } else if item.isSymbolicLink {
                         Image(systemName: "arrow.turn.up.right")
-                            .font(.system(size: 9, weight: .bold))
+                            .font(.system(size: max(iconSize * 0.14, 8), weight: .bold))
                             .foregroundStyle(.primary)
                             .padding(2.5)
                             .background(
@@ -228,9 +245,9 @@ private struct FileGridTileView: View {
                         }
                     } label: {
                         Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                            .font(.system(size: 14, weight: .semibold))
+                            .font(.system(size: max(iconSize * 0.2, 12), weight: .semibold))
                             .foregroundStyle(isSelected ? Color.accentColor : Color.secondary.opacity(0.65))
-                            .padding(4)
+                            .padding(3)
                     }
                     .buttonStyle(.plain)
                     .help(isSelected
@@ -243,15 +260,15 @@ private struct FileGridTileView: View {
             // Nombre o campo de renombrado en línea (F2)
             if isRenaming {
                 InlineRenameTextField(viewModel: viewModel, alignment: .center)
-                    .frame(maxWidth: 112)
+                    .frame(maxWidth: tileMaxWidth - 16)
             } else {
                 Text(item.name)
-                    .font(.system(size: 12, weight: isSelected ? .medium : .regular))
+                    .font(.system(size: fontSize, weight: isSelected ? .medium : .regular))
                     .foregroundStyle(isCut || item.isHidden ? Color.secondary : Color.primary)
                     .multilineTextAlignment(.center)
                     .lineLimit(2)
                     .truncationMode(.middle)
-                    .frame(height: 30, alignment: .top)
+                    .frame(height: nameHeight, alignment: .top)
             }
 
             // Subtítulo compacto (Tamaño o Tipo)
@@ -259,13 +276,13 @@ private struct FileGridTileView: View {
                 ? LocalizationManager.shared.text(es: "Carpeta", en: "Folder")
                 : item.formattedSize
             )
-            .font(.system(size: 10.5).monospacedDigit())
+            .font(.system(size: max(fontSize - 1.5, 9)).monospacedDigit())
             .foregroundStyle(.tertiary)
             .lineLimit(1)
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 8)
-        .frame(minWidth: 110, maxWidth: 136)
+        .padding(.horizontal, max(iconSize * 0.08, 6))
+        .padding(.vertical, max(iconSize * 0.08, 6))
+        .frame(minWidth: tileMinWidth, maxWidth: tileMaxWidth)
         .background(
             RoundedRectangle(cornerRadius: 8, style: .continuous)
                 .fill(tileBackgroundColor)
@@ -312,7 +329,8 @@ private struct FileGridTileView: View {
                 loadedThumbnail = memCached
                 return
             }
-            if let generated = await ThumbnailCacheService.shared.thumbnail(for: item, maxPixelSize: 160) {
+            let requestedPixelSize = max(Int(iconSize * 2), 160)
+            if let generated = await ThumbnailCacheService.shared.thumbnail(for: item, maxPixelSize: requestedPixelSize) {
                 loadedThumbnail = generated
             }
         }

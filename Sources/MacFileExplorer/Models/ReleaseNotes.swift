@@ -84,6 +84,14 @@ public enum ReleaseNotesCatalog {
             dateLabelEN: "Nov 12, 2026",
             items: [
                 ReleaseNoteItem(
+                    id: "grid-icon-size-slider",
+                    icon: "slider.horizontal.below.rectangle",
+                    titleES: "Control deslizante de tamaño de iconos estilo Finder",
+                    titleEN: "Finder-style icon size slider in Grid view",
+                    summaryES: "En la vista de Iconos grandes ahora dispones de un control deslizante en la barra inferior (idéntico a Finder) que te permite ajustar de forma fluida el tamaño de los iconos y fotos desde 40 px hasta 192 px.",
+                    summaryEN: "In Large icons view, you can now use a slider in the bottom status bar (just like in Finder) to smoothly adjust the size of icons and photo previews from 40 px up to 192 px."
+                ),
+                ReleaseNoteItem(
                     id: "all-menu-icons",
                     icon: "square.grid.2x2",
                     titleES: "Iconos en todas las opciones de los menús",
