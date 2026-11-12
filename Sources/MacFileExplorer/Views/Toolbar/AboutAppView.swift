@@ -88,6 +88,12 @@ public struct AboutAppView: View {
         }
     }
 
+    private var versionLabel: String {
+        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.1.0"
+        let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "2"
+        return "\(version) (Build \(build) • Swift 6)"
+    }
+
     private var headerSection: some View {
         VStack(spacing: 8) {
             Group {
@@ -111,8 +117,8 @@ public struct AboutAppView: View {
                     .foregroundStyle(.primary)
 
                 Text(loc.text(
-                    es: "Versión 1.0.0 (Build 1 • Swift 6)",
-                    en: "Version 1.0.0 (Build 1 • Swift 6)"
+                    es: "Versión \(versionLabel)",
+                    en: "Version \(versionLabel)"
                 ))
                 .font(.system(size: 11.5, weight: .medium))
                 .foregroundStyle(.secondary)

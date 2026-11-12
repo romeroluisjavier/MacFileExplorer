@@ -13,6 +13,10 @@ mkdir -p MacFileExplorer.app/Contents/Resources
 cp .build/debug/MacFileExplorer MacFileExplorer.app/Contents/MacOS/MacFileExplorer
 chmod +x MacFileExplorer.app/Contents/MacOS/MacFileExplorer
 
+if [ -f Config/Info.plist ]; then
+    cp Config/Info.plist MacFileExplorer.app/Contents/Info.plist
+fi
+
 cp Sources/MacFileExplorer/Resources/AppIcon.icns MacFileExplorer.app/Contents/Resources/AppIcon.icns
 cp Sources/MacFileExplorer/Resources/AppIcon-Light.png MacFileExplorer.app/Contents/Resources/AppIcon-Light.png
 cp Sources/MacFileExplorer/Resources/AppIcon-Dark.png MacFileExplorer.app/Contents/Resources/AppIcon-Dark.png

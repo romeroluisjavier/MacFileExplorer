@@ -77,12 +77,20 @@ public struct ReleaseNoteSection: Identifiable, Sendable {
 public enum ReleaseNotesCatalog {
     public static let sections: [ReleaseNoteSection] = [
         ReleaseNoteSection(
-            id: "v1.0-personalization-navigation",
-            versionLabelES: "Actualización — Personalización y Navegación Rápida",
-            versionLabelEN: "Update — Customization & Fast Navigation",
+            id: "v1.1-customization-navigation",
+            versionLabelES: "Versión 1.1 — Personalización, Navegación e Iconos",
+            versionLabelEN: "Version 1.1 — Customization, Navigation & Icons",
             dateLabelES: "12 nov 2026",
             dateLabelEN: "Nov 12, 2026",
             items: [
+                ReleaseNoteItem(
+                    id: "version-1-1-release",
+                    icon: "sparkles",
+                    titleES: "Lanzamiento oficial de la versión 1.1",
+                    titleEN: "Official Version 1.1 Release",
+                    summaryES: "MacFileExplorer llega a la versión 1.1 reuniendo iconos en toda la barra de menús superior y menús contextuales, acceso directo a la Papelera desde la barra lateral, control deslizante para agrandar o achicar iconos en cuadrícula, y modos de iconos por app y miniatura.",
+                    summaryEN: "MacFileExplorer reaches version 1.1 bringing representative icons across the top Menu Bar and context menus, direct Trash access from the sidebar, icon size slider in Grid view, and app-based icons & thumbnails."
+                ),
                 ReleaseNoteItem(
                     id: "menu-bar-representative-icons",
                     icon: "menubar.dock.rectangle",

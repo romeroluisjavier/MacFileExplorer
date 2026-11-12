@@ -1,5 +1,21 @@
 # MacFileExplorer Releases
 
+## Versión 1.1.0 (Versión Actual)
+
+- **Instalador:** [`MacFileExplorer-1.1.0.dmg`](./MacFileExplorer-1.1.0.dmg)
+- **Tamaño:** ~9.5 MB
+- **Arquitectura:** Binario Universal (`arm64` Apple Silicon + `x86_64` Intel)
+- **Requisitos del sistema:** macOS 14.0 (Sonoma) o posterior
+
+### Novedades principales en la v1.1.0:
+1. **Iconos representativos en la barra de menús (`Menu Bar`) y menús contextuales**: todos los elementos de la barra superior (Ventana, Archivo, Edición, Ver, Idioma y Ayuda) y menús contextuales cuentan con su icono SF Symbol.
+2. **Acceso directo a la Papelera (Trash)**: disponible directamente desde la sección Acceso rápido en la barra lateral (configurable desde *Ver → Carpetas en Acceso rápido*).
+3. **Control deslizante de tamaño en vista de Iconos Grandes**: barra inferior estilo Finder para redimensionar de forma fluida los iconos de 40 px a 192 px.
+4. **Soporte de miniaturas y modos de icono optimizados**: vistas previas rápidas con caché en memoria y disco.
+5. **Detección dinámica de versión**: la ventana "Acerca de MacFileExplorer" refleja automáticamente la versión 1.1.0 (Build 2).
+
+---
+
 ## Versión 1.0.0 (Release Inicial)
 
 - **Instalador:** [`MacFileExplorer-1.0.0.dmg`](./MacFileExplorer-1.0.0.dmg)

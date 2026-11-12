@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>en</string>
+    <key>CFBundleLocalizations</key>
+    <array>
+        <string>en</string>
+        <string>es</string>
+    </array>
+    <key>CFBundleExecutable</key>
+    <string>MacFileExplorer</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon.icns</string>
+    <key>CFBundleIconName</key>
+    <string>AppIcon</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.macfileexplorer.app</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundleName</key>
+    <string>MacFileExplorer</string>
+    <key>CFBundleDisplayName</key>
+    <string>Explorador de Archivos</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.1.0</string>
+    <key>CFBundleVersion</key>
+    <string>2</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>14.0</string>
+    <key>NSHighResolutionCapable</key>
+    <true/>
+    <key>NSPrincipalClass</key>
+    <string>NSApplication</string>
+    <key>NSDesktopFolderUsageDescription</key>
+    <string>MacFileExplorer necesita acceso a tu carpeta Escritorio para explorar y gestionar tus archivos.</string>
+    <key>NSDocumentsFolderUsageDescription</key>
+    <string>MacFileExplorer necesita acceso a tu carpeta Documentos para explorar y gestionar tus archivos.</string>
+    <key>NSDownloadsFolderUsageDescription</key>
+    <string>MacFileExplorer necesita acceso a tu carpeta Descargas para explorar y gestionar tus archivos.</string>
+    <key>NSRemovableVolumesUsageDescription</key>
+    <string>MacFileExplorer necesita acceso a volúmenes externos para mostrarlos en Este Equipo.</string>
+</dict>
+</plist>

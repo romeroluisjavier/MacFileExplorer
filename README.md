@@ -5,7 +5,7 @@ Un explorador de archivos nativo, ágil y moderno para macOS, inspirado en la pr
 ![macOS 14+](https://img.shields.io/badge/macOS-14.0%2B-blue?logo=apple)
 ![Swift 6](https://img.shields.io/badge/Swift-6.0-orange?logo=swift)
 ![Architecture](https://img.shields.io/badge/Architecture-Universal%20(Apple%20Silicon%20%2B%20Intel)-brightgreen)
-![Release](https://img.shields.io/badge/Release-v1.0.0-blueviolet)
+![Release](https://img.shields.io/badge/Release-v1.1.0-blueviolet)
 
 ---
 
@@ -41,12 +41,12 @@ Un explorador de archivos nativo, ágil y moderno para macOS, inspirado en la pr
 
 ### 1. Descargar el instalador
 Descarga la versión más reciente en formato `.dmg` directamente desde este repositorio:
-- 👉 **[Descargar MacFileExplorer-1.0.0.dmg](https://github.com/romeroluisjavier/MacFileExplorer/raw/main/releases/MacFileExplorer-1.0.0.dmg)** *(ubicado en la carpeta [`releases/`](./releases))*
+- 👉 **[Descargar MacFileExplorer-1.1.0.dmg](https://github.com/romeroluisjavier/MacFileExplorer/raw/main/releases/MacFileExplorer-1.1.0.dmg)** *(ubicado en la carpeta [`releases/`](./releases))*
 
 ---
 
 ### 2. Instalación en tu Mac
-1. Haz doble clic en el archivo descargado **`MacFileExplorer-1.0.0.dmg`**.
+1. Haz doble clic en el archivo descargado **`MacFileExplorer-1.1.0.dmg`**.
 2. Arrastra el icono de **MacFileExplorer** a la carpeta **Applications** (Aplicaciones).
 
 ---
