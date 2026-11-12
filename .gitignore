@@ -17,6 +17,8 @@ Package.resolved
 MacFileExplorer.app/
 dist/
 *.dmg
+!releases/*.dmg
+!releases/**/*.dmg
 *.app/
 *.dSYM/
 *.dSYM
