@@ -52,49 +52,61 @@ struct MacFileExplorerApp: App {
         .windowToolbarStyle(.unifiedCompact)
         .commands {
             CommandGroup(replacing: .appInfo) {
-                Button(loc.text(es: "Acerca de MacFileExplorer", en: "About MacFileExplorer")) {
+                Button {
                     showAboutPanel()
+                } label: {
+                    Label(loc.text(es: "Acerca de MacFileExplorer", en: "About MacFileExplorer"), systemImage: "info.circle")
                 }
             }
 
             CommandGroup(after: .appInfo) {
                 Divider()
-                Menu(loc.text(es: "Idioma", en: "Language")) {
+                Menu {
                     languageSelectionPicker
+                } label: {
+                    Label(loc.text(es: "Idioma", en: "Language"), systemImage: "globe")
                 }
             }
 
             CommandGroup(after: .newItem) {
-                Button(loc.text(es: "Nueva pestaña de carpetas", en: "New Folder Tab")) {
+                Button {
                     let sourceWindow = NSApp.keyWindow ?? NSApp.mainWindow
                     GoogleAccountsManager.shared.openNewFileExplorerTabWindow(from: sourceWindow)
+                } label: {
+                    Label(loc.text(es: "Nueva pestaña de carpetas", en: "New Folder Tab"), systemImage: "folder.badge.plus")
                 }
                 .keyboardShortcut("t", modifiers: [.command])
 
-                Button(loc.text(es: "Cerrar pestaña actual", en: "Close Current Tab")) {
+                Button {
                     let sourceWindow = NSApp.keyWindow ?? NSApp.mainWindow
                     GoogleAccountsManager.shared.closeCurrentTabWindow(from: sourceWindow)
+                } label: {
+                    Label(loc.text(es: "Cerrar pestaña actual", en: "Close Current Tab"), systemImage: "xmark.circle")
                 }
                 .keyboardShortcut("t", modifiers: [.command, .shift])
             }
 
             CommandGroup(replacing: .undoRedo) {
-                Button(undoMenuItemTitle) {
+                Button {
                     if isTextOrWebResponderActive || activeExplorerViewModel == nil {
                         NSApp.sendAction(Selector(("undo:")), to: nil, from: nil)
                     } else {
                         activeExplorerViewModel?.undoLastOperation()
                     }
+                } label: {
+                    Label(undoMenuItemTitle, systemImage: "arrow.uturn.backward")
                 }
                 .keyboardShortcut("z", modifiers: [.command])
                 .disabled(activeExplorerViewModel != nil && activeExplorerViewModel?.canUndo != true && !isTextOrWebResponderActive)
 
-                Button(redoMenuItemTitle) {
+                Button {
                     if isTextOrWebResponderActive || activeExplorerViewModel == nil {
                         NSApp.sendAction(Selector(("redo:")), to: nil, from: nil)
                     } else {
                         activeExplorerViewModel?.redoLastOperation()
                     }
+                } label: {
+                    Label(redoMenuItemTitle, systemImage: "arrow.uturn.forward")
                 }
                 .keyboardShortcut("z", modifiers: [.command, .shift])
                 .disabled(activeExplorerViewModel != nil && activeExplorerViewModel?.canRedo != true && !isTextOrWebResponderActive)
@@ -111,7 +123,7 @@ struct MacFileExplorerApp: App {
                     Label(loc.text(es: "Mostrar botón Nuevo", en: "Show New Button"), systemImage: "plus.circle")
                 }
 
-                Menu(loc.text(es: "Iconos en vista Lista", en: "List View Icons")) {
+                Menu {
                     Picker(
                         loc.text(es: "Modo de icono", en: "Icon Mode"),
                         selection: $listIconPrefs.mode
@@ -122,9 +134,11 @@ struct MacFileExplorerApp: App {
                         }
                     }
                     .pickerStyle(.inline)
+                } label: {
+                    Label(loc.text(es: "Iconos en vista Lista", en: "List View Icons"), systemImage: "app.badge.checkmark")
                 }
 
-                Menu(loc.text(es: "Tamaño de iconos (Cuadrícula)", en: "Grid Icon Size")) {
+                Menu {
                     Button {
                         GridIconPreferences.shared.iconSize = 48
                     } label: {
@@ -158,9 +172,11 @@ struct MacFileExplorerApp: App {
                     } label: {
                         Label(loc.text(es: "Restablecer tamaño predeterminado", en: "Reset to Default Size"), systemImage: "arrow.counterclockwise")
                     }
+                } label: {
+                    Label(loc.text(es: "Tamaño de iconos (Cuadrícula)", en: "Grid Icon Size"), systemImage: "photo")
                 }
 
-                Menu(loc.text(es: "Abrir marcadores web en...", en: "Open web bookmarks in...")) {
+                Menu {
                     Picker(
                         loc.text(es: "Abrir marcadores en", en: "Open bookmarks in"),
                         selection: $bookmarksManager.openBehavior
@@ -171,9 +187,11 @@ struct MacFileExplorerApp: App {
                         }
                     }
                     .pickerStyle(.inline)
+                } label: {
+                    Label(loc.text(es: "Abrir marcadores web en...", en: "Open web bookmarks in..."), systemImage: "arrow.up.right.square")
                 }
 
-                Menu(loc.text(es: "Carpetas en Acceso rápido", en: "Quick Access Folders")) {
+                Menu {
                     ForEach(QuickAccessFolder.allCases) { folder in
                         Toggle(isOn: quickAccessPrefs.binding(for: folder)) {
                             Label(folder.localizedTitle(using: loc), systemImage: folder.systemImage)
@@ -188,6 +206,8 @@ struct MacFileExplorerApp: App {
                         Label(loc.text(es: "Restablecer predeterminadas", en: "Reset to Defaults"), systemImage: "arrow.counterclockwise")
                     }
                     .disabled(quickAccessPrefs.visibleFolders == QuickAccessFolder.defaultFolders)
+                } label: {
+                    Label(loc.text(es: "Carpetas en Acceso rápido", en: "Quick Access Folders"), systemImage: "star")
                 }
 
                 Divider()
@@ -235,8 +255,11 @@ struct MacFileExplorerApp: App {
     private var languageSelectionPicker: some View {
         Picker(loc.text(es: "Idioma", en: "Language"), selection: $loc.preference) {
             ForEach(AppLanguagePreference.allCases) { option in
-                Text(loc.displayName(for: option))
-                    .tag(option)
+                Label(
+                    loc.displayName(for: option),
+                    systemImage: option == .spanish ? "globe.americas.fill" : "globe.europe.africa.fill"
+                )
+                .tag(option)
             }
         }
         .pickerStyle(.inline)

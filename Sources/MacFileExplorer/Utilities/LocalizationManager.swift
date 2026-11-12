@@ -22,7 +22,7 @@ public enum EffectiveLanguage: String, Sendable {
 /// persiste la preferencia y traduce en tiempo real tanto la UI como la barra de menús y submenús de macOS (`NSMenu`).
 @MainActor
 @Observable
-public final class LocalizationManager {
+public final class LocalizationManager: NSObject, NSMenuDelegate {
 
     public static let shared = LocalizationManager()
 
@@ -55,13 +55,14 @@ public final class LocalizationManager {
         }
     }
 
-    private init() {
+    private override init() {
         if let raw = UserDefaults.standard.string(forKey: preferenceKey),
            let saved = AppLanguagePreference(rawValue: raw) {
             self.preference = saved
         } else {
             self.preference = .system
         }
+        super.init()
         syncAppleLanguagesDefault()
         installMenuTrackingObserverIfNeeded()
     }
@@ -133,6 +134,16 @@ public final class LocalizationManager {
         }
     }
 
+    // MARK: - NSMenuDelegate
+
+    public func menuWillOpen(_ menu: NSMenu) {
+        translateSubmenuRecursively(menu, toSpanish: isSpanish)
+    }
+
+    public func menuNeedsUpdate(_ menu: NSMenu) {
+        translateSubmenuRecursively(menu, toSpanish: isSpanish)
+    }
+
     /// Traduce en vivo todos los menús principales de la barra superior de macOS y todos sus submenús.
     public func applyLanguageToMainMenu() {
         guard let mainMenu = NSApplication.shared.mainMenu else { return }
@@ -140,6 +151,9 @@ public final class LocalizationManager {
 
         for topItem in mainMenu.items {
             if let submenu = topItem.submenu {
+                if submenu.delegate == nil {
+                    submenu.delegate = self
+                }
                 let translatedTopTitle = Self.translateMenuTitle(submenu.title, toSpanish: targetSpanish)
                     ?? Self.translateMenuTitle(topItem.title, toSpanish: targetSpanish)
                 if let translatedTopTitle {
@@ -153,6 +167,9 @@ public final class LocalizationManager {
     }
 
     private func translateSubmenuRecursively(_ menu: NSMenu, toSpanish: Bool) {
+        if menu.delegate == nil {
+            menu.delegate = self
+        }
         if let translatedMenuTitle = Self.translateMenuTitle(menu.title, toSpanish: toSpanish) {
             menu.title = translatedMenuTitle
         }
@@ -168,8 +185,14 @@ public final class LocalizationManager {
                 item.title = byTitle
             }
 
-            // 2. Si el ítem tiene un submenú anidado, traducirlo recursivamente
+            // 2. Aplicar icono representativo si corresponde
+            Self.applyIconToMenuItem(item, parentMenuTitle: menu.title)
+
+            // 3. Si el ítem tiene un submenú anidado, traducirlo recursivamente
             if let childMenu = item.submenu {
+                if childMenu.delegate == nil {
+                    childMenu.delegate = self
+                }
                 if let translatedSubTitle = Self.translateMenuTitle(childMenu.title, toSpanish: toSpanish)
                     ?? Self.translateMenuItemTitle(item.title, toSpanish: toSpanish) {
                     item.title = translatedSubTitle
@@ -369,9 +392,15 @@ public final class LocalizationManager {
             ("Salir de pantalla completa", "Exit Full Screen"),
             ("Minimizar", "Minimize"),
             ("Minimizar todo", "Minimize All"),
+            ("Zoom todo", "Zoom All"),
+            ("Zoom en todas", "Zoom All"),
             ("Rellenar", "Fill"),
             ("Centrar", "Center"),
             ("Mover y redimensionar", "Move & Resize"),
+            ("Mitad izquierda", "Left Half"),
+            ("Mitad derecha", "Right Half"),
+            ("Mitad superior", "Top Half"),
+            ("Mitad inferior", "Bottom Half"),
             ("Mosaico en pantalla completa", "Full Screen Tile"),
             ("Quitar ventana del conjunto", "Remove Window from Set"),
             ("Cambiar entre ventanas", "Cycle Through Windows"),
@@ -390,6 +419,390 @@ public final class LocalizationManager {
             }
         }
         return nil
+    }
+
+    // MARK: - Iconos Representativos en la Barra de Menús (`NSMenuItem`)
+
+    public static func symbolImage(named symbolName: String) -> NSImage? {
+        let config = NSImage.SymbolConfiguration(pointSize: 13, weight: .regular)
+        guard let image = NSImage(systemSymbolName: symbolName, accessibilityDescription: nil) else {
+            return nil
+        }
+        return image.withSymbolConfiguration(config)
+    }
+
+    public static func applyIconToMenuItem(_ item: NSMenuItem, parentMenuTitle: String = "") {
+        if item.image != nil {
+            return
+        }
+
+        if let action = item.action,
+           let symbolName = symbolNameBySelector(action, title: item.title) {
+            item.image = symbolImage(named: symbolName)
+            return
+        }
+
+        if let symbolName = symbolNameByTitle(item.title, parentMenuTitle: parentMenuTitle, target: item.target, action: item.action) {
+            item.image = symbolImage(named: symbolName)
+        }
+    }
+
+    public static func symbolNameBySelector(_ selector: Selector, title: String) -> String? {
+        let selName = NSStringFromSelector(selector)
+        switch selName {
+        case "newWindowForTab:":
+            return "macwindow.badge.plus"
+        case "performClose:":
+            let lower = title.lowercased()
+            if lower.contains("pestaña") || lower.contains("tab") {
+                return "xmark.circle"
+            }
+            return "xmark.rectangle"
+        case "closeAll:":
+            return "rectangle.badge.xmark"
+        case "undo:":
+            return "arrow.uturn.backward"
+        case "redo:":
+            return "arrow.uturn.forward"
+        case "cut:":
+            return "scissors"
+        case "copy:":
+            return "doc.on.doc"
+        case "paste:":
+            return "doc.on.clipboard"
+        case "pasteAsPlainText:":
+            return "doc.badge.arrow.up"
+        case "delete:":
+            return "trash"
+        case "selectAll:":
+            return "checkmark.circle"
+        case "hide:":
+            return "eye.slash"
+        case "hideOtherApplications:":
+            return "circle.slash"
+        case "unhideAllApplications:":
+            return "eye"
+        case "terminate:":
+            return "power"
+        case "performMiniaturize:":
+            return "minus.circle"
+        case "miniaturizeAll:":
+            return "arrow.down.right.and.arrow.up.left"
+        case "performZoom:":
+            return "arrow.up.left.and.arrow.down.right"
+        case "zoomAll:":
+            return "arrow.up.left.and.down.right.and.arrow.up.right.and.down.left"
+        case "arrangeInFront:":
+            return "square.3.layers.3d.top.filled"
+        case "toggleTabBar:":
+            return "menubar.rectangle"
+        case "toggleTabOverview:":
+            return "square.grid.2x2"
+        case "toggleToolbarShown:":
+            return "hammer"
+        case "runToolbarCustomizationPalette:":
+            return "slider.horizontal.3"
+        case "toggleSidebar:":
+            return "sidebar.left"
+        case "toggleFullScreen:":
+            return "arrow.up.left.and.arrow.down.right"
+        case "selectPreviousTabViewItem:":
+            return "chevron.left"
+        case "selectNextTabViewItem:":
+            return "chevron.right"
+        case "moveTabToNewWindow:":
+            return "macwindow.badge.plus"
+        case "mergeAllWindows:":
+            return "macwindow.on.rectangle"
+        case "showHelp:":
+            return "questionmark.circle"
+        case "orderFrontCharacterPalette:":
+            return "face.smiling"
+        case "startDictation:":
+            return "mic"
+        case "startSpeaking:":
+            return "play.circle"
+        case "stopSpeaking:":
+            return "stop.circle"
+        case "checkSpelling:":
+            return "checkmark.bubble"
+        case "showGuessPanel:":
+            return "character.cursor.ibeam"
+        default:
+            return nil
+        }
+    }
+
+    public static func symbolNameByTitle(_ rawTitle: String, parentMenuTitle: String = "", target: AnyObject? = nil, action: Selector? = nil) -> String? {
+        let trimmed = rawTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        let lower = trimmed.lowercased()
+
+        if parentMenuTitle.lowercased().contains("window") || parentMenuTitle.lowercased().contains("ventana") {
+            if target is NSWindow || (action != nil && NSStringFromSelector(action!) == "makeKeyAndOrderFront:") {
+                return "macwindow"
+            }
+        }
+
+        switch lower {
+        // App
+        case "acerca de macfileexplorer", "about macfileexplorer":
+            return "info.circle"
+        case "ajustes…", "preferencias…", "settings…", "preferences…":
+            return "gearshape"
+        case "servicios", "services":
+            return "gearshape.2"
+        case "ocultar macfileexplorer", "hide macfileexplorer":
+            return "eye.slash"
+        case "ocultar otros", "hide others":
+            return "circle.slash"
+        case "mostrar todo", "show all":
+            return "eye"
+        case "salir de macfileexplorer", "quit macfileexplorer":
+            return "power"
+
+        // File / Archivo
+        case "nueva ventana", "new window":
+            return "macwindow.badge.plus"
+        case "nueva pestaña de carpetas", "new folder tab":
+            return "folder.badge.plus"
+        case "cerrar", "close":
+            return "xmark.circle"
+        case "cerrar ventana", "close window":
+            return "xmark.rectangle"
+        case "cerrar pestaña", "cerrar pestaña actual", "close tab", "close current tab":
+            return "xmark.circle"
+        case "cerrar todo", "close all":
+            return "rectangle.badge.xmark"
+
+        // Edit / Edición
+        case "deshacer", "undo":
+            return "arrow.uturn.backward"
+        case "rehacer", "redo":
+            return "arrow.uturn.forward"
+        case "cortar", "cut":
+            return "scissors"
+        case "copiar", "copy":
+            return "doc.on.doc"
+        case "pegar", "paste":
+            return "doc.on.clipboard"
+        case "pegar con el mismo estilo", "paste and match style":
+            return "doc.badge.arrow.up"
+        case "eliminar", "delete":
+            return "trash"
+        case "seleccionar todo", "select all":
+            return "checkmark.circle"
+
+        // Buscar / Find
+        case "buscar", "find", "buscar…", "find…":
+            return "magnifyingglass"
+        case "buscar y reemplazar…", "find and replace…":
+            return "doc.text.magnifyingglass"
+        case "buscar siguiente", "find next":
+            return "chevron.down"
+        case "buscar anterior", "find previous":
+            return "chevron.up"
+        case "usar selección para buscar", "use selection for find":
+            return "selection.pin.in.out"
+        case "ir a la selección", "jump to selection":
+            return "arrow.right.to.line"
+
+        // Ortografía / Spelling
+        case "ortografía y gramática", "spelling and grammar":
+            return "textformat.abc.dottedunderline"
+        case "mostrar ortografía y gramática", "show spelling and grammar":
+            return "character.cursor.ibeam"
+        case "comprobar documento ahora", "check document now":
+            return "checkmark.bubble"
+        case "comprobar ortografía mientras se escribe", "check spelling while typing":
+            return "checkmark.circle"
+        case "comprobar gramática con la ortografía", "check grammar with spelling":
+            return "text.badge.checkmark"
+        case "corregir ortografía automáticamente", "correct spelling automatically":
+            return "wand.and.stars"
+
+        // Sustituciones / Substitutions
+        case "sustituciones", "substitutions":
+            return "arrow.left.arrow.right"
+        case "mostrar sustituciones", "show substitutions":
+            return "list.bullet.rectangle"
+        case "copiado y pegado inteligente", "smart copy/paste":
+            return "doc.on.clipboard"
+        case "comillas tipográficas", "smart quotes":
+            return "quote.bubble"
+        case "guiones inteligentes", "smart dashes":
+            return "minus"
+        case "enlaces inteligentes", "smart links":
+            return "link"
+        case "detectores de datos", "data detectors":
+            return "binoculars"
+        case "reemplazo de texto", "text replacement":
+            return "character.textbox"
+
+        // Transformaciones / Transformations
+        case "transformaciones", "transformations":
+            return "character.circle"
+        case "convertir en mayúsculas", "make upper case":
+            return "textformat.size.larger"
+        case "convertir en minúsculas", "make lower case":
+            return "textformat.size.smaller"
+        case "poner mayúsculas iniciales", "capitalize":
+            return "textformat"
+
+        // Habla / Speech
+        case "habla", "speech", "voz":
+            return "waveform"
+        case "iniciar locución", "start speaking":
+            return "play.circle"
+        case "detener locución", "stop speaking":
+            return "stop.circle"
+
+        // Dictado / Dictation & Emoji
+        case "iniciar dictado…", "start dictation…":
+            return "mic"
+        case "emoji y símbolos", "emoji & symbols":
+            return "face.smiling"
+
+        // AutoFill / Autorrelleno
+        case "autorrelleno", "autofill":
+            return "person.text.rectangle"
+        case "contraseñas", "passwords":
+            return "key"
+        case "contactos", "contacts":
+            return "person.crop.circle"
+
+        // View / Visualización
+        case "mostrar barra de pestañas", "show tab bar", "ocultar barra de pestañas", "hide tab bar":
+            return "menubar.rectangle"
+        case "mostrar todas las pestañas", "show all tabs":
+            return "square.grid.2x2"
+        case "mostrar barra de herramientas", "show toolbar", "ocultar barra de herramientas", "hide toolbar":
+            return "hammer"
+        case "personalizar barra de herramientas…", "customize toolbar…":
+            return "slider.horizontal.3"
+        case "mostrar barra lateral", "show sidebar", "ocultar barra lateral", "hide sidebar":
+            return "sidebar.left"
+        case "usar pantalla completa", "enter full screen", "entrar en pantalla completa", "salir de pantalla completa", "exit full screen":
+            return "arrow.up.left.and.arrow.down.right"
+
+        // Custom View options
+        case "iconos en vista lista", "list view icons":
+            return "app.badge.checkmark"
+        case "básico", "basic":
+            return "app"
+        case "icono de app (app icon)", "app icon":
+            return "app.badge.checkmark"
+        case "miniatura (thumbnail)", "thumbnail":
+            return "photo"
+        case "tamaño de iconos (cuadrícula)", "icon size (grid)":
+            return "photo"
+        case "pequeño", "small":
+            return "circle.grid.2x2"
+        case "mediano", "medium":
+            return "square.grid.2x2"
+        case "grande", "large":
+            return "square.grid.3x3"
+        case "extra grande", "extra large":
+            return "square.grid.3x3.fill"
+        case "abrir marcadores web en...", "open bookmarks in...":
+            return "arrow.up.right.square"
+        case "navegador web por defecto del sistema", "system default web browser":
+            return "safari"
+        case "pestaña interna de macfileexplorer", "macfileexplorer tab":
+            return "macwindow"
+        case "carpetas en acceso rápido", "quick access folders":
+            return "star"
+        case "descargas", "downloads":
+            return "arrow.down.circle"
+        case "documentos", "documents":
+            return "doc"
+        case "escritorio", "desktop":
+            return "desktopcomputer"
+        case "aplicaciones", "applications":
+            return "app.gift"
+        case "música", "music":
+            return "music.note"
+        case "películas", "movies":
+            return "film"
+        case "imágenes", "pictures":
+            return "photo"
+        case "papelera", "trash":
+            return "trash"
+
+        // Window / Ventana
+        case "minimizar", "minimize":
+            return "minus.circle"
+        case "minimizar todo", "minimize all":
+            return "arrow.down.right.and.arrow.up.left"
+        case "zoom":
+            return "arrow.up.left.and.arrow.down.right"
+        case "zoom all", "zoom todo", "zoom en todas":
+            return "arrow.up.left.and.down.right.and.arrow.up.right.and.down.left"
+        case "rellenar", "fill":
+            return "rectangle.inset.filled"
+        case "centrar", "center":
+            return "scope"
+        case "mover y redimensionar", "move & resize":
+            return "arrow.up.and.down.and.arrow.left.and.right"
+        case "mitad izquierda", "left half", "izquierda", "left":
+            return "rectangle.leadinghalf.filled"
+        case "mitad derecha", "right half", "derecha", "right":
+            return "rectangle.trailinghalf.filled"
+        case "mitad superior", "top half", "superior", "top":
+            return "rectangle.tophalf.filled"
+        case "mitad inferior", "bottom half", "inferior", "bottom":
+            return "rectangle.bottomhalf.filled"
+        case "superior izquierda", "top left":
+            return "rectangle.split.2x2"
+        case "superior derecha", "top right":
+            return "rectangle.split.2x2"
+        case "inferior izquierda", "bottom left":
+            return "rectangle.split.2x2"
+        case "inferior derecha", "bottom right":
+            return "rectangle.split.2x2"
+        case "mosaico en pantalla completa", "full screen tile":
+            return "square.split.2x1"
+        case "quitar ventana del conjunto", "remove window from set":
+            return "minus.rectangle"
+        case "cambiar entre ventanas", "cycle through windows":
+            return "arrow.2.squarepath"
+        case "mostrar pestaña anterior", "show previous tab":
+            return "chevron.left"
+        case "mostrar pestaña siguiente", "show next tab":
+            return "chevron.right"
+        case "mover pestaña a una ventana nueva", "move tab to new window":
+            return "macwindow.badge.plus"
+        case "fusionar todas las ventanas", "merge all windows":
+            return "macwindow.on.rectangle"
+        case "traer todo al frente", "bring all to front", "arrange in front":
+            return "square.3.layers.3d.top.filled"
+
+        // Help / Ayuda
+        case "ayuda de macfileexplorer", "macfileexplorer help":
+            return "questionmark.circle"
+
+        // Language / Idioma
+        case "idioma", "language":
+            return "globe"
+        case "español":
+            return "globe.americas.fill"
+        case "english":
+            return "globe.europe.africa.fill"
+
+        default:
+            if lower.hasPrefix("automático del sistema") || lower.hasPrefix("system default") {
+                return "gearshape.2"
+            }
+            if lower.hasPrefix("nueva ventana") || (lower.hasPrefix("new ") && lower.hasSuffix("window")) {
+                return "macwindow.badge.plus"
+            }
+            if lower.contains("pestaña") || lower.contains("tab") {
+                return "macwindow"
+            }
+            if lower.contains("ventana") || lower.contains("window") {
+                return "macwindow"
+            }
+            return nil
+        }
     }
 
     // MARK: - Traducciones de Columnas y Modos de Vista

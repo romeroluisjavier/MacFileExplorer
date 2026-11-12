@@ -84,6 +84,14 @@ public enum ReleaseNotesCatalog {
             dateLabelEN: "Nov 12, 2026",
             items: [
                 ReleaseNoteItem(
+                    id: "menu-bar-representative-icons",
+                    icon: "menubar.dock.rectangle",
+                    titleES: "Iconos en todas las opciones de la barra de menús",
+                    titleEN: "Icons across all Menu Bar options",
+                    summaryES: "Se agregaron iconos representativos a todos los elementos y submenús de la barra superior de macOS (incluyendo la ventana, archivo, edición, visualización, idioma y ayuda), logrando un diseño visualmente uniforme en toda la app.",
+                    summaryEN: "Representative icons have been added to all items and submenus across the macOS Menu Bar (including Window, File, Edit, View, Language, and Help), delivering a visually consistent design throughout the entire app."
+                ),
+                ReleaseNoteItem(
                     id: "trash-in-quick-access",
                     icon: "trash.fill",
                     titleES: "Papelera en Acceso rápido",
