@@ -84,6 +84,14 @@ public enum ReleaseNotesCatalog {
             dateLabelEN: "Nov 12, 2026",
             items: [
                 ReleaseNoteItem(
+                    id: "mouse-back-forward-buttons",
+                    icon: "computermouse.fill",
+                    titleES: "Navegación con botones laterales del ratón (Atrás y Adelante)",
+                    titleEN: "Navigation with mouse side buttons (Back and Forward)",
+                    summaryES: "Ahora puedes usar los dos botones laterales de tu ratón para retroceder y avanzar rápidamente entre las carpetas visitadas (y en las pestañas web), exactamente igual a cómo funciona en navegadores como Google Chrome.",
+                    summaryEN: "You can now use your mouse's two side buttons to swiftly navigate back and forward through visited folders (and in web tabs), exactly like in web browsers such as Google Chrome."
+                ),
+                ReleaseNoteItem(
                     id: "responsive-command-bar-buttons",
                     icon: "menubar.rectangle",
                     titleES: "Botones adaptables en la barra de herramientas",

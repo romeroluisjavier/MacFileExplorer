@@ -83,6 +83,7 @@ public struct ExplorerKeyEventMonitorModifier: ViewModifier {
     let viewModel: ExplorerViewModel
 
     @ViewState private var eventMonitor: Any? = nil
+    @ViewState private var mouseMonitor: Any? = nil
     @ViewState private var hostWindowBox = WeakWindowBox()
 
     public func body(content: Content) -> some View {
@@ -98,21 +99,38 @@ public struct ExplorerKeyEventMonitorModifier: ViewModifier {
 
     @MainActor
     private func installMonitorIfNeeded() {
-        guard eventMonitor == nil else { return }
-        eventMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
-            let keyCode = event.keyCode
-            let rawModifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask).rawValue
-            let characters = event.charactersIgnoringModifiers?.lowercased()
-            let eventWindow = event.window
-            let consumed = MainActor.assumeIsolated {
-                handleKeyDown(
-                    keyCode: keyCode,
-                    characters: characters,
-                    rawModifiers: rawModifiers,
-                    eventWindow: eventWindow
-                )
+        if eventMonitor == nil {
+            eventMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+                let keyCode = event.keyCode
+                let rawModifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask).rawValue
+                let characters = event.charactersIgnoringModifiers?.lowercased()
+                let eventWindow = event.window
+                let consumed = MainActor.assumeIsolated {
+                    handleKeyDown(
+                        keyCode: keyCode,
+                        characters: characters,
+                        rawModifiers: rawModifiers,
+                        eventWindow: eventWindow
+                    )
+                }
+                return consumed ? nil : event
             }
-            return consumed ? nil : event
+        }
+
+        if mouseMonitor == nil {
+            mouseMonitor = NSEvent.addLocalMonitorForEvents(matching: [.otherMouseDown, .otherMouseUp]) { event in
+                let buttonNumber = event.buttonNumber
+                let eventType = event.type
+                let eventWindow = event.window
+                let consumed = MainActor.assumeIsolated {
+                    handleOtherMouseEvent(
+                        buttonNumber: buttonNumber,
+                        eventType: eventType,
+                        eventWindow: eventWindow
+                    )
+                }
+                return consumed ? nil : event
+            }
         }
     }
 
@@ -121,6 +139,10 @@ public struct ExplorerKeyEventMonitorModifier: ViewModifier {
         if let monitor = eventMonitor {
             NSEvent.removeMonitor(monitor)
             eventMonitor = nil
+        }
+        if let mMonitor = mouseMonitor {
+            NSEvent.removeMonitor(mMonitor)
+            mouseMonitor = nil
         }
     }
 
@@ -253,16 +275,16 @@ public struct ExplorerKeyEventMonitorModifier: ViewModifier {
             }
         }
 
-        // Alt/Option + Left Arrow o Cmd + [ (keyCode 123) -> Atrás
-        if keyCode == 123 && (flags.contains(.option) || flags.contains(.command)) {
+        // Alt/Option + Left Arrow o Cmd + [ (keyCode 123 o carácter "[") -> Atrás
+        if (keyCode == 123 && (flags.contains(.option) || flags.contains(.command))) || (characters == "[" && flags.contains(.command)) {
             if viewModel.canGoBack {
                 viewModel.goBack()
                 return true
             }
         }
 
-        // Alt/Option + Right Arrow o Cmd + ] (keyCode 124) -> Adelante
-        if keyCode == 124 && (flags.contains(.option) || flags.contains(.command)) {
+        // Alt/Option + Right Arrow o Cmd + ] (keyCode 124 o carácter "]") -> Adelante
+        if (keyCode == 124 && (flags.contains(.option) || flags.contains(.command))) || (characters == "]" && flags.contains(.command)) {
             if viewModel.canGoForward {
                 viewModel.goForward()
                 return true
@@ -301,6 +323,106 @@ public struct ExplorerKeyEventMonitorModifier: ViewModifier {
                     return true
                 }
             }
+        }
+
+        return false
+    }
+
+    // MARK: - Eventos de Ratón (Botones Atrás / Adelante del Mouse)
+
+    @MainActor
+    private func handleOtherMouseEvent(
+        buttonNumber: Int,
+        eventType: NSEvent.EventType,
+        eventWindow: NSWindow?
+    ) -> Bool {
+        // En macOS / AppKit:
+        // buttonNumber == 3 es el botón lateral de retroceso (Atrás / Back).
+        // buttonNumber == 4 es el botón lateral de avance (Adelante / Forward).
+        guard buttonNumber == 3 || buttonNumber == 4 else {
+            return false
+        }
+
+        guard let hostWindow = hostWindowBox.window else {
+            return false
+        }
+        let selectedInGroup = hostWindow.tabGroup?.selectedWindow ?? hostWindow
+        guard selectedInGroup === hostWindow else {
+            return false
+        }
+        if let activeWin = eventWindow ?? NSApp.keyWindow {
+            let sameActiveTabGroup = (hostWindow.tabGroup != nil && activeWin.tabGroup === hostWindow.tabGroup)
+            guard activeWin === hostWindow || sameActiveTabGroup else {
+                return false
+            }
+        }
+
+        // Si hay una hoja modal activa (ej. propiedades, compartir en Slack), no navegar la carpeta de fondo
+        if hostWindow.attachedSheet != nil {
+            return true
+        }
+
+        let activeResponderWindow = selectedInGroup
+        return Self.handleMouseNavigation(
+            buttonNumber: buttonNumber,
+            eventType: eventType,
+            viewModel: viewModel,
+            activeWindow: activeResponderWindow
+        )
+    }
+
+    /// Lógica centralizada para manejar la navegación por botones de ratón (3 = Atrás, 4 = Adelante).
+    @MainActor
+    public static func handleMouseNavigation(
+        buttonNumber: Int,
+        eventType: NSEvent.EventType,
+        viewModel: ExplorerViewModel,
+        activeWindow: NSWindow? = nil
+    ) -> Bool {
+        guard buttonNumber == 3 || buttonNumber == 4 else {
+            return false
+        }
+
+        if buttonNumber == 3 {
+            // Botón 4 del ratón (Atrás / Back)
+            if eventType == .otherMouseDown {
+                if viewModel.renamingItemID != nil {
+                    viewModel.cancelRename()
+                    if let activeWindow {
+                        KeyboardShortcuts.resignTextFocus(in: activeWindow)
+                    }
+                }
+                if viewModel.isEditingAddressBar {
+                    viewModel.cancelAddressBarEditing()
+                    if let activeWindow {
+                        KeyboardShortcuts.resignTextFocus(in: activeWindow)
+                    }
+                }
+                if viewModel.canGoBack {
+                    viewModel.goBack()
+                }
+            }
+            return true
+        } else if buttonNumber == 4 {
+            // Botón 5 del ratón (Adelante / Forward)
+            if eventType == .otherMouseDown {
+                if viewModel.renamingItemID != nil {
+                    viewModel.cancelRename()
+                    if let activeWindow {
+                        KeyboardShortcuts.resignTextFocus(in: activeWindow)
+                    }
+                }
+                if viewModel.isEditingAddressBar {
+                    viewModel.cancelAddressBarEditing()
+                    if let activeWindow {
+                        KeyboardShortcuts.resignTextFocus(in: activeWindow)
+                    }
+                }
+                if viewModel.canGoForward {
+                    viewModel.goForward()
+                }
+            }
+            return true
         }
 
         return false
