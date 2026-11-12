@@ -78,6 +78,9 @@ public struct MainExplorerView: View {
         .sheet(item: $viewModel.propertiesTargetItem) { targetItem in
             ItemPropertiesModalView(item: targetItem)
         }
+        .sheet(isPresented: $viewModel.isShareToSlackPresented) {
+            ShareToSlackModalView(viewModel: viewModel)
+        }
         .focusedSceneValue(\.explorerViewModel, viewModel)
     }
 
@@ -154,6 +157,10 @@ public struct MainExplorerView: View {
             }
 
             AddToGeminiMenuButton(viewModel: viewModel) {
+                [viewModel.currentDirectoryURL]
+            }
+
+            AddToSlackMenuButton(viewModel: viewModel) {
                 [viewModel.currentDirectoryURL]
             }
         }

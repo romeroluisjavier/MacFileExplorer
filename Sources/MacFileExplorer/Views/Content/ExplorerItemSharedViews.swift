@@ -397,6 +397,10 @@ public struct ExplorerItemContextMenu: View {
             AddToGeminiMenuButton(viewModel: viewModel) {
                 targetURLsToOpen()
             }
+
+            AddToSlackMenuButton(viewModel: viewModel) {
+                targetURLsToOpen()
+            }
         }
     }
 
@@ -556,3 +560,33 @@ public struct AddToGeminiMenuButton: View {
         }
     }
 }
+
+/// Botón reutilizable de menú contextual que replica "Add to Slack / Compartir con Slack".
+public struct AddToSlackMenuButton: View {
+    let viewModel: ExplorerViewModel
+    let urlsProvider: () -> [URL]
+
+    private var loc: LocalizationManager { LocalizationManager.shared }
+
+    public init(viewModel: ExplorerViewModel, urls: @escaping () -> [URL]) {
+        self.viewModel = viewModel
+        self.urlsProvider = urls
+    }
+
+    public var body: some View {
+        Button {
+            viewModel.presentShareToSlack(for: urlsProvider())
+        } label: {
+            Label {
+                Text(loc.text(es: "Añadir a Slack", en: "Add to Slack"))
+            } icon: {
+                if let slackIcon = viewModel.slackMenuIcon() {
+                    Image(nsImage: slackIcon)
+                } else {
+                    Image(systemName: "bubble.left.and.bubble.right.fill")
+                }
+            }
+        }
+    }
+}
+

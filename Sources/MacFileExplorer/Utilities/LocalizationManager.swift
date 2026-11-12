@@ -409,7 +409,9 @@ public final class LocalizationManager: NSObject, NSMenuDelegate {
             ("Mover pestaña a una ventana nueva", "Move Tab to New Window"),
             ("Fusionar todas las ventanas", "Merge All Windows"),
             ("Traer todo al frente", "Bring All to Front"),
-            ("Ayuda de MacFileExplorer", "MacFileExplorer Help")
+            ("Ayuda de MacFileExplorer", "MacFileExplorer Help"),
+            ("Añadir a Slack", "Add to Slack"),
+            ("Compartir con Slack", "Share with Slack")
         ]
 
         for pair in exactPairs {
@@ -727,6 +729,8 @@ public final class LocalizationManager: NSObject, NSMenuDelegate {
             return "photo"
         case "papelera", "trash":
             return "trash"
+        case "añadir a slack", "add to slack", "compartir con slack", "share with slack":
+            return "bubble.left.and.bubble.right.fill"
 
         // Window / Ventana
         case "minimizar", "minimize":

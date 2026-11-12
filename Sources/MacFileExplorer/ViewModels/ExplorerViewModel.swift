@@ -140,6 +140,10 @@ public final class ExplorerViewModel {
     /// Elemento cuyo diálogo modal de "Propiedades" (estilo Windows 11 Explorer) está abierto actualmente.
     public var propertiesTargetItem: FileItem? = nil
 
+    /// Controla la presentación del modal "Compartir con Slack".
+    public var isShareToSlackPresented: Bool = false
+    public var slackShareURLs: [URL] = []
+
     // MARK: - Historial de Deshacer / Rehacer (`Cmd+Z` / `Cmd+Shift+Z`)
 
     public private(set) var undoStack: [ExplorerUndoEntry] = []
@@ -859,6 +863,157 @@ public final class ExplorerViewModel {
                         userInfo: nil,
                         deliverImmediately: true
                     )
+                }
+            }
+        }
+    }
+
+    // MARK: - Integración con Slack ("Añadir a Slack / Compartir con Slack")
+
+    public static let slackBundleIdentifier = "com.tinyspeck.slackmacgap"
+
+    /// Resuelve la URL de la aplicación nativa `Slack.app` si está instalada en macOS.
+    public func slackApplicationURL() -> URL? {
+        if let appURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: Self.slackBundleIdentifier) {
+            return appURL.standardizedFileURL
+        }
+        let candidates = [
+            URL(fileURLWithPath: "/Applications/Slack.app"),
+            FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Applications/Slack.app", isDirectory: true),
+        ]
+        for candidate in candidates {
+            if FileManager.default.fileExists(atPath: candidate.path(percentEncoded: false)) {
+                return candidate.standardizedFileURL
+            }
+        }
+        return nil
+    }
+
+    /// Devuelve el ícono de `Slack.app` redimensionado a 16×16 para el menú contextual.
+    public func slackMenuIcon() -> NSImage? {
+        guard let slackURL = slackApplicationURL() else { return nil }
+        let rawIcon = NSWorkspace.shared.icon(forFile: slackURL.path(percentEncoded: false))
+        let sized = (rawIcon.copy() as? NSImage) ?? rawIcon
+        sized.size = NSSize(width: 16, height: 16)
+        return sized
+    }
+
+    /// Prepara y presenta el modal "Compartir con Slack" para las URLs indicadas.
+    public func presentShareToSlack(for urls: [URL]) {
+        let targets = urls.map(\.standardizedFileURL)
+        guard !targets.isEmpty else { return }
+
+        guard slackApplicationURL() != nil else {
+            errorMessage = LocalizationManager.shared.text(
+                es: "No se encontró la aplicación Slack instalada en el sistema.",
+                en: "Slack application could not be found on this Mac."
+            )
+            return
+        }
+
+        self.slackShareURLs = targets
+        self.isShareToSlackPresented = true
+    }
+
+    /// Envía los archivos seleccionados a Slack, copiándolos al portapapeles y navegando al canal/usuario especificado.
+    public func sendToSlack(urls: [URL], destination: String, message: String) {
+        let targets = urls.map(\.standardizedFileURL)
+        guard !targets.isEmpty else { return }
+
+        guard let slackURL = slackApplicationURL() else {
+            errorMessage = LocalizationManager.shared.text(
+                es: "No se encontró la aplicación Slack instalada en el sistema.",
+                en: "Slack application could not be found on this Mac."
+            )
+            return
+        }
+
+        let trimmedDestination = destination.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedDestination.isEmpty {
+            PersistenceService.shared.saveSlackRecentDestination(trimmedDestination)
+        }
+
+        // 1. Escribir los archivos en el portapapeles universal del sistema
+        let pb = NSPasteboard.general
+        pb.clearContents()
+        pb.writeObjects(targets.map { $0 as NSURL })
+
+        // 2. Activar la app Slack
+        let config = NSWorkspace.OpenConfiguration()
+        config.activates = true
+        NSWorkspace.shared.openApplication(at: slackURL, configuration: config) { [weak self] _, error in
+            Task { @MainActor [weak self] in
+                if let error {
+                    self?.errorMessage = error.localizedDescription
+                    return
+                }
+
+                // 3. Si se especificó canal/persona, automatizar Quick Switcher (Cmd+K)
+                if !trimmedDestination.isEmpty {
+                    let cleanDest = trimmedDestination
+                        .replacingOccurrences(of: "\\", with: "\\\\")
+                        .replacingOccurrences(of: "\"", with: "\\\"")
+                    let cleanMsg = message.trimmingCharacters(in: .whitespacesAndNewlines)
+                        .replacingOccurrences(of: "\\", with: "\\\\")
+                        .replacingOccurrences(of: "\"", with: "\\\"")
+
+                    let scriptSource: String
+                    if !cleanMsg.isEmpty {
+                        scriptSource = """
+                        tell application "Slack" to activate
+                        delay 0.25
+                        tell application "System Events"
+                            tell process "Slack"
+                                keystroke "k" using {command down}
+                                delay 0.35
+                                keystroke "\(cleanDest)"
+                                delay 0.45
+                                key code 36
+                                delay 0.45
+                                keystroke "v" using {command down}
+                                delay 0.35
+                                keystroke "\(cleanMsg)"
+                            end tell
+                        end tell
+                        """
+                    } else {
+                        scriptSource = """
+                        tell application "Slack" to activate
+                        delay 0.25
+                        tell application "System Events"
+                            tell process "Slack"
+                                keystroke "k" using {command down}
+                                delay 0.35
+                                keystroke "\(cleanDest)"
+                                delay 0.45
+                                key code 36
+                                delay 0.45
+                                keystroke "v" using {command down}
+                            end tell
+                        end tell
+                        """
+                    }
+
+                    Task.detached {
+                        let appleScript = NSAppleScript(source: scriptSource)
+                        var errorDict: NSDictionary?
+                        appleScript?.executeAndReturnError(&errorDict)
+                    }
+                } else {
+                    let scriptSource = """
+                    tell application "Slack" to activate
+                    delay 0.25
+                    tell application "System Events"
+                        tell process "Slack"
+                            keystroke "v" using {command down}
+                        end tell
+                    end tell
+                    """
+                    Task.detached {
+                        let appleScript = NSAppleScript(source: scriptSource)
+                        var errorDict: NSDictionary?
+                        appleScript?.executeAndReturnError(&errorDict)
+                    }
                 }
             }
         }

@@ -84,6 +84,14 @@ public enum ReleaseNotesCatalog {
             dateLabelEN: "Nov 12, 2026",
             items: [
                 ReleaseNoteItem(
+                    id: "add-to-slack",
+                    icon: "bubble.left.and.bubble.right.fill",
+                    titleES: "Compartir y enviar a Slack desde el menú contextual",
+                    titleEN: "Share and send to Slack from the context menu",
+                    summaryES: "Al hacer clic derecho sobre cualquier archivo, ahora puedes elegir «Añadir a Slack» para enviarlo directamente al canal o persona que elijas con un mensaje opcional y sugerencias de conversaciones frecuentes.",
+                    summaryEN: "Right-clicking any file now offers «Add to Slack» to directly share it with your chosen channel or teammate, complete with an optional message and quick recipient suggestions."
+                ),
+                ReleaseNoteItem(
                     id: "version-1-1-release",
                     icon: "sparkles",
                     titleES: "Lanzamiento oficial de la versión 1.1",

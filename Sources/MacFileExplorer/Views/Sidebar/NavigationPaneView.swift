@@ -712,6 +712,10 @@ private struct SidebarTreeNodeView: View {
                 AddToGeminiMenuButton(viewModel: viewModel) {
                     [node.url]
                 }
+
+                AddToSlackMenuButton(viewModel: viewModel) {
+                    [node.url]
+                }
             }
 
             // Subcarpetas desplegadas recursivamente

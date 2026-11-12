@@ -217,6 +217,25 @@ public final class PersistenceService {
         }
         return GridIconPreferences.defaultIconSize
     }
+
+    // MARK: - Destinos Recientes de Slack
+
+    private static let slackRecentDestinationsKey = "com.macfileexplorer.state.slackRecentDestinations"
+
+    public func loadSlackRecentDestinations() -> [String] {
+        defaults.stringArray(forKey: Self.slackRecentDestinationsKey) ?? ["#general", "#random"]
+    }
+
+    public func saveSlackRecentDestination(_ destination: String) {
+        let trimmed = destination.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        var list = loadSlackRecentDestinations().filter { $0.caseInsensitiveCompare(trimmed) != .orderedSame }
+        list.insert(trimmed, at: 0)
+        if list.count > 6 {
+            list = Array(list.prefix(6))
+        }
+        defaults.set(list, forKey: Self.slackRecentDestinationsKey)
+    }
 }
 
 /// Anchos configurables de las columnas de la vista Detalles junto con la lógica de ajuste por divisores.
