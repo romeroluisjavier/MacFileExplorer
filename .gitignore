@@ -1,0 +1,27 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Swift Package Manager & Xcode
+.build/
+.swiftpm/
+DerivedData/
+*.xcodeproj/
+*.xcworkspace/
+xcuserdata/
+Package.resolved
+
+# App bundles & Release artifacts (generados por run.sh y package_release.sh)
+MacFileExplorer.app/
+dist/
+*.dmg
+*.app/
+*.dSYM/
+*.dSYM
+
+# Cachés ocultas generadas en tiempo de ejecución por MacFileExplorer
+.macfileexplorer_dir.cache
+.macfileexplorer_thumbs.cache
+.macfileexplorer_*.cache
