@@ -218,9 +218,41 @@ public final class PersistenceService {
         return GridIconPreferences.defaultIconSize
     }
 
-    // MARK: - Destinos Recientes de Slack
+    // MARK: - Destinos y Preferencias de Slack
 
     private static let slackRecentDestinationsKey = "com.macfileexplorer.state.slackRecentDestinations"
+    private static let showSlackOptionKey = "com.macfileexplorer.state.showSlackOption"
+    private static let slackDirectoryKey = "com.macfileexplorer.state.slackDirectory"
+
+    public static let defaultSlackDirectory: [String] = [
+        "#general",
+        "#random",
+        "#anuncios",
+        "#equipo",
+        "#desarrollo",
+        "#proyectos",
+        "#soporte",
+        "@yo (bloc de notas)"
+    ]
+
+    public func loadShowSlackOption() -> Bool {
+        if defaults.object(forKey: Self.showSlackOptionKey) == nil {
+            return true
+        }
+        return defaults.bool(forKey: Self.showSlackOptionKey)
+    }
+
+    public func saveShowSlackOption(_ show: Bool) {
+        defaults.set(show, forKey: Self.showSlackOptionKey)
+    }
+
+    public func loadSlackDirectory() -> [String] {
+        defaults.stringArray(forKey: Self.slackDirectoryKey) ?? Self.defaultSlackDirectory
+    }
+
+    public func saveSlackDirectory(_ directory: [String]) {
+        defaults.set(directory, forKey: Self.slackDirectoryKey)
+    }
 
     public func loadSlackRecentDestinations() -> [String] {
         defaults.stringArray(forKey: Self.slackRecentDestinationsKey) ?? ["#general", "#random"]
@@ -231,8 +263,8 @@ public final class PersistenceService {
         guard !trimmed.isEmpty else { return }
         var list = loadSlackRecentDestinations().filter { $0.caseInsensitiveCompare(trimmed) != .orderedSame }
         list.insert(trimmed, at: 0)
-        if list.count > 6 {
-            list = Array(list.prefix(6))
+        if list.count > 8 {
+            list = Array(list.prefix(8))
         }
         defaults.set(list, forKey: Self.slackRecentDestinationsKey)
     }
@@ -471,6 +503,58 @@ public final class GridIconPreferences {
 
     public func resetToDefault() {
         iconSize = Self.defaultIconSize
+    }
+}
+
+/// Preferencias reactivas y persistentes de la integración con Slack (visibilidad de menú y directorio de autocompletado).
+@MainActor
+@Observable
+public final class SlackPreferences {
+    public static let shared = SlackPreferences()
+
+    public var isShareToSlackEnabled: Bool {
+        didSet {
+            guard isShareToSlackEnabled != oldValue else { return }
+            PersistenceService.shared.saveShowSlackOption(isShareToSlackEnabled)
+        }
+    }
+
+    public var savedDestinations: [String] {
+        didSet {
+            PersistenceService.shared.saveSlackDirectory(savedDestinations)
+        }
+    }
+
+    public var recentDestinations: [String]
+
+    private init() {
+        self.isShareToSlackEnabled = PersistenceService.shared.loadShowSlackOption()
+        self.savedDestinations = PersistenceService.shared.loadSlackDirectory()
+        self.recentDestinations = PersistenceService.shared.loadSlackRecentDestinations()
+    }
+
+    public func addDestination(_ destination: String) {
+        let trimmed = destination.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        if !savedDestinations.contains(where: { $0.caseInsensitiveCompare(trimmed) == .orderedSame }) {
+            savedDestinations.append(trimmed)
+        }
+        recordRecent(trimmed)
+    }
+
+    public func removeDestination(_ destination: String) {
+        savedDestinations.removeAll { $0.caseInsensitiveCompare(destination) == .orderedSame }
+    }
+
+    public func recordRecent(_ destination: String) {
+        let trimmed = destination.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        PersistenceService.shared.saveSlackRecentDestination(trimmed)
+        recentDestinations = PersistenceService.shared.loadSlackRecentDestinations()
+    }
+
+    public func resetDirectoryToDefaults() {
+        savedDestinations = PersistenceService.defaultSlackDirectory
     }
 }
 

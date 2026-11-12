@@ -36,6 +36,7 @@ struct MacFileExplorerApp: App {
     @Bindable private var quickAccessPrefs = QuickAccessPreferences.shared
     @Bindable private var toolbarPrefs = ToolbarPreferences.shared
     @Bindable private var listIconPrefs = ListIconPreferences.shared
+    @Bindable private var slackPrefs = SlackPreferences.shared
     @FocusedValue(\.explorerViewModel) private var focusedExplorerViewModel
 
     var body: some Scene {
@@ -269,6 +270,10 @@ struct MacFileExplorerApp: App {
                     .disabled(quickAccessPrefs.visibleFolders == QuickAccessFolder.defaultFolders)
                 } label: {
                     Label(loc.text(es: "Carpetas en Acceso rápido", en: "Quick Access Folders"), systemImage: "star")
+                }
+
+                Toggle(isOn: $slackPrefs.isShareToSlackEnabled) {
+                    Label(loc.text(es: "Mostrar opción «Añadir a Slack»", en: "Show «Add to Slack» option"), systemImage: "bubble.left.and.bubble.right")
                 }
 
                 Divider()

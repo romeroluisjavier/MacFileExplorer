@@ -84,6 +84,14 @@ public enum ReleaseNotesCatalog {
             dateLabelEN: "Nov 12, 2026",
             items: [
                 ReleaseNoteItem(
+                    id: "slack-search-autocomplete-and-toggle",
+                    icon: "magnifyingglass.circle.fill",
+                    titleES: "Búsqueda y autocompletado para Slack, y opción para activar o desactivar",
+                    titleEN: "Search and autocomplete for Slack, with toggle to show or hide",
+                    summaryES: "Al compartir archivos con Slack ahora puedes buscar y autocompletar al instante tanto canales (#) como compañeros de equipo (@) con pestañas de filtro, sugerencias y agregar o eliminar contactos fácilmente. Además, puedes activar o desactivar la opción «Añadir a Slack» en cualquier momento desde el propio diálogo, la barra de herramientas o el menú Ver.",
+                    summaryEN: "When sharing files with Slack you can now instantly search and autocomplete channels (#) and teammates (@) with filter tabs, quick suggestions, and simple contact management. You can also easily toggle «Add to Slack» on or off at any time from the share dialog, the toolbar, or the View menu."
+                ),
+                ReleaseNoteItem(
                     id: "edit-menu-action-icons",
                     icon: "scissors",
                     titleES: "Iconos en todas las opciones del menú Edición",

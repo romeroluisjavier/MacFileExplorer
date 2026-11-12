@@ -335,6 +335,18 @@ public struct CommandBarView: View {
             } label: {
                 Label(loc.text(es: "Carpetas en Acceso rápido", en: "Quick Access Folders"), systemImage: "star")
             }
+
+            Divider()
+
+            Toggle(isOn: Binding(
+                get: { SlackPreferences.shared.isShareToSlackEnabled },
+                set: { SlackPreferences.shared.isShareToSlackEnabled = $0 }
+            )) {
+                Label(
+                    loc.text(es: "Mostrar opción «Añadir a Slack»", en: "Show «Add to Slack» option"),
+                    systemImage: "bubble.left.and.bubble.right"
+                )
+            }
         } label: {
             HStack(spacing: 5) {
                 Image(systemName: viewModel.viewMode.systemImage)

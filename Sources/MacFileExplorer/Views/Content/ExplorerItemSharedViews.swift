@@ -567,23 +567,27 @@ public struct AddToSlackMenuButton: View {
     let urlsProvider: () -> [URL]
 
     private var loc: LocalizationManager { LocalizationManager.shared }
+    private var slackPrefs: SlackPreferences { SlackPreferences.shared }
 
     public init(viewModel: ExplorerViewModel, urls: @escaping () -> [URL]) {
         self.viewModel = viewModel
         self.urlsProvider = urls
     }
 
+    @ViewBuilder
     public var body: some View {
-        Button {
-            viewModel.presentShareToSlack(for: urlsProvider())
-        } label: {
-            Label {
-                Text(loc.text(es: "Añadir a Slack", en: "Add to Slack"))
-            } icon: {
-                if let slackIcon = viewModel.slackMenuIcon() {
-                    Image(nsImage: slackIcon)
-                } else {
-                    Image(systemName: "bubble.left.and.bubble.right.fill")
+        if slackPrefs.isShareToSlackEnabled {
+            Button {
+                viewModel.presentShareToSlack(for: urlsProvider())
+            } label: {
+                Label {
+                    Text(loc.text(es: "Añadir a Slack", en: "Add to Slack"))
+                } icon: {
+                    if let slackIcon = viewModel.slackMenuIcon() {
+                        Image(nsImage: slackIcon)
+                    } else {
+                        Image(systemName: "bubble.left.and.bubble.right.fill")
+                    }
                 }
             }
         }

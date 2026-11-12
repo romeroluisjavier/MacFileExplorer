@@ -930,7 +930,7 @@ public final class ExplorerViewModel {
 
         let trimmedDestination = destination.trimmingCharacters(in: .whitespacesAndNewlines)
         if !trimmedDestination.isEmpty {
-            PersistenceService.shared.saveSlackRecentDestination(trimmedDestination)
+            SlackPreferences.shared.addDestination(trimmedDestination)
         }
 
         // 1. Escribir los archivos en el portapapeles universal del sistema
