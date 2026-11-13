@@ -8,7 +8,7 @@ INFO_PLIST_SRC="Config/Info.plist"
 if [ ! -f "$INFO_PLIST_SRC" ]; then
     INFO_PLIST_SRC="MacFileExplorer.app/Contents/Info.plist"
 fi
-VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$INFO_PLIST_SRC" 2>/dev/null || echo "1.1.0")
+VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$INFO_PLIST_SRC" 2>/dev/null || echo "1.2.0")
 
 DIST_DIR="dist"
 RELEASE_APP="${DIST_DIR}/${APP_NAME}.app"

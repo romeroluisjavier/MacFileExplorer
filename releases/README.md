@@ -1,6 +1,22 @@
 # MacFileExplorer Releases
 
-## Versión 1.1.0 (Versión Actual)
+## Versión 1.2.0 (Versión Actual)
+
+- **Instalador:** [`MacFileExplorer-1.2.0.dmg`](./MacFileExplorer-1.2.0.dmg)
+- **Tamaño:** ~9.9 MB
+- **Arquitectura:** Binario Universal (`arm64` Apple Silicon + `x86_64` Intel)
+- **Requisitos del sistema:** macOS 14.0 (Sonoma) o posterior
+
+### Novedades principales en la v1.2.0:
+1. **Compartir en Slack («Añadir a Slack»)**: envía archivos desde el menú contextual eligiendo canales (`#`) o personas (`@`) con búsqueda en vivo, autocompletado, destinos recientes, mensaje opcional y opción para activar/desactivar la función desde menú Ver, barra de herramientas o diálogo.
+2. **Navegación completa con ratón lateral (Logitech MX Master 3) y menú Ir**: soporte out-of-the-box para botones Atrás y Adelante vía eventos `.swipe` de Logi Options+, clics laterales estándar y trackpad tanto en carpetas como en pestañas web, menú superior **Ir** con atajos `⌘[` / `⌘]` (incluyendo teclados en español/latinoamericano y US) y preferencia para invertir botones.
+3. **Barra de herramientas adaptable**: al reducir el ancho de la ventana, Cortar, Copiar, Pegar, Renombrar y Eliminar ocultan sus etiquetas para mostrar solo íconos y evitar cortes visuales.
+4. **Iconos en el menú Edición**: iconografía SF Symbol completa también en Cortar, Copiar, Pegar, Eliminar y Seleccionar todo.
+5. **Versión actualizada a 1.2.0 (Build 3)**: reflejada en `Info.plist`, «Acerca de MacFileExplorer» y el instalador universal.
+
+---
+
+## Versión 1.1.0
 
 - **Instalador:** [`MacFileExplorer-1.1.0.dmg`](./MacFileExplorer-1.1.0.dmg)
 - **Tamaño:** ~9.5 MB

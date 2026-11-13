@@ -77,12 +77,20 @@ public struct ReleaseNoteSection: Identifiable, Sendable {
 public enum ReleaseNotesCatalog {
     public static let sections: [ReleaseNoteSection] = [
         ReleaseNoteSection(
-            id: "v1.1-customization-navigation",
-            versionLabelES: "Versión 1.1 — Personalización, Navegación e Iconos",
-            versionLabelEN: "Version 1.1 — Customization, Navigation & Icons",
+            id: "v1.2-slack-mxmaster-responsive",
+            versionLabelES: "Versión 1.2 — Slack, Ratón MX Master y Barra Adaptable",
+            versionLabelEN: "Version 1.2 — Slack, MX Master Mouse & Responsive Toolbar",
             dateLabelES: "13 nov 2026",
             dateLabelEN: "Nov 13, 2026",
             items: [
+                ReleaseNoteItem(
+                    id: "version-1-2-release",
+                    icon: "sparkles",
+                    titleES: "Lanzamiento oficial de la versión 1.2",
+                    titleEN: "Official Version 1.2 Release",
+                    summaryES: "MacFileExplorer llega a la versión 1.2 sumando envío directo de archivos a Slack con búsqueda y autocompletado, compatibilidad completa con botones laterales y gestos de ratones Logitech MX Master 3 (Atrás y Adelante), menú «Ir», barra de herramientas adaptable al tamaño de la ventana e íconos completos en el menú Edición.",
+                    summaryEN: "MacFileExplorer reaches version 1.2 with direct file sharing to Slack including search and autocomplete, full out-of-the-box support for Logitech MX Master 3 side buttons and swipe gestures (Back and Forward), a new «Go» menu, a window-responsive toolbar, and complete Edit menu icons."
+                ),
                 ReleaseNoteItem(
                     id: "mx-master-swipe-navigation",
                     icon: "computermouse.fill",
@@ -123,7 +131,6 @@ public enum ReleaseNotesCatalog {
                     summaryES: "Se agregaron iconos representativos a las acciones de Cortar, Copiar, Pegar, Eliminar y Seleccionar todo en el menú superior de macOS (Edición / Edit), completando el diseño visual de toda la barra de menús.",
                     summaryEN: "Representative icons have been added to Cut, Copy, Paste, Delete, and Select All in the top macOS menu bar (Edit), completing the visual design across all application menus."
                 ),
-
                 ReleaseNoteItem(
                     id: "responsive-command-bar-buttons",
                     icon: "menubar.rectangle",
@@ -139,7 +146,16 @@ public enum ReleaseNotesCatalog {
                     titleEN: "Share and send to Slack from the context menu",
                     summaryES: "Al hacer clic derecho sobre cualquier archivo, ahora puedes elegir «Añadir a Slack» para enviarlo directamente al canal o persona que elijas con un mensaje opcional y sugerencias de conversaciones frecuentes.",
                     summaryEN: "Right-clicking any file now offers «Add to Slack» to directly share it with your chosen channel or teammate, complete with an optional message and quick recipient suggestions."
-                ),
+                )
+            ]
+        ),
+        ReleaseNoteSection(
+            id: "v1.1-customization-navigation",
+            versionLabelES: "Versión 1.1 — Personalización, Navegación e Iconos",
+            versionLabelEN: "Version 1.1 — Customization, Navigation & Icons",
+            dateLabelES: "12 nov 2026",
+            dateLabelEN: "Nov 12, 2026",
+            items: [
                 ReleaseNoteItem(
                     id: "version-1-1-release",
                     icon: "sparkles",
