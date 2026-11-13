@@ -506,6 +506,7 @@ public final class ExplorerViewModel {
         currentDirectoryURL = standardized
         addressBarText = standardized.path(percentEncoded: false)
         PersistenceService.shared.saveLastDirectory(standardized)
+        GoogleAccountsManager.shared.scheduleSessionAutosave()
 
         loadCurrentDirectory()
     }

@@ -60,7 +60,7 @@ public struct MainExplorerView: View {
         .navigationTitle(viewModel.currentFolderTitle)
         .explorerKeyboardShortcuts(viewModel: viewModel)
         .background {
-            WindowFrameAutosaveView(folderTitle: viewModel.currentFolderTitle)
+            WindowFrameAutosaveView(folderTitle: viewModel.currentFolderTitle, viewModel: viewModel)
             hiddenShortcutButtons
         }
         .task {
@@ -73,17 +73,18 @@ public struct MainExplorerView: View {
         .onAppear {
             MouseNavigationManager.shared.installIfNeeded()
             ExplorerWindowRegistry.shared.lastActiveViewModel = viewModel
-            if let win = NSApp.keyWindow ?? NSApp.mainWindow {
-                ExplorerWindowRegistry.shared.register(viewModel: viewModel, for: win)
-            }
         }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             viewModel.checkCurrentDirectoryForExternalChanges()
         }
         .onReceive(NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)) { notif in
-            viewModel.checkCurrentDirectoryForExternalChanges()
-            if let win = notif.object as? NSWindow {
-                ExplorerWindowRegistry.shared.register(viewModel: viewModel, for: win)
+            if let win = notif.object as? NSWindow,
+               let registered = ExplorerWindowRegistry.shared.viewModel(for: win) {
+                if registered === viewModel {
+                    viewModel.checkCurrentDirectoryForExternalChanges()
+                }
+            } else {
+                viewModel.checkCurrentDirectoryForExternalChanges()
             }
         }
         .sheet(item: $viewModel.propertiesTargetItem) { targetItem in

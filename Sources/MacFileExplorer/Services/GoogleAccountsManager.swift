@@ -88,6 +88,13 @@ public final class GoogleAccountsManager: NSObject {
     /// Observadores KVO sobre `NSWindowTabGroup.selectedWindow` para sincronizar `activeTabID` al cambiar de pestaña nativa.
     private var tabGroupObservations: [ObjectIdentifier: NSKeyValueObservation] = [:]
 
+    /// Estado de ciclo de vida para guardar y restaurar pestañas sin sobrescribir la sesión durante cierre/arranque.
+    private var isTerminating = false
+    private var isRestoringSession = false
+    private var didAttemptInitialSessionRestore = false
+    private var sessionAutosaveTask: Task<Void, Never>?
+    private var ignoredClosingWindowIDs: Set<ObjectIdentifier> = []
+
     /// Caché en memoria de fotos de perfil de cuentas de Google indexadas por `account.id`.
     private let avatarImageCache = NSCache<NSString, NSImage>()
     private var avatarDownloadTasks: [UUID: Task<Void, Never>] = [:]
@@ -259,28 +266,49 @@ public final class GoogleAccountsManager: NSObject {
     public func openNewFileExplorerTabWindow(from sourceWindow: NSWindow? = nil) {
         let anchorWindow = resolveAnchorWindow(preferred: sourceWindow)
         let frame = anchorWindow?.frame ?? NSRect(x: 120, y: 120, width: 1160, height: 720)
-        let newExplorerWindow = ExplorerNativeTabWindow(
+        let initialFolderURL = anchorWindow.flatMap {
+            ExplorerWindowRegistry.shared.viewModel(for: $0)?.currentDirectoryURL
+        }
+        let created = createExplorerTabWindow(directoryURL: initialFolderURL, frame: frame)
+        attachWindowToTabGroup(created.window, anchorWindow: anchorWindow)
+        activeTabID = nil
+        scheduleSessionAutosave()
+    }
+
+    private func makeNativeTabWindow(frame: NSRect) -> ExplorerNativeTabWindow {
+        let window = ExplorerNativeTabWindow(
             contentRect: frame,
             styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
-        newExplorerWindow.isReleasedWhenClosed = false
-        newExplorerWindow.minSize = NSSize(width: 880, height: 540)
-        newExplorerWindow.tabbingMode = .preferred
-        newExplorerWindow.tabbingIdentifier = Self.mainWindowTabbingIdentifier
-        newExplorerWindow.toolbarStyle = .unifiedCompact
+        window.isReleasedWhenClosed = false
+        window.minSize = NSSize(width: 880, height: 540)
+        window.tabbingMode = .preferred
+        window.tabbingIdentifier = Self.mainWindowTabbingIdentifier
+        window.toolbarStyle = .unifiedCompact
+        return window
+    }
 
-        let initialFolderURL = anchorWindow.flatMap {
-            ExplorerWindowRegistry.shared.viewModel(for: $0)?.currentDirectoryURL
-        }
-        let explorerVM = ExplorerViewModel(initialDirectoryURL: initialFolderURL)
-        NativeWindowTabIconBuilder.applyFolderTabAppearance(to: newExplorerWindow, title: explorerVM.currentFolderTitle)
-        newExplorerWindow.contentViewController = NSHostingController(rootView: MainExplorerView(viewModel: explorerVM))
+    private func createExplorerTabWindow(
+        directoryURL: URL?,
+        frame: NSRect
+    ) -> (window: NSWindow, viewModel: ExplorerViewModel) {
+        let explorerWindow = makeNativeTabWindow(frame: frame)
+        let explorerVM = ExplorerViewModel(initialDirectoryURL: directoryURL)
+        NativeWindowTabIconBuilder.applyFolderTabAppearance(to: explorerWindow, title: explorerVM.currentFolderTitle)
+        explorerWindow.contentViewController = NSHostingController(rootView: MainExplorerView(viewModel: explorerVM))
+        extraExplorerWindows.insert(explorerWindow)
+        ExplorerWindowRegistry.shared.register(viewModel: explorerVM, for: explorerWindow)
+        return (explorerWindow, explorerVM)
+    }
 
-        extraExplorerWindows.insert(newExplorerWindow)
-        attachWindowToTabGroup(newExplorerWindow, anchorWindow: anchorWindow)
-        activeTabID = nil
+    private func createWebTabWindow(for tab: BrowserTabItem, frame: NSRect) -> NSWindow {
+        let webWindow = makeNativeTabWindow(frame: frame)
+        NativeWindowTabIconBuilder.applyWebTabAppearance(to: webWindow, for: tab)
+        webWindow.contentViewController = NSHostingController(rootView: IsolatedGoogleWebTabView(tabID: tab.id))
+        windowsByTabID[tab.id] = webWindow
+        return webWindow
     }
 
     /// Cierra la pestaña actual (carpeta o web) y activa una pestaña adyacente si quedan otras en el grupo.
@@ -315,29 +343,17 @@ public final class GoogleAccountsManager: NSObject {
             existingWindow.tabGroup?.selectedWindow = existingWindow
             existingWindow.makeKeyAndOrderFront(nil)
             activeTabID = tab.id
+            scheduleSessionAutosave()
             return
         }
 
         let anchorWindow = resolveAnchorWindow()
         let frame = anchorWindow?.frame ?? NSRect(x: 120, y: 120, width: 1160, height: 720)
-        let webWindow = ExplorerNativeTabWindow(
-            contentRect: frame,
-            styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
-            backing: .buffered,
-            defer: false
-        )
-        webWindow.isReleasedWhenClosed = false
-        webWindow.minSize = NSSize(width: 880, height: 540)
-        webWindow.tabbingMode = .preferred
-        webWindow.tabbingIdentifier = Self.mainWindowTabbingIdentifier
-        webWindow.toolbarStyle = .unifiedCompact
-        NativeWindowTabIconBuilder.applyWebTabAppearance(to: webWindow, for: tab)
-        webWindow.contentViewController = NSHostingController(rootView: IsolatedGoogleWebTabView(tabID: tab.id))
-
-        windowsByTabID[tab.id] = webWindow
+        let webWindow = createWebTabWindow(for: tab, frame: frame)
 
         attachWindowToTabGroup(webWindow, anchorWindow: anchorWindow)
         activeTabID = tab.id
+        scheduleSessionAutosave()
     }
 
     private func resolveAnchorWindow(preferred sourceWindow: NSWindow? = nil) -> NSWindow? {
@@ -378,6 +394,7 @@ public final class GoogleAccountsManager: NSObject {
             activeTabID = nil
             explorerWindow.tabGroup?.selectedWindow = explorerWindow
             explorerWindow.makeKeyAndOrderFront(nil)
+            scheduleSessionAutosave()
             return
         }
         if let anyExplorerWindow = NSApplication.shared.windows.first(where: {
@@ -386,6 +403,7 @@ public final class GoogleAccountsManager: NSObject {
             activeTabID = nil
             anyExplorerWindow.tabGroup?.selectedWindow = anyExplorerWindow
             anyExplorerWindow.makeKeyAndOrderFront(nil)
+            scheduleSessionAutosave()
         } else {
             openNewFileExplorerTabWindow()
         }
@@ -393,7 +411,19 @@ public final class GoogleAccountsManager: NSObject {
 
     /// Cierra una pestaña web y libera su `WKWebView` y su `NSWindow` nativa.
     public func closeTab(_ tabID: UUID, closeNativeWindow: Bool = true) {
+        let closingWindow = windowsByTabID[tabID]
+        if let closingWindow,
+           !isTerminating,
+           !isRestoringSession,
+           !ignoredClosingWindowIDs.contains(ObjectIdentifier(closingWindow)),
+           SessionPreferences.shared.rememberOpenTabsOnLaunch,
+           !hasOtherLiveSessionWindows(excluding: closingWindow),
+           let snapshot = buildCurrentSessionSnapshot(includingClosingWindow: closingWindow) {
+            PersistenceService.shared.saveSessionSnapshot(snapshot)
+        }
+
         if closeNativeWindow, let window = windowsByTabID.removeValue(forKey: tabID) {
+            ignoredClosingWindowIDs.insert(ObjectIdentifier(window))
             window.close()
         } else {
             windowsByTabID.removeValue(forKey: tabID)
@@ -416,6 +446,12 @@ public final class GoogleAccountsManager: NSObject {
            !openTabs.contains(where: { $0.accountID == account.id }) {
             removeAccount(account)
         }
+
+        if let closingWindow, hasOtherLiveSessionWindows(excluding: closingWindow) {
+            scheduleSessionAutosave()
+        } else if closingWindow == nil {
+            scheduleSessionAutosave()
+        }
     }
 
     /// Elimina una cuenta de Google, cierra todas sus pestañas y destruye su almacén aislado de cookies/datos en disco.
@@ -437,6 +473,7 @@ public final class GoogleAccountsManager: NSObject {
         Task { @MainActor in
             try? await WKWebsiteDataStore.remove(forIdentifier: storeID)
         }
+        scheduleSessionAutosave()
     }
 
     private func observeTabGroupSelection(for window: NSWindow) {
@@ -483,6 +520,11 @@ public final class GoogleAccountsManager: NSObject {
         } else {
             activeTabID = nil
         }
+        if let vm = ExplorerWindowRegistry.shared.viewModel(for: effective),
+           SessionPreferences.shared.rememberOpenTabsOnLaunch {
+            PersistenceService.shared.saveLastDirectory(vm.currentDirectoryURL)
+        }
+        scheduleSessionAutosave()
     }
 
     private func installWindowLifecycleObservers() {
@@ -504,22 +546,494 @@ public final class GoogleAccountsManager: NSObject {
         }
 
         center.addObserver(
-            forName: NSWindow.willCloseNotification,
-            object: nil,
-            queue: .main
-        ) { [weak self] notification in
-            guard let window = notification.object as? NSWindow else { return }
-            Task { @MainActor [weak self, weak window] in
-                guard let self, let window else { return }
-                if let group = window.tabGroup, group.windows.count <= 1 {
-                    self.tabGroupObservations.removeValue(forKey: ObjectIdentifier(group))
-                }
-                self.extraExplorerWindows.remove(window)
-                if let match = self.windowsByTabID.first(where: { $0.value === window }) {
-                    self.closeTab(match.key, closeNativeWindow: false)
+            self,
+            selector: #selector(handleAnyWindowWillCloseNotification(_:)),
+            name: NSWindow.willCloseNotification,
+            object: nil
+        )
+    }
+
+    @objc private func handleAnyWindowWillCloseNotification(_ notification: Notification) {
+        guard let window = notification.object as? NSWindow else { return }
+        let windowID = ObjectIdentifier(window)
+        let isIgnored = ignoredClosingWindowIDs.remove(windowID) != nil
+
+        let isExplorerWindow = ExplorerWindowRegistry.shared.viewModel(for: window) != nil
+            || extraExplorerWindows.contains(window)
+        let matchingWebTabID = windowsByTabID.first(where: { $0.value === window })?.key
+        let isSessionWindow = isExplorerWindow || matchingWebTabID != nil
+        let hadOtherWindows = hasOtherLiveSessionWindows(excluding: window)
+
+        if isSessionWindow,
+           !isIgnored,
+           !isTerminating,
+           !isRestoringSession,
+           SessionPreferences.shared.rememberOpenTabsOnLaunch {
+            if !hadOtherWindows,
+               let snapshot = buildCurrentSessionSnapshot(includingClosingWindow: window) {
+                PersistenceService.shared.saveSessionSnapshot(snapshot)
+                if let vm = ExplorerWindowRegistry.shared.viewModel(for: window) {
+                    PersistenceService.shared.saveLastDirectory(vm.currentDirectoryURL)
                 }
             }
         }
+
+        if let group = window.tabGroup, group.windows.count <= 1 {
+            tabGroupObservations.removeValue(forKey: ObjectIdentifier(group))
+        }
+        extraExplorerWindows.remove(window)
+        ExplorerWindowRegistry.shared.unregister(window: window)
+        if let matchingWebTabID {
+            closeTab(matchingWebTabID, closeNativeWindow: false)
+        }
+
+        if isSessionWindow, !isIgnored, hadOtherWindows {
+            scheduleSessionAutosave()
+        }
+    }
+
+    // MARK: - Persistencia y Restauración de Sesión (Carpetas y Pestañas Web)
+
+    /// Captura sincrónicamente las pestañas y ventanas abiertas antes de cerrar la app.
+    public func prepareForTermination() {
+        sessionAutosaveTask?.cancel()
+        sessionAutosaveTask = nil
+        if SessionPreferences.shared.rememberOpenTabsOnLaunch {
+            if let snapshot = buildCurrentSessionSnapshot() {
+                PersistenceService.shared.saveSessionSnapshot(snapshot)
+                if let activeDir = ExplorerWindowRegistry.shared.activeViewModel?.currentDirectoryURL {
+                    PersistenceService.shared.saveLastDirectory(activeDir)
+                }
+            }
+        } else {
+            PersistenceService.shared.clearSavedSessionState()
+        }
+        isTerminating = true
+    }
+
+    /// Programa un autoguardado con debounce tras abrir, cerrar, navegar o cambiar pestañas.
+    public func scheduleSessionAutosave() {
+        guard !isTerminating, !isRestoringSession else { return }
+        guard SessionPreferences.shared.rememberOpenTabsOnLaunch else { return }
+        sessionAutosaveTask?.cancel()
+        sessionAutosaveTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .milliseconds(350))
+            guard let self, !Task.isCancelled else { return }
+            self.saveCurrentSessionSnapshot()
+        }
+    }
+
+    /// Guarda inmediatamente un snapshot de todas las pestañas abiertas (carpetas, Gmail, Drive, Calendar y marcadores).
+    public func saveCurrentSessionSnapshot() {
+        guard !isTerminating, !isRestoringSession else { return }
+        guard SessionPreferences.shared.rememberOpenTabsOnLaunch else {
+            PersistenceService.shared.clearSavedSessionState()
+            return
+        }
+        guard let snapshot = buildCurrentSessionSnapshot() else { return }
+        PersistenceService.shared.saveSessionSnapshot(snapshot)
+    }
+
+    private func isWindowLiveInSession(_ window: NSWindow, includingClosingWindow: NSWindow?) -> Bool {
+        if window === includingClosingWindow {
+            return true
+        }
+        if window.isVisible || window.isMiniaturized {
+            return true
+        }
+        if let selected = window.tabGroup?.selectedWindow {
+            if selected === includingClosingWindow || selected.isVisible || selected.isMiniaturized {
+                return true
+            }
+        }
+        return false
+    }
+
+    private func hasOtherLiveSessionWindows(excluding closingWindow: NSWindow) -> Bool {
+        for entry in ExplorerWindowRegistry.shared.allRegisteredWindows() where entry.window !== closingWindow {
+            if isWindowLiveInSession(entry.window, includingClosingWindow: nil) {
+                return true
+            }
+        }
+        for window in windowsByTabID.values where window !== closingWindow {
+            if isWindowLiveInSession(window, includingClosingWindow: nil) {
+                return true
+            }
+        }
+        return false
+    }
+
+    /// Construye el snapshot actual preservando el orden exacto de pestañas de izquierda a derecha en cada grupo de ventanas.
+    public func buildCurrentSessionSnapshot(includingClosingWindow: NSWindow? = nil) -> PersistedSessionSnapshot? {
+        let explorerEntries = ExplorerWindowRegistry.shared.allRegisteredWindows()
+        var explorerByWindowID: [ObjectIdentifier: ExplorerViewModel] = [:]
+        explorerByWindowID.reserveCapacity(explorerEntries.count)
+        for entry in explorerEntries {
+            explorerByWindowID[ObjectIdentifier(entry.window)] = entry.viewModel
+        }
+
+        let tabsByID = Dictionary(uniqueKeysWithValues: openTabs.map { ($0.id, $0) })
+        var webByWindowID: [ObjectIdentifier: BrowserTabItem] = [:]
+        for (tabID, window) in windowsByTabID {
+            if let tab = tabsByID[tabID] {
+                webByWindowID[ObjectIdentifier(window)] = tab
+            }
+        }
+
+        let registeredWindows = explorerEntries.map(\.window) + Array(windowsByTabID.values)
+        var candidates: [NSWindow] = NSApplication.shared.orderedWindows
+        let seenInOrdered = Set(candidates.map { ObjectIdentifier($0) })
+        for win in registeredWindows where !seenInOrdered.contains(ObjectIdentifier(win)) {
+            candidates.append(win)
+        }
+
+        var visitedWindowIDs = Set<ObjectIdentifier>()
+        var visitedGroupIDs = Set<ObjectIdentifier>()
+        var windowGroups: [PersistedWindowGroupSnapshot] = []
+        var groupLeadWindows: [(groupWindows: [NSWindow], selectedWindow: NSWindow?)] = []
+
+        for candidate in candidates {
+            let candidateID = ObjectIdentifier(candidate)
+            guard !visitedWindowIDs.contains(candidateID) else { continue }
+            guard candidate.canBecomeMain, !candidate.isSheet, !(candidate is NSPanel) else { continue }
+
+            let groupWindowsRaw: [NSWindow]
+            let selectedInGroup: NSWindow?
+            if let group = candidate.tabGroup, !group.windows.isEmpty {
+                let groupID = ObjectIdentifier(group)
+                guard !visitedGroupIDs.contains(groupID) else { continue }
+                visitedGroupIDs.insert(groupID)
+                groupWindowsRaw = group.windows
+                selectedInGroup = group.selectedWindow
+            } else {
+                groupWindowsRaw = [candidate]
+                selectedInGroup = candidate
+            }
+
+            for w in groupWindowsRaw {
+                visitedWindowIDs.insert(ObjectIdentifier(w))
+            }
+
+            let isGroupLive = groupWindowsRaw.contains {
+                isWindowLiveInSession($0, includingClosingWindow: includingClosingWindow)
+            }
+            guard isGroupLive else { continue }
+
+            var persistedTabs: [PersistedSessionTab] = []
+            var liveWindowsInGroup: [NSWindow] = []
+
+            for win in groupWindowsRaw {
+                let winID = ObjectIdentifier(win)
+                if let vm = explorerByWindowID[winID] {
+                    liveWindowsInGroup.append(win)
+                    persistedTabs.append(
+                        PersistedSessionTab(
+                            kind: .folder,
+                            folderPath: vm.currentDirectoryURL.standardizedFileURL.path(percentEncoded: false)
+                        )
+                    )
+                } else if let tab = webByWindowID[winID],
+                          let serializedTab = persistedTab(from: tab) {
+                    liveWindowsInGroup.append(win)
+                    persistedTabs.append(serializedTab)
+                }
+            }
+
+            guard !persistedTabs.isEmpty else { continue }
+
+            let rawActiveIndex = selectedInGroup.flatMap { sel in
+                liveWindowsInGroup.firstIndex(where: { $0 === sel })
+            } ?? 0
+            let activeTabIndex = min(max(rawActiveIndex, 0), persistedTabs.count - 1)
+            let frameSourceWindow = selectedInGroup ?? liveWindowsInGroup.first
+            let frameString = frameSourceWindow.map { NSStringFromRect($0.frame) }
+
+            windowGroups.append(
+                PersistedWindowGroupSnapshot(
+                    tabs: persistedTabs,
+                    activeTabIndex: activeTabIndex,
+                    frameString: frameString
+                )
+            )
+            groupLeadWindows.append((liveWindowsInGroup, selectedInGroup ?? liveWindowsInGroup.first))
+        }
+
+        guard !windowGroups.isEmpty else { return nil }
+
+        let frontWindow = NSApplication.shared.keyWindow ?? NSApplication.shared.mainWindow
+        let activeGroupIndex: Int = {
+            if let frontWindow,
+               let idx = groupLeadWindows.firstIndex(where: { entry in
+                   entry.selectedWindow === frontWindow || entry.groupWindows.contains(where: { $0 === frontWindow })
+               }) {
+                return idx
+            }
+            return 0
+        }()
+
+        return PersistedSessionSnapshot(windowGroups: windowGroups, activeGroupIndex: activeGroupIndex)
+    }
+
+    private func persistedTab(from tab: BrowserTabItem) -> PersistedSessionTab? {
+        let scheme = tab.currentURL.scheme?.lowercased()
+        guard scheme == "http" || scheme == "https" else { return nil }
+
+        // No guardar pestañas vacías de borrador de login que no llegaron a autenticarse
+        if tab.service == nil,
+           tab.bookmarkID == nil,
+           let acct = accounts.first(where: { $0.id == tab.accountID }),
+           !acct.isAuthenticated,
+           acct.email.isEmpty {
+            return nil
+        }
+
+        return PersistedSessionTab(
+            kind: .web,
+            accountID: tab.accountID,
+            service: tab.service,
+            urlString: tab.currentURL.absoluteString,
+            title: tab.title,
+            bookmarkID: tab.bookmarkID,
+            pageZoom: tab.pageZoom
+        )
+    }
+
+    /// Restaura automáticamente la sesión guardada la primera vez que aparece la ventana principal al iniciar la app.
+    public func restoreInitialSessionIfNeeded(
+        initialWindow: NSWindow,
+        initialViewModel: ExplorerViewModel?
+    ) {
+        guard !didAttemptInitialSessionRestore else { return }
+        didAttemptInitialSessionRestore = true
+
+        guard SessionPreferences.shared.rememberOpenTabsOnLaunch else { return }
+        guard let snapshot = PersistenceService.shared.loadSessionSnapshot(),
+              !snapshot.windowGroups.isEmpty else {
+            return
+        }
+
+        restoreSession(
+            snapshot: snapshot,
+            initialWindow: initialWindow,
+            initialViewModel: initialViewModel
+        )
+    }
+
+    /// Restaura todas las ventanas, pestañas (carpetas, Gmail, Drive, Calendar y marcadores), orden y selección activa.
+    public func restoreSession(
+        snapshot: PersistedSessionSnapshot,
+        initialWindow: NSWindow,
+        initialViewModel: ExplorerViewModel?
+    ) {
+        enum ResolvedTabSpec {
+            case folder(URL)
+            case web(BrowserTabItem)
+        }
+
+        struct ResolvedGroupSpec {
+            var tabs: [ResolvedTabSpec]
+            var activeTabIndex: Int
+            var frame: NSRect?
+        }
+
+        var resolvedGroups: [ResolvedGroupSpec] = []
+
+        for group in snapshot.windowGroups {
+            var validTabs: [ResolvedTabSpec] = []
+            var mappedActiveIndex: Int?
+
+            for (originalIdx, tab) in group.tabs.enumerated() {
+                let resolved: ResolvedTabSpec?
+                switch tab.kind {
+                case .folder:
+                    let validURL = PersistenceService.shared.resolveValidDirectoryURL(forPath: tab.folderPath)
+                    resolved = .folder(validURL)
+                case .web:
+                    if let browserTab = makeRestoredBrowserTab(from: tab) {
+                        resolved = .web(browserTab)
+                    } else {
+                        resolved = nil
+                    }
+                }
+
+                if let resolved {
+                    if originalIdx == group.activeTabIndex {
+                        mappedActiveIndex = validTabs.count
+                    }
+                    validTabs.append(resolved)
+                }
+            }
+
+            guard !validTabs.isEmpty else { continue }
+            let resolvedActiveIndex = min(max(mappedActiveIndex ?? 0, 0), validTabs.count - 1)
+            let parsedFrame: NSRect? = {
+                guard let raw = group.frameString, !raw.isEmpty else { return nil }
+                let rect = NSRectFromString(raw)
+                return (rect.width >= 880 && rect.height >= 540) ? rect : nil
+            }()
+            resolvedGroups.append(
+                ResolvedGroupSpec(tabs: validTabs, activeTabIndex: resolvedActiveIndex, frame: parsedFrame)
+            )
+        }
+
+        guard !resolvedGroups.isEmpty else { return }
+
+        // Elegir qué slot de carpeta reutiliza la `initialWindow` recién creada por SwiftUI
+        let preferredReuseGroupIndex = min(max(snapshot.activeGroupIndex, 0), resolvedGroups.count - 1)
+        var reuseSlot: (groupIndex: Int, tabIndex: Int)? = nil
+        if initialViewModel != nil {
+            if let tabIdx = resolvedGroups[preferredReuseGroupIndex].tabs.firstIndex(where: {
+                if case .folder = $0 { return true }
+                return false
+            }) {
+                reuseSlot = (preferredReuseGroupIndex, tabIdx)
+            } else {
+                outer: for (gIdx, group) in resolvedGroups.enumerated() {
+                    for (tIdx, tab) in group.tabs.enumerated() {
+                        if case .folder = tab {
+                            reuseSlot = (gIdx, tIdx)
+                            break outer
+                        }
+                    }
+                }
+            }
+        }
+
+        isRestoringSession = true
+        defer { isRestoringSession = false }
+
+        var groupSelectedWindows: [NSWindow] = []
+        let defaultFrame = initialWindow.frame
+
+        for (groupIdx, group) in resolvedGroups.enumerated() {
+            let groupFrame = group.frame ?? defaultFrame
+            var groupWindows: [NSWindow] = []
+
+            for (tabIdx, spec) in group.tabs.enumerated() {
+                switch spec {
+                case .folder(let folderURL):
+                    if let reuseSlot,
+                       reuseSlot.groupIndex == groupIdx,
+                       reuseSlot.tabIndex == tabIdx,
+                       let initialViewModel {
+                        if let parsedFrame = group.frame {
+                            initialWindow.setFrame(parsedFrame, display: true)
+                        }
+                        if initialViewModel.currentDirectoryURL.standardizedFileURL != folderURL.standardizedFileURL {
+                            initialViewModel.navigate(to: folderURL, recordHistory: false)
+                        }
+                        NativeWindowTabIconBuilder.applyFolderTabAppearance(
+                            to: initialWindow,
+                            title: initialViewModel.currentFolderTitle
+                        )
+                        ExplorerWindowRegistry.shared.register(viewModel: initialViewModel, for: initialWindow)
+                        groupWindows.append(initialWindow)
+                    } else {
+                        let created = createExplorerTabWindow(directoryURL: folderURL, frame: groupFrame)
+                        groupWindows.append(created.window)
+                    }
+
+                case .web(let browserTab):
+                    openTabs.append(browserTab)
+                    let webWin = createWebTabWindow(for: browserTab, frame: groupFrame)
+                    groupWindows.append(webWin)
+                }
+            }
+
+            guard !groupWindows.isEmpty else { continue }
+
+            let anchorWindow: NSWindow = {
+                if let reuseSlot, reuseSlot.groupIndex == groupIdx {
+                    return groupWindows[reuseSlot.tabIndex]
+                }
+                return groupWindows[0]
+            }()
+
+            NSWindow.allowsAutomaticWindowTabbing = true
+            anchorWindow.tabbingMode = .preferred
+            anchorWindow.tabbingIdentifier = Self.mainWindowTabbingIdentifier
+            if !anchorWindow.isVisible {
+                anchorWindow.makeKeyAndOrderFront(nil)
+            }
+
+            for win in groupWindows where win !== anchorWindow {
+                anchorWindow.addTabbedWindow(win, ordered: .above)
+            }
+
+            if let tabGroup = anchorWindow.tabGroup {
+                for (targetIndex, win) in groupWindows.enumerated() {
+                    if targetIndex < tabGroup.windows.count, tabGroup.windows[targetIndex] !== win {
+                        tabGroup.insertWindow(win, at: targetIndex)
+                    }
+                }
+            }
+
+            observeTabGroupSelection(for: anchorWindow)
+
+            let selectedWindow = groupWindows[group.activeTabIndex]
+            selectedWindow.tabGroup?.selectedWindow = selectedWindow
+            selectedWindow.makeKeyAndOrderFront(nil)
+            groupSelectedWindows.append(selectedWindow)
+        }
+
+        if reuseSlot == nil, let firstRestored = groupSelectedWindows.first {
+            ignoredClosingWindowIDs.insert(ObjectIdentifier(initialWindow))
+            ExplorerWindowRegistry.shared.unregister(window: initialWindow)
+            initialWindow.tabGroup?.removeWindow(initialWindow)
+            initialWindow.close()
+            firstRestored.makeKeyAndOrderFront(nil)
+        }
+
+        let targetGroupIdx = min(max(snapshot.activeGroupIndex, 0), max(groupSelectedWindows.count - 1, 0))
+        if groupSelectedWindows.indices.contains(targetGroupIdx) {
+            let finalActiveWindow = groupSelectedWindows[targetGroupIdx]
+            finalActiveWindow.tabGroup?.selectedWindow = finalActiveWindow
+            finalActiveWindow.makeKeyAndOrderFront(nil)
+            syncActiveTabID(for: finalActiveWindow)
+        }
+    }
+
+    private func makeRestoredBrowserTab(from tab: PersistedSessionTab) -> BrowserTabItem? {
+        guard let rawURLString = tab.urlString,
+              let url = URL(string: rawURLString),
+              let scheme = url.scheme?.lowercased(),
+              scheme == "http" || scheme == "https" else {
+            return nil
+        }
+
+        let resolvedAccountID = tab.accountID ?? BookmarksManager.generalBookmarksAccountID
+        let isGeneralBookmark = resolvedAccountID == BookmarksManager.generalBookmarksAccountID
+        if !isGeneralBookmark && !accounts.contains(where: { $0.id == resolvedAccountID }) {
+            return nil
+        }
+
+        let resolvedTitle: String = {
+            let trimmed = (tab.title ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            if !trimmed.isEmpty { return trimmed }
+            if let serviceTitle = tab.service?.title { return serviceTitle }
+            return url.host ?? "Web"
+        }()
+
+        let cachedFaviconData: Data? = {
+            guard tab.service == nil,
+                  let host = url.host,
+                  let cachedImage = BookmarksManager.shared.cachedFavicon(forHost: host) else {
+                return nil
+            }
+            return FaviconService.normalizedPNGData(from: cachedImage)
+        }()
+
+        let zoom = min(max(tab.pageZoom ?? defaultPageZoom, 0.25), 3.0)
+        return BrowserTabItem(
+            accountID: resolvedAccountID,
+            title: resolvedTitle,
+            currentURL: url,
+            service: tab.service,
+            bookmarkID: tab.bookmarkID,
+            faviconData: cachedFaviconData,
+            isLoading: true,
+            pageZoom: zoom
+        )
     }
 
     // MARK: - Obtención y Control del `WKWebView` Aislado por Pestaña
@@ -589,6 +1103,7 @@ public final class GoogleAccountsManager: NSObject {
         openTabs[idx].pageZoom = clamped
         defaultPageZoom = clamped
         webViewsByTabID[tabID]?.pageZoom = CGFloat(clamped)
+        scheduleSessionAutosave()
     }
 
     /// Incrementa el zoom de la página completa al siguiente escalón estilo Chrome.
@@ -676,6 +1191,9 @@ public final class GoogleAccountsManager: NSObject {
         openTabs[idx].canGoForward = canGoForward
 
         let updatedTab = openTabs[idx]
+        if updatedTab.title != oldTitle || updatedTab.currentURL != oldURL {
+            scheduleSessionAutosave()
+        }
         if (updatedTab.title != oldTitle || updatedTab.currentURL != oldURL || updatedTab.faviconData != oldFaviconData),
            let window = windowsByTabID[tabID] {
             NativeWindowTabIconBuilder.applyWebTabAppearance(to: window, for: updatedTab)

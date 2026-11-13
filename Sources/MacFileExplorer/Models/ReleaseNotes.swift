@@ -84,6 +84,14 @@ public enum ReleaseNotesCatalog {
             dateLabelEN: "Nov 13, 2026",
             items: [
                 ReleaseNoteItem(
+                    id: "remember-open-tabs-and-web-sessions",
+                    icon: "clock.arrow.circlepath",
+                    titleES: "Recordar carpetas, pestañas y sesiones de Google al reabrir",
+                    titleEN: "Remember open folders, tabs & Google sessions on relaunch",
+                    summaryES: "Ahora MacFileExplorer recuerda automáticamente no solo la carpeta activa, sino también todas las pestañas que tenías abiertas (carpetas, Gmail, Google Drive, Google Calendar y marcadores web) respetando su orden y cuál estabas viendo al cerrar la aplicación. Puedes activar o desactivar esta opción en cualquier momento desde el menú Ver de la barra superior o el menú Ver de la barra de herramientas.",
+                    summaryEN: "MacFileExplorer now automatically remembers not only your active folder, but also every tab you had open (folders, Gmail, Google Drive, Google Calendar, and web bookmarks) along with their exact order and active tab when you quit. You can turn this option on or off at any time from the top View menu or the toolbar View menu."
+                ),
+                ReleaseNoteItem(
                     id: "version-1-2-release",
                     icon: "sparkles",
                     titleES: "Lanzamiento oficial de la versión 1.2",

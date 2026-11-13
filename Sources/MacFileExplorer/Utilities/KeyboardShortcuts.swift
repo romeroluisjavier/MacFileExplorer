@@ -78,6 +78,20 @@ public final class ExplorerWindowRegistry {
         MouseNavigationManager.shared.installSwipeResponderIfNeeded(on: window)
     }
 
+    public func unregister(window: NSWindow?) {
+        pruneDeadEntries()
+        guard let window else { return }
+        entries.removeValue(forKey: ObjectIdentifier(window))
+    }
+
+    public func allRegisteredWindows() -> [(window: NSWindow, viewModel: ExplorerViewModel)] {
+        pruneDeadEntries()
+        return entries.values.compactMap { box in
+            guard let window = box.window, let vm = box.viewModel else { return nil }
+            return (window: window, viewModel: vm)
+        }
+    }
+
     public func viewModel(for window: NSWindow?) -> ExplorerViewModel? {
         pruneDeadEntries()
         guard let window else { return nil }

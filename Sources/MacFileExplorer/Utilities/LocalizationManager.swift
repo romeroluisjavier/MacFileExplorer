@@ -416,6 +416,7 @@ public final class LocalizationManager: NSObject, NSMenuDelegate {
             ("Mostrar «Añadir a Slack» (Compartir con Slack)", "Show «Add to Slack» (Share with Slack)"),
             ("Mostrar opción «Añadir a Slack»", "Show «Add to Slack» option"),
             ("Invertir botones laterales del ratón (Atrás/Adelante)", "Swap mouse side buttons (Back/Forward)"),
+            ("Recordar carpetas y pestañas abiertas al iniciar", "Remember open folders & tabs on launch"),
             ("Atrás", "Back"),
             ("Adelante", "Forward"),
             ("Subir un nivel", "Enclosing Folder"),
@@ -743,6 +744,8 @@ public final class LocalizationManager: NSObject, NSMenuDelegate {
             return "bubble.left.and.bubble.right"
         case "invertir botones laterales del ratón (atrás/adelante)", "swap mouse side buttons (back/forward)":
             return "computermouse"
+        case "recordar carpetas y pestañas abiertas al iniciar", "remember open folders & tabs on launch":
+            return "clock.arrow.circlepath"
         case "mostrar barra de marcadores", "show bookmarks bar":
             return "bookmark"
         case "mostrar botón nuevo", "show new button":

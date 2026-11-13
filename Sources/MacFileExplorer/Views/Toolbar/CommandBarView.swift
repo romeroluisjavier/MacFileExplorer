@@ -8,6 +8,7 @@ public struct CommandBarView: View {
     @Bindable private var toolbarPrefs: ToolbarPreferences = .shared
     @Bindable private var slackPrefs: SlackPreferences = .shared
     @Bindable private var mousePrefs: MousePreferences = .shared
+    @Bindable private var sessionPrefs: SessionPreferences = .shared
     @ViewState private var barWidth: CGFloat = 1160
 
     private var loc: LocalizationManager { LocalizationManager.shared }
@@ -339,6 +340,13 @@ public struct CommandBarView: View {
             }
 
             Divider()
+
+            Toggle(isOn: $sessionPrefs.rememberOpenTabsOnLaunch) {
+                Label(
+                    loc.text(es: "Recordar carpetas y pestañas abiertas al iniciar", en: "Remember open folders & tabs on launch"),
+                    systemImage: "clock.arrow.circlepath"
+                )
+            }
 
             Toggle(isOn: $slackPrefs.isShareToSlackEnabled) {
                 Label(

@@ -27,6 +27,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         true
     }
+
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        GoogleAccountsManager.shared.prepareForTermination()
+        return .terminateNow
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        GoogleAccountsManager.shared.prepareForTermination()
+    }
 }
 
 @main
@@ -39,6 +48,7 @@ struct MacFileExplorerApp: App {
     @Bindable private var listIconPrefs = ListIconPreferences.shared
     @Bindable private var slackPrefs = SlackPreferences.shared
     @Bindable private var mousePrefs = MousePreferences.shared
+    @Bindable private var sessionPrefs = SessionPreferences.shared
     @FocusedValue(\.explorerViewModel) private var focusedExplorerViewModel
 
     var body: some Scene {
@@ -272,6 +282,10 @@ struct MacFileExplorerApp: App {
                     .disabled(quickAccessPrefs.visibleFolders == QuickAccessFolder.defaultFolders)
                 } label: {
                     Label(loc.text(es: "Carpetas en Acceso rápido", en: "Quick Access Folders"), systemImage: "star")
+                }
+
+                Toggle(isOn: $sessionPrefs.rememberOpenTabsOnLaunch) {
+                    Label(loc.text(es: "Recordar carpetas y pestañas abiertas al iniciar", en: "Remember open folders & tabs on launch"), systemImage: "clock.arrow.circlepath")
                 }
 
                 Toggle(isOn: $slackPrefs.isShareToSlackEnabled) {

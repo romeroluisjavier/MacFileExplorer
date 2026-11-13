@@ -18,6 +18,8 @@ public final class PersistenceService {
     private enum Keys {
         static let lastDirectoryPath = "com.macfileexplorer.state.lastDirectoryPath"
         static let expandedSidebarNodeIDs = "com.macfileexplorer.state.expandedSidebarNodeIDs"
+        static let rememberOpenTabs = "com.macfileexplorer.state.rememberOpenTabs"
+        static let savedSessionSnapshot = "com.macfileexplorer.state.savedSessionSnapshot"
         static let isQuickAccessExpanded = "com.macfileexplorer.state.isQuickAccessExpanded"
         static let isVolumesExpanded = "com.macfileexplorer.state.isVolumesExpanded"
         static let viewMode = "com.macfileexplorer.state.viewMode"
@@ -40,12 +42,23 @@ public final class PersistenceService {
     // MARK: - Último Directorio Abierto
 
     public func saveLastDirectory(_ url: URL) {
+        guard loadRememberOpenTabs() else { return }
         defaults.set(url.standardizedFileURL.path(percentEncoded: false), forKey: Keys.lastDirectoryPath)
     }
 
     public func loadLastDirectory() -> URL {
+        guard loadRememberOpenTabs() else {
+            return FileManager.default.homeDirectoryForCurrentUser.standardizedFileURL
+        }
+        return resolveValidDirectoryURL(forPath: defaults.string(forKey: Keys.lastDirectoryPath))
+    }
+
+    public func resolveValidDirectoryURL(forPath savedPath: String?) -> URL {
         let fm = FileManager.default
-        if let savedPath = defaults.string(forKey: Keys.lastDirectoryPath), !savedPath.isEmpty {
+        if let savedPath, !savedPath.isEmpty {
+            if savedPath == "/" {
+                return URL(fileURLWithPath: "/").standardizedFileURL
+            }
             var candidate = URL(fileURLWithPath: savedPath).standardizedFileURL
             var isDir: ObjCBool = false
             // Si la carpeta guardada existe, abrir en ella; si fue borrada, subir al padre existente más cercano
@@ -279,6 +292,37 @@ public final class PersistenceService {
 
     public func saveSwapMouseButtons(_ swap: Bool) {
         defaults.set(swap, forKey: Self.swapMouseButtonsKey)
+    }
+
+    // MARK: - Sesión y Pestañas Abiertas al Iniciar
+
+    public func loadRememberOpenTabs() -> Bool {
+        if defaults.object(forKey: Keys.rememberOpenTabs) == nil {
+            return true
+        }
+        return defaults.bool(forKey: Keys.rememberOpenTabs)
+    }
+
+    public func saveRememberOpenTabs(_ enabled: Bool) {
+        defaults.set(enabled, forKey: Keys.rememberOpenTabs)
+    }
+
+    public func saveSessionSnapshot(_ snapshot: PersistedSessionSnapshot) {
+        guard loadRememberOpenTabs() else { return }
+        if let data = try? JSONEncoder().encode(snapshot) {
+            defaults.set(data, forKey: Keys.savedSessionSnapshot)
+        }
+    }
+
+    public func loadSessionSnapshot() -> PersistedSessionSnapshot? {
+        guard loadRememberOpenTabs() else { return nil }
+        guard let data = defaults.data(forKey: Keys.savedSessionSnapshot) else { return nil }
+        return try? JSONDecoder().decode(PersistedSessionSnapshot.self, from: data)
+    }
+
+    public func clearSavedSessionState() {
+        defaults.removeObject(forKey: Keys.savedSessionSnapshot)
+        defaults.removeObject(forKey: Keys.lastDirectoryPath)
     }
 }
 
@@ -588,24 +632,117 @@ public final class MousePreferences {
     }
 }
 
+/// Tipo de pestaña incluida dentro del snapshot de sesión persistida.
+public enum PersistedSessionTabKind: String, Codable, Sendable {
+    case folder
+    case web
+}
+
+/// Snapshot serializable de una pestaña individual (explorador de carpetas o web de Google Workspace / marcador).
+public struct PersistedSessionTab: Codable, Equatable, Sendable {
+    public let kind: PersistedSessionTabKind
+    public let folderPath: String?
+    public let accountID: UUID?
+    public let service: GoogleServiceShortcut?
+    public let urlString: String?
+    public let title: String?
+    public let bookmarkID: UUID?
+    public let pageZoom: Double?
+
+    public init(
+        kind: PersistedSessionTabKind,
+        folderPath: String? = nil,
+        accountID: UUID? = nil,
+        service: GoogleServiceShortcut? = nil,
+        urlString: String? = nil,
+        title: String? = nil,
+        bookmarkID: UUID? = nil,
+        pageZoom: Double? = nil
+    ) {
+        self.kind = kind
+        self.folderPath = folderPath
+        self.accountID = accountID
+        self.service = service
+        self.urlString = urlString
+        self.title = title
+        self.bookmarkID = bookmarkID
+        self.pageZoom = pageZoom
+    }
+}
+
+/// Snapshot de una ventana (o grupo nativo de pestañas) con sus pestañas de izquierda a derecha y cuál estaba activa.
+public struct PersistedWindowGroupSnapshot: Codable, Equatable, Sendable {
+    public let tabs: [PersistedSessionTab]
+    public let activeTabIndex: Int
+    public let frameString: String?
+
+    public init(tabs: [PersistedSessionTab], activeTabIndex: Int, frameString: String? = nil) {
+        self.tabs = tabs
+        self.activeTabIndex = activeTabIndex
+        self.frameString = frameString
+    }
+}
+
+/// Snapshot completo de sesión abierta al cerrar/usar MacFileExplorer.
+public struct PersistedSessionSnapshot: Codable, Equatable, Sendable {
+    public let windowGroups: [PersistedWindowGroupSnapshot]
+    public let activeGroupIndex: Int
+
+    public init(windowGroups: [PersistedWindowGroupSnapshot], activeGroupIndex: Int) {
+        self.windowGroups = windowGroups
+        self.activeGroupIndex = activeGroupIndex
+    }
+}
+
+/// Preferencia reactiva para recordar automáticamente todas las pestañas abiertas (carpetas, Gmail, Drive, Calendar y marcadores) al reabrir la app.
+@MainActor
+@Observable
+public final class SessionPreferences {
+    public static let shared = SessionPreferences()
+
+    public var rememberOpenTabsOnLaunch: Bool {
+        didSet {
+            guard rememberOpenTabsOnLaunch != oldValue else { return }
+            PersistenceService.shared.saveRememberOpenTabs(rememberOpenTabsOnLaunch)
+            if rememberOpenTabsOnLaunch {
+                if let activeDir = ExplorerWindowRegistry.shared.activeViewModel?.currentDirectoryURL {
+                    PersistenceService.shared.saveLastDirectory(activeDir)
+                }
+                GoogleAccountsManager.shared.saveCurrentSessionSnapshot()
+            } else {
+                PersistenceService.shared.clearSavedSessionState()
+            }
+        }
+    }
+
+    private init() {
+        self.rememberOpenTabsOnLaunch = PersistenceService.shared.loadRememberOpenTabs()
+    }
+}
+
 /// Representable invisible que vincula el `NSWindow` anfitrión para restaurar su posición/tamaño exactos
 /// al abrir la aplicación, guardar cualquier movimiento/redimensionamiento y mantener el icono de carpeta en la pestaña nativa.
 public struct WindowFrameAutosaveView: NSViewRepresentable {
     public let folderTitle: String
+    public weak var viewModel: ExplorerViewModel?
 
-    public init(folderTitle: String) {
+    public init(folderTitle: String, viewModel: ExplorerViewModel? = nil) {
         self.folderTitle = folderTitle
+        self.viewModel = viewModel
     }
 
     public func makeNSView(context: Context) -> NSView {
         let view = WindowObserverNSView()
         view.folderTitle = folderTitle
+        view.viewModel = viewModel
         return view
     }
 
     public func updateNSView(_ nsView: NSView, context: Context) {
         guard let observerView = nsView as? WindowObserverNSView else { return }
         observerView.folderTitle = folderTitle
+        observerView.viewModel = viewModel
+        observerView.syncWindowRegistrationIfNeeded()
         observerView.syncWindowTabAppearanceIfNeeded()
     }
 }
@@ -615,6 +752,7 @@ private final class WindowObserverNSView: NSView {
     private var didRestoreFrame = false
     private var lastAppliedTitle: String = ""
     var folderTitle: String = ""
+    weak var viewModel: ExplorerViewModel?
 
     override func viewWillMove(toWindow newWindow: NSWindow?) {
         super.viewWillMove(toWindow: newWindow)
@@ -622,6 +760,10 @@ private final class WindowObserverNSView: NSView {
             NotificationCenter.default.removeObserver(self, name: NSWindow.didMoveNotification, object: oldWindow)
             NotificationCenter.default.removeObserver(self, name: NSWindow.didResizeNotification, object: oldWindow)
             NotificationCenter.default.removeObserver(self, name: NSWindow.willCloseNotification, object: oldWindow)
+            NotificationCenter.default.removeObserver(self, name: NSWindow.didBecomeKeyNotification, object: oldWindow)
+            if newWindow !== oldWindow {
+                ExplorerWindowRegistry.shared.unregister(window: oldWindow)
+            }
         }
     }
 
@@ -632,6 +774,8 @@ private final class WindowObserverNSView: NSView {
         NSWindow.allowsAutomaticWindowTabbing = true
         window.tabbingMode = .preferred
         window.tabbingIdentifier = GoogleAccountsManager.mainWindowTabbingIdentifier
+
+        syncWindowRegistrationIfNeeded()
 
         if !didRestoreFrame {
             didRestoreFrame = true
@@ -647,8 +791,15 @@ private final class WindowObserverNSView: NSView {
         }
 
         syncWindowTabAppearanceIfNeeded(force: true)
-        DispatchQueue.main.async { [weak self] in
+        let vm = viewModel
+        DispatchQueue.main.async { [weak self, weak window, weak vm] in
             self?.syncWindowTabAppearanceIfNeeded(force: true)
+            if let window {
+                GoogleAccountsManager.shared.restoreInitialSessionIfNeeded(
+                    initialWindow: window,
+                    initialViewModel: vm
+                )
+            }
         }
 
         let center = NotificationCenter.default
@@ -670,6 +821,17 @@ private final class WindowObserverNSView: NSView {
             name: NSWindow.willCloseNotification,
             object: window
         )
+        center.addObserver(
+            self,
+            selector: #selector(handleWindowDidBecomeKey(_:)),
+            name: NSWindow.didBecomeKeyNotification,
+            object: window
+        )
+    }
+
+    func syncWindowRegistrationIfNeeded() {
+        guard let window = self.window, let viewModel else { return }
+        ExplorerWindowRegistry.shared.register(viewModel: viewModel, for: window)
     }
 
     func syncWindowTabAppearanceIfNeeded(force: Bool = false) {
@@ -693,5 +855,12 @@ private final class WindowObserverNSView: NSView {
     @objc private func handleWindowFrameChange(_ notification: Notification) {
         guard let window = self.window ?? (notification.object as? NSWindow) else { return }
         PersistenceService.shared.saveWindowFrame(window.frame)
+        if notification.name != NSWindow.willCloseNotification {
+            GoogleAccountsManager.shared.scheduleSessionAutosave()
+        }
+    }
+
+    @objc private func handleWindowDidBecomeKey(_ notification: Notification) {
+        syncWindowRegistrationIfNeeded()
     }
 }
