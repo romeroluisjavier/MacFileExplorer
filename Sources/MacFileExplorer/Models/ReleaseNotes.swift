@@ -84,6 +84,14 @@ public enum ReleaseNotesCatalog {
             dateLabelEN: "Nov 13, 2026",
             items: [
                 ReleaseNoteItem(
+                    id: "mx-master-swipe-navigation",
+                    icon: "computermouse.fill",
+                    titleES: "Botones laterales Logitech MX Master y gestos Atrás / Adelante",
+                    titleEN: "Logitech MX Master side buttons and Back / Forward gestures",
+                    summaryES: "Los botones laterales Atrás y Adelante de ratones como Logitech MX Master 3 (y gestos de deslizamiento lateral del trackpad) ahora funcionan de forma automática y sin configuración extra tanto al explorar carpetas como en las pestañas web, igual que en Finder y Chrome, junto con compatibilidad mejorada para teclados en español con ⌘[ y ⌘].",
+                    summaryEN: "Side Back and Forward buttons on mice like Logitech MX Master 3 (as well as trackpad horizontal swipe gestures) now work automatically out of the box both when browsing folders and in web tabs, just like in Finder and Chrome, alongside improved ⌘[ and ⌘] support on international keyboards."
+                ),
+                ReleaseNoteItem(
                     id: "slack-disable-option-refinement",
                     icon: "bubble.left.and.bubble.right",
                     titleES: "Desactivar «Compartir con Slack» desde menús o desde el diálogo",

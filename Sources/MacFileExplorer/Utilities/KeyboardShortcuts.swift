@@ -33,6 +33,30 @@ public enum KeyboardShortcuts {
             targetWindow.makeFirstResponder(nil)
         }
     }
+
+    /// Determina si un evento de teclado coincide con `Cmd + [` o `Cmd + ]`,
+    /// soportando tanto teclado US ANSI (`keyCode 33/30` sin `Shift`) como teclados
+    /// internacionales (ej. Latinoamérica donde `[` / `]` requieren `Shift`) y eventos
+    /// Unicode sintéticos (`typedCharacters == "[" / "]"`), sin interceptar `Cmd + Shift + [` / `]` en US.
+    public static func matchesCommandBracket(
+        targetBracket: String,
+        ansiKeyCode: UInt16,
+        keyCode: UInt16,
+        characters: String?,
+        typedCharacters: String?,
+        flags: NSEvent.ModifierFlags
+    ) -> Bool {
+        guard flags.contains(.command), !flags.contains(.control) else {
+            return false
+        }
+        if typedCharacters == targetBracket {
+            return true
+        }
+        guard !flags.contains(.shift) else {
+            return false
+        }
+        return keyCode == ansiKeyCode || characters == targetBracket
+    }
 }
 
 /// Registro débil de ventanas activas -> `ExplorerViewModel` para que el menú `Edición` (`Cmd+Z`/`Cmd+Shift+Z`)
@@ -51,6 +75,7 @@ public final class ExplorerWindowRegistry {
         lastActiveViewModel = viewModel
         guard let window else { return }
         entries[ObjectIdentifier(window)] = WeakExplorerBox(window: window, viewModel: viewModel)
+        MouseNavigationManager.shared.installSwipeResponderIfNeeded(on: window)
     }
 
     public func viewModel(for window: NSWindow?) -> ExplorerViewModel? {
@@ -121,11 +146,13 @@ public struct ExplorerKeyEventMonitorModifier: ViewModifier {
                 let keyCode = event.keyCode
                 let rawModifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask).rawValue
                 let characters = event.charactersIgnoringModifiers?.lowercased()
+                let typedCharacters = event.characters?.lowercased()
                 let eventWindow = event.window
                 let consumed = MainActor.assumeIsolated {
                     handleKeyDown(
                         keyCode: keyCode,
                         characters: characters,
+                        typedCharacters: typedCharacters,
                         rawModifiers: rawModifiers,
                         eventWindow: eventWindow
                     )
@@ -148,6 +175,7 @@ public struct ExplorerKeyEventMonitorModifier: ViewModifier {
     private func handleKeyDown(
         keyCode: UInt16,
         characters: String?,
+        typedCharacters: String?,
         rawModifiers: UInt,
         eventWindow: NSWindow?
     ) -> Bool {
@@ -272,20 +300,32 @@ public struct ExplorerKeyEventMonitorModifier: ViewModifier {
             }
         }
 
-        // Alt/Option + Left Arrow, Cmd + Left Arrow o Cmd + [ (keyCode 123, keyCode 33 o carácter "[") -> Atrás
+        // Alt/Option + Left Arrow, Cmd + Left Arrow o Cmd + [ (keyCode 123, US keyCode 33 o "[") -> Atrás
         if (keyCode == 123 && (flags.contains(.option) || flags.contains(.command)))
-            || (keyCode == 33 && flags.contains(.command))
-            || (characters == "[" && flags.contains(.command)) {
+            || KeyboardShortcuts.matchesCommandBracket(
+                targetBracket: "[",
+                ansiKeyCode: 33,
+                keyCode: keyCode,
+                characters: characters,
+                typedCharacters: typedCharacters,
+                flags: flags
+            ) {
             if viewModel.canGoBack {
                 viewModel.goBack()
                 return true
             }
         }
 
-        // Alt/Option + Right Arrow, Cmd + Right Arrow o Cmd + ] (keyCode 124, keyCode 30 o carácter "]") -> Adelante
+        // Alt/Option + Right Arrow, Cmd + Right Arrow o Cmd + ] (keyCode 124, US keyCode 30 o "]") -> Adelante
         if (keyCode == 124 && (flags.contains(.option) || flags.contains(.command)))
-            || (keyCode == 30 && flags.contains(.command))
-            || (characters == "]" && flags.contains(.command)) {
+            || KeyboardShortcuts.matchesCommandBracket(
+                targetBracket: "]",
+                ansiKeyCode: 30,
+                keyCode: keyCode,
+                characters: characters,
+                typedCharacters: typedCharacters,
+                flags: flags
+            ) {
             if viewModel.canGoForward {
                 viewModel.goForward()
                 return true

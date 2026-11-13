@@ -494,8 +494,8 @@ public final class GoogleAccountsManager: NSObject {
                 queue: .main
             ) { [weak self] notification in
                 guard let window = notification.object as? NSWindow else { return }
-                Task { @MainActor [weak self] in
-                    guard let self else { return }
+                Task { @MainActor [weak self, weak window] in
+                    guard let self, let window else { return }
                     guard window.canBecomeMain, !window.isSheet else { return }
                     self.observeTabGroupSelection(for: window)
                     self.syncActiveTabID(for: window)
@@ -509,8 +509,8 @@ public final class GoogleAccountsManager: NSObject {
             queue: .main
         ) { [weak self] notification in
             guard let window = notification.object as? NSWindow else { return }
-            Task { @MainActor [weak self] in
-                guard let self else { return }
+            Task { @MainActor [weak self, weak window] in
+                guard let self, let window else { return }
                 if let group = window.tabGroup, group.windows.count <= 1 {
                     self.tabGroupObservations.removeValue(forKey: ObjectIdentifier(group))
                 }
