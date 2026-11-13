@@ -275,7 +275,7 @@ struct MacFileExplorerApp: App {
                 }
 
                 Toggle(isOn: $slackPrefs.isShareToSlackEnabled) {
-                    Label(loc.text(es: "Mostrar opción «Añadir a Slack»", en: "Show «Add to Slack» option"), systemImage: "bubble.left.and.bubble.right")
+                    Label(loc.text(es: "Mostrar «Añadir a Slack» (Compartir con Slack)", en: "Show «Add to Slack» (Share with Slack)"), systemImage: "bubble.left.and.bubble.right")
                 }
 
                 Toggle(isOn: $mousePrefs.swapSideButtons) {

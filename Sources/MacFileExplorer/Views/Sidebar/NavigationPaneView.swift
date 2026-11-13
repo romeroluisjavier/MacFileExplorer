@@ -495,6 +495,7 @@ private struct SidebarTreeNodeView: View {
     let depth: Int
     @Bindable var viewModel: ExplorerViewModel
     @Bindable var sidebarViewModel: SidebarViewModel
+    @Bindable private var slackPrefs: SlackPreferences = .shared
 
     @ViewState private var isRowHovered: Bool = false
     @ViewState private var isChevronHovered: Bool = false
@@ -713,8 +714,10 @@ private struct SidebarTreeNodeView: View {
                     [node.url]
                 }
 
-                AddToSlackMenuButton(viewModel: viewModel) {
-                    [node.url]
+                if slackPrefs.isShareToSlackEnabled {
+                    AddToSlackMenuButton(viewModel: viewModel) {
+                        [node.url]
+                    }
                 }
             }
 

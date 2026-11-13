@@ -80,9 +80,17 @@ public enum ReleaseNotesCatalog {
             id: "v1.1-customization-navigation",
             versionLabelES: "Versión 1.1 — Personalización, Navegación e Iconos",
             versionLabelEN: "Version 1.1 — Customization, Navigation & Icons",
-            dateLabelES: "12 nov 2026",
-            dateLabelEN: "Nov 12, 2026",
+            dateLabelES: "13 nov 2026",
+            dateLabelEN: "Nov 13, 2026",
             items: [
+                ReleaseNoteItem(
+                    id: "slack-disable-option-refinement",
+                    icon: "bubble.left.and.bubble.right",
+                    titleES: "Desactivar «Compartir con Slack» desde menús o desde el diálogo",
+                    titleEN: "Disable «Share with Slack» from menus or the dialog",
+                    summaryES: "Ahora puedes activar o desactivar al instante la opción de compartir archivos con Slack desde el menú Ver de la barra superior, el menú Ver de la barra de herramientas o directamente desde la casilla inferior al abrir «Compartir con Slack», con confirmación inmediata y ocultamiento en todos los menús contextuales.",
+                    summaryEN: "You can now instantly turn the «Add to Slack» sharing option on or off from the top View menu, the toolbar View menu, or directly from the checkbox at the bottom of the Share with Slack window, with immediate visual confirmation across all context menus."
+                ),
                 ReleaseNoteItem(
                     id: "mouse-side-buttons-and-go-menu",
                     icon: "computermouse.fill",

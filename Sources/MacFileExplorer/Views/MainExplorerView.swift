@@ -3,6 +3,7 @@ import SwiftUI
 /// Vista raíz del Explorador de Archivos (layout Windows 11 Explorer + estética nativa macOS).
 public struct MainExplorerView: View {
     @ViewState private var viewModel: ExplorerViewModel
+    @Bindable private var slackPrefs: SlackPreferences = .shared
     @Environment(\.colorScheme) private var colorScheme
 
     private var loc: LocalizationManager { LocalizationManager.shared }
@@ -170,8 +171,10 @@ public struct MainExplorerView: View {
                 [viewModel.currentDirectoryURL]
             }
 
-            AddToSlackMenuButton(viewModel: viewModel) {
-                [viewModel.currentDirectoryURL]
+            if slackPrefs.isShareToSlackEnabled {
+                AddToSlackMenuButton(viewModel: viewModel) {
+                    [viewModel.currentDirectoryURL]
+                }
             }
         }
     }

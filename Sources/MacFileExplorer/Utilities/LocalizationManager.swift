@@ -210,6 +210,7 @@ public final class LocalizationManager: NSObject, NSMenuDelegate {
             ("Editar", "Edit"),
             ("Visualización", "View"),
             ("Ver", "View"),
+            ("Ir", "Go"),
             ("Idioma", "Language"),
             ("Ventana", "Window"),
             ("Ayuda", "Help"),
@@ -411,7 +412,14 @@ public final class LocalizationManager: NSObject, NSMenuDelegate {
             ("Traer todo al frente", "Bring All to Front"),
             ("Ayuda de MacFileExplorer", "MacFileExplorer Help"),
             ("Añadir a Slack", "Add to Slack"),
-            ("Compartir con Slack", "Share with Slack")
+            ("Compartir con Slack", "Share with Slack"),
+            ("Mostrar «Añadir a Slack» (Compartir con Slack)", "Show «Add to Slack» (Share with Slack)"),
+            ("Mostrar opción «Añadir a Slack»", "Show «Add to Slack» option"),
+            ("Invertir botones laterales del ratón (Atrás/Adelante)", "Swap mouse side buttons (Back/Forward)"),
+            ("Atrás", "Back"),
+            ("Adelante", "Forward"),
+            ("Subir un nivel", "Enclosing Folder"),
+            ("Inicio", "Home")
         ]
 
         for pair in exactPairs {
@@ -695,7 +703,7 @@ public final class LocalizationManager: NSObject, NSMenuDelegate {
             return "app.badge.checkmark"
         case "miniatura (thumbnail)", "thumbnail":
             return "photo"
-        case "tamaño de iconos (cuadrícula)", "icon size (grid)":
+        case "tamaño de iconos (cuadrícula)", "icon size (grid)", "grid icon size":
             return "photo"
         case "pequeño", "small":
             return "circle.grid.2x2"
@@ -705,7 +713,7 @@ public final class LocalizationManager: NSObject, NSMenuDelegate {
             return "square.grid.3x3"
         case "extra grande", "extra large":
             return "square.grid.3x3.fill"
-        case "abrir marcadores web en...", "open bookmarks in...":
+        case "abrir marcadores web en...", "open bookmarks in...", "open web bookmarks in...":
             return "arrow.up.right.square"
         case "navegador web por defecto del sistema", "system default web browser":
             return "safari"
@@ -731,6 +739,22 @@ public final class LocalizationManager: NSObject, NSMenuDelegate {
             return "trash"
         case "añadir a slack", "add to slack", "compartir con slack", "share with slack":
             return "bubble.left.and.bubble.right.fill"
+        case "mostrar «añadir a slack» (compartir con slack)", "show «add to slack» (share with slack)", "mostrar opción «añadir a slack»", "show «add to slack» option":
+            return "bubble.left.and.bubble.right"
+        case "invertir botones laterales del ratón (atrás/adelante)", "swap mouse side buttons (back/forward)":
+            return "computermouse"
+        case "mostrar barra de marcadores", "show bookmarks bar":
+            return "bookmark"
+        case "mostrar botón nuevo", "show new button":
+            return "plus.circle"
+        case "atrás", "back":
+            return "chevron.backward"
+        case "adelante", "forward":
+            return "chevron.forward"
+        case "subir un nivel", "enclosing folder":
+            return "arrow.up"
+        case "inicio", "home":
+            return "house"
 
         // Window / Ventana
         case "minimizar", "minimize":

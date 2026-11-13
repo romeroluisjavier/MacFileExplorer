@@ -632,44 +632,68 @@ public struct ShareToSlackModalView: View {
     // MARK: - Barra Inferior
 
     private var footerBar: some View {
-        HStack(spacing: 12) {
-            Toggle(isOn: $slackPrefs.isShareToSlackEnabled) {
-                Text(loc.text(
-                    es: "Mostrar «Añadir a Slack» en menús contextuales",
-                    en: "Show «Add to Slack» in context menus"
-                ))
-                .font(.system(size: 11.5))
-                .foregroundStyle(.secondary)
-            }
-            .toggleStyle(.checkbox)
-
-            Spacer()
-
-            Button {
-                dismiss()
-            } label: {
-                Text(loc.text(es: "Cancelar", en: "Cancel"))
-                    .frame(minWidth: 70)
-            }
-            .keyboardShortcut(.cancelAction)
-
-            Button {
-                submitShare()
-            } label: {
+        VStack(spacing: 8) {
+            if !slackPrefs.isShareToSlackEnabled {
                 HStack(spacing: 6) {
-                    if let slackIcon = viewModel.slackMenuIcon() {
-                        Image(nsImage: slackIcon)
-                            .resizable()
-                            .frame(width: 14, height: 14)
-                    }
-                    Text(loc.text(es: "Compartir en Slack", en: "Share in Slack"))
+                    Image(systemName: "eye.slash.fill")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.orange)
+                    Text(loc.text(
+                        es: "«Añadir a Slack» quedó desactivado en los menús contextuales. Puedes volver a activarlo desde el menú Ver.",
+                        en: "«Add to Slack» is now disabled in context menus. You can re-enable it anytime from the View menu."
+                    ))
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    Spacer()
                 }
-                .fontWeight(.semibold)
-                .frame(minWidth: 120)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(Color.orange.opacity(0.08))
+                .cornerRadius(6)
             }
-            .buttonStyle(.borderedProminent)
-            .keyboardShortcut(.defaultAction)
-            .disabled(viewModel.slackShareURLs.isEmpty)
+
+            HStack(spacing: 12) {
+                Toggle(isOn: $slackPrefs.isShareToSlackEnabled) {
+                    Text(loc.text(
+                        es: "Mostrar «Añadir a Slack» en menús contextuales",
+                        en: "Show «Add to Slack» in context menus"
+                    ))
+                    .font(.system(size: 11.5))
+                    .foregroundStyle(.secondary)
+                }
+                .toggleStyle(.checkbox)
+
+                Spacer()
+
+                Button {
+                    dismiss()
+                } label: {
+                    Text(slackPrefs.isShareToSlackEnabled
+                        ? loc.text(es: "Cancelar", en: "Cancel")
+                        : loc.text(es: "Listo", en: "Done"))
+                        .frame(minWidth: 70)
+                }
+                .keyboardShortcut(.cancelAction)
+
+                Button {
+                    submitShare()
+                } label: {
+                    HStack(spacing: 6) {
+                        if let slackIcon = viewModel.slackMenuIcon() {
+                            Image(nsImage: slackIcon)
+                                .resizable()
+                                .frame(width: 14, height: 14)
+                        }
+                        Text(loc.text(es: "Compartir en Slack", en: "Share in Slack"))
+                    }
+                    .fontWeight(.semibold)
+                    .frame(minWidth: 120)
+                }
+                .buttonStyle(.borderedProminent)
+                .keyboardShortcut(.defaultAction)
+                .disabled(viewModel.slackShareURLs.isEmpty)
+            }
         }
         .padding(.horizontal, 18)
         .padding(.vertical, 12)

@@ -254,6 +254,8 @@ public struct ExplorerItemContextMenu: View {
     let item: FileItem
     @Bindable var viewModel: ExplorerViewModel
 
+    @Bindable private var slackPrefs: SlackPreferences = .shared
+
     private var loc: LocalizationManager { LocalizationManager.shared }
 
     public init(item: FileItem, viewModel: ExplorerViewModel) {
@@ -398,8 +400,10 @@ public struct ExplorerItemContextMenu: View {
                 targetURLsToOpen()
             }
 
-            AddToSlackMenuButton(viewModel: viewModel) {
-                targetURLsToOpen()
+            if slackPrefs.isShareToSlackEnabled {
+                AddToSlackMenuButton(viewModel: viewModel) {
+                    targetURLsToOpen()
+                }
             }
         }
     }
@@ -567,7 +571,7 @@ public struct AddToSlackMenuButton: View {
     let urlsProvider: () -> [URL]
 
     private var loc: LocalizationManager { LocalizationManager.shared }
-    private var slackPrefs: SlackPreferences { SlackPreferences.shared }
+    @Bindable private var slackPrefs: SlackPreferences = .shared
 
     public init(viewModel: ExplorerViewModel, urls: @escaping () -> [URL]) {
         self.viewModel = viewModel

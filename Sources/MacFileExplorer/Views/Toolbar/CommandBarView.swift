@@ -6,6 +6,8 @@ public struct CommandBarView: View {
     @Bindable var viewModel: ExplorerViewModel
     @Bindable private var bookmarksManager: BookmarksManager = .shared
     @Bindable private var toolbarPrefs: ToolbarPreferences = .shared
+    @Bindable private var slackPrefs: SlackPreferences = .shared
+    @Bindable private var mousePrefs: MousePreferences = .shared
     @ViewState private var barWidth: CGFloat = 1160
 
     private var loc: LocalizationManager { LocalizationManager.shared }
@@ -338,20 +340,14 @@ public struct CommandBarView: View {
 
             Divider()
 
-            Toggle(isOn: Binding(
-                get: { SlackPreferences.shared.isShareToSlackEnabled },
-                set: { SlackPreferences.shared.isShareToSlackEnabled = $0 }
-            )) {
+            Toggle(isOn: $slackPrefs.isShareToSlackEnabled) {
                 Label(
-                    loc.text(es: "Mostrar opción «Añadir a Slack»", en: "Show «Add to Slack» option"),
+                    loc.text(es: "Mostrar «Añadir a Slack» (Compartir con Slack)", en: "Show «Add to Slack» (Share with Slack)"),
                     systemImage: "bubble.left.and.bubble.right"
                 )
             }
 
-            Toggle(isOn: Binding(
-                get: { MousePreferences.shared.swapSideButtons },
-                set: { MousePreferences.shared.swapSideButtons = $0 }
-            )) {
+            Toggle(isOn: $mousePrefs.swapSideButtons) {
                 Label(
                     loc.text(es: "Invertir botones laterales del ratón (Atrás/Adelante)", en: "Swap mouse side buttons (Back/Forward)"),
                     systemImage: "computermouse"
