@@ -12,6 +12,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             NSApplication.shared.applicationIconImage = icon
         }
         MouseNavigationManager.shared.installIfNeeded()
+        StatusBarManager.shared.installIfNeeded()
         LocalizationManager.shared.installMenuTrackingObserverIfNeeded()
         LocalizationManager.shared.applyLanguageToMainMenu()
         DispatchQueue.main.async {
@@ -24,8 +25,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         LocalizationManager.shared.applyLanguageToMainMenu()
     }
 
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        if !flag {
+            GoogleAccountsManager.shared.openOrFocusMainWindow()
+        }
+        return true
+    }
+
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
-        true
+        !TrayIconPreferences.shared.isTrayIconEnabled
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
@@ -49,6 +57,7 @@ struct MacFileExplorerApp: App {
     @Bindable private var slackPrefs = SlackPreferences.shared
     @Bindable private var mousePrefs = MousePreferences.shared
     @Bindable private var sessionPrefs = SessionPreferences.shared
+    @Bindable private var trayIconPrefs = TrayIconPreferences.shared
     @FocusedValue(\.explorerViewModel) private var focusedExplorerViewModel
 
     var body: some Scene {
@@ -286,6 +295,10 @@ struct MacFileExplorerApp: App {
 
                 Toggle(isOn: $sessionPrefs.rememberOpenTabsOnLaunch) {
                     Label(loc.text(es: "Recordar carpetas y pestañas abiertas al iniciar", en: "Remember open folders & tabs on launch"), systemImage: "clock.arrow.circlepath")
+                }
+
+                Toggle(isOn: $trayIconPrefs.isTrayIconEnabled) {
+                    Label(loc.text(es: "Mostrar icono en la barra de menús (Tray Icon)", en: "Show icon in menu bar (Tray Icon)"), systemImage: "menubar.rectangle")
                 }
 
                 Toggle(isOn: $slackPrefs.isShareToSlackEnabled) {

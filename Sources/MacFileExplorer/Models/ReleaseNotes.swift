@@ -80,9 +80,17 @@ public enum ReleaseNotesCatalog {
             id: "v1.2-slack-mxmaster-responsive",
             versionLabelES: "Versión 1.2 — Slack, Ratón MX Master y Barra Adaptable",
             versionLabelEN: "Version 1.2 — Slack, MX Master Mouse & Responsive Toolbar",
-            dateLabelES: "13 nov 2026",
-            dateLabelEN: "Nov 13, 2026",
+            dateLabelES: "16 nov 2026",
+            dateLabelEN: "Nov 16, 2026",
             items: [
+                ReleaseNoteItem(
+                    id: "menu-bar-tray-icon",
+                    icon: "menubar.rectangle",
+                    titleES: "Icono de acceso rápido en la barra de menús de macOS (Tray Icon)",
+                    titleEN: "Quick access icon in the macOS menu bar (Tray Icon)",
+                    summaryES: "Ahora MacFileExplorer cuenta con su propio icono en la barra superior de macOS (junto al reloj, Wi‑Fi y batería). Al hacer clic sobre él puedes abrir o traer al frente el explorador, abrir una nueva pestaña o ventana, ir directamente a tus carpetas favoritas, cambiar entre tus pestañas abiertas o de Google Workspace, cerrar la pestaña o ventana actual, o salir de la aplicación.",
+                    summaryEN: "MacFileExplorer now includes its own icon in the top macOS menu bar (next to the clock, Wi‑Fi, and battery). Clicking it lets you open or bring the explorer to the front, open a new tab or window, jump directly to your favorite folders, switch between open tabs or Google Workspace services, close the current tab or window, or quit the app."
+                ),
                 ReleaseNoteItem(
                     id: "quicklook-movable-resizable-maximize",
                     icon: "arrow.up.left.and.arrow.down.right",

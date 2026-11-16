@@ -262,17 +262,134 @@ public final class GoogleAccountsManager: NSObject {
         presentOrActivateNativeWindowTab(for: newTab)
     }
 
-    /// Abre una nueva pestaña del Explorador de Archivos dentro de la barra de pestañas nativa de `MacFileExplorer`.
-    public func openNewFileExplorerTabWindow(from sourceWindow: NSWindow? = nil) {
-        let anchorWindow = resolveAnchorWindow(preferred: sourceWindow)
-        let frame = anchorWindow?.frame ?? NSRect(x: 120, y: 120, width: 1160, height: 720)
-        let initialFolderURL = anchorWindow.flatMap {
-            ExplorerWindowRegistry.shared.viewModel(for: $0)?.currentDirectoryURL
+    /// Indica si existe al menos una ventana principal de sesión abierta (visible o minimizada en el Dock).
+    public var hasLiveSessionWindows: Bool {
+        for entry in ExplorerWindowRegistry.shared.allRegisteredWindows() {
+            if isWindowLiveInSession(entry.window, includingClosingWindow: nil) {
+                return true
+            }
         }
+        for window in windowsByTabID.values {
+            if isWindowLiveInSession(window, includingClosingWindow: nil) {
+                return true
+            }
+        }
+        return false
+    }
+
+    /// Muestra y trae al frente la ventana principal de `MacFileExplorer` (desminimizándola si estaba en el Dock,
+    /// o creando/restaurando una ventana si todas habían sido cerradas). Si se especifica `directoryURL`, navega a esa carpeta.
+    public func openOrFocusMainWindow(at directoryURL: URL? = nil) {
+        NSApplication.shared.activate(ignoringOtherApps: true)
+
+        if let anchorWindow = resolveAnchorWindow(includeMiniaturized: true) {
+            let selected = anchorWindow.tabGroup?.selectedWindow ?? anchorWindow
+            if anchorWindow.isMiniaturized {
+                anchorWindow.deminiaturize(nil)
+            }
+            if selected.isMiniaturized {
+                selected.deminiaturize(nil)
+            }
+
+            if let directoryURL {
+                if let vm = ExplorerWindowRegistry.shared.viewModel(for: selected) {
+                    vm.navigate(to: directoryURL)
+                    selected.tabGroup?.selectedWindow = selected
+                    selected.makeKeyAndOrderFront(nil)
+                    syncActiveTabID(for: selected)
+                    return
+                }
+                let groupWindows = selected.tabGroup?.windows ?? [selected]
+                if let explorerWin = groupWindows.first(where: { ExplorerWindowRegistry.shared.viewModel(for: $0) != nil }),
+                   let vm = ExplorerWindowRegistry.shared.viewModel(for: explorerWin) {
+                    if explorerWin.isMiniaturized {
+                        explorerWin.deminiaturize(nil)
+                    }
+                    vm.navigate(to: directoryURL)
+                    activeTabID = nil
+                    explorerWin.tabGroup?.selectedWindow = explorerWin
+                    explorerWin.makeKeyAndOrderFront(nil)
+                    syncActiveTabID(for: explorerWin)
+                    return
+                }
+                openNewFileExplorerTabWindow(from: selected, directoryURL: directoryURL)
+                return
+            }
+
+            selected.tabGroup?.selectedWindow = selected
+            selected.makeKeyAndOrderFront(nil)
+            syncActiveTabID(for: selected)
+            return
+        }
+
+        // No hay ninguna ventana abierta: crear ventana nueva (y restaurar sesión si corresponde)
+        let savedFrame = PersistenceService.shared.loadWindowFrame() ?? NSRect(x: 120, y: 120, width: 1160, height: 720)
+        let targetURL = directoryURL ?? PersistenceService.shared.loadLastDirectory()
+        let created = createExplorerTabWindow(directoryURL: targetURL, frame: savedFrame)
+
+        if directoryURL == nil,
+           SessionPreferences.shared.rememberOpenTabsOnLaunch,
+           let snapshot = PersistenceService.shared.loadSessionSnapshot(),
+           !snapshot.windowGroups.isEmpty {
+            restoreSession(
+                snapshot: snapshot,
+                initialWindow: created.window,
+                initialViewModel: created.viewModel
+            )
+            return
+        }
+
+        created.window.makeKeyAndOrderFront(nil)
+        observeTabGroupSelection(for: created.window)
+        activeTabID = nil
+        scheduleSessionAutosave()
+    }
+
+    /// Abre una nueva pestaña del Explorador de Archivos dentro de la barra de pestañas nativa de `MacFileExplorer`.
+    public func openNewFileExplorerTabWindow(from sourceWindow: NSWindow? = nil, directoryURL: URL? = nil) {
+        NSApplication.shared.activate(ignoringOtherApps: true)
+        let anchorWindow = resolveAnchorWindow(preferred: sourceWindow, includeMiniaturized: true)
+        if let anchorWindow, anchorWindow.isMiniaturized {
+            anchorWindow.deminiaturize(nil)
+        }
+        let frame = anchorWindow?.frame
+            ?? PersistenceService.shared.loadWindowFrame()
+            ?? NSRect(x: 120, y: 120, width: 1160, height: 720)
+        let initialFolderURL = directoryURL
+            ?? anchorWindow.flatMap { ExplorerWindowRegistry.shared.viewModel(for: $0)?.currentDirectoryURL }
+            ?? PersistenceService.shared.loadLastDirectory()
         let created = createExplorerTabWindow(directoryURL: initialFolderURL, frame: frame)
         attachWindowToTabGroup(created.window, anchorWindow: anchorWindow)
         activeTabID = nil
         scheduleSessionAutosave()
+    }
+
+    /// Abre una ventana independiente del Explorador de Archivos (fuera del grupo de pestañas actual).
+    @discardableResult
+    public func openStandaloneFileExplorerWindow(directoryURL: URL? = nil) -> NSWindow {
+        NSApplication.shared.activate(ignoringOtherApps: true)
+        let baseFrame = resolveAnchorWindow(includeMiniaturized: true)?.frame
+            ?? PersistenceService.shared.loadWindowFrame()
+            ?? NSRect(x: 120, y: 120, width: 1160, height: 720)
+        let cascadedFrame: NSRect = {
+            guard hasLiveSessionWindows else { return baseFrame }
+            return NSRect(
+                x: baseFrame.origin.x + 26,
+                y: max(40, baseFrame.origin.y - 26),
+                width: baseFrame.width,
+                height: baseFrame.height
+            )
+        }()
+        let targetURL = directoryURL ?? PersistenceService.shared.loadLastDirectory()
+        let created = createExplorerTabWindow(directoryURL: targetURL, frame: cascadedFrame)
+        created.window.tabbingMode = .disallowed
+        created.window.makeKeyAndOrderFront(nil)
+        created.window.tabbingMode = .preferred
+        created.window.tabbingIdentifier = Self.mainWindowTabbingIdentifier
+        observeTabGroupSelection(for: created.window)
+        activeTabID = nil
+        scheduleSessionAutosave()
+        return created.window
     }
 
     private func makeNativeTabWindow(frame: NSRect) -> ExplorerNativeTabWindow {
@@ -313,7 +430,7 @@ public final class GoogleAccountsManager: NSObject {
 
     /// Cierra la pestaña actual (carpeta o web) y activa una pestaña adyacente si quedan otras en el grupo.
     public func closeCurrentTabWindow(from sourceWindow: NSWindow? = nil) {
-        guard let anchorWindow = resolveAnchorWindow(preferred: sourceWindow) else { return }
+        guard let anchorWindow = resolveAnchorWindow(preferred: sourceWindow, includeMiniaturized: true) else { return }
         let targetWindow = anchorWindow.tabGroup?.selectedWindow ?? anchorWindow
         let groupWindows = targetWindow.tabGroup?.windows ?? []
         let fallbackWindow: NSWindow? = {
@@ -336,9 +453,98 @@ public final class GoogleAccountsManager: NSObject {
         }
     }
 
+    /// Cierra la ventana activa completa (incluyendo todas las pestañas de su grupo, preservando el snapshot de sesión si es la última ventana).
+    public func closeActiveWindow(from sourceWindow: NSWindow? = nil) {
+        guard let anchorWindow = resolveAnchorWindow(preferred: sourceWindow, includeMiniaturized: true) else { return }
+        let groupWindows = anchorWindow.tabGroup?.windows ?? [anchorWindow]
+        let groupSet = Set(groupWindows.map { ObjectIdentifier($0) })
+
+        let hasOtherGroups: Bool = {
+            for entry in ExplorerWindowRegistry.shared.allRegisteredWindows() where !groupSet.contains(ObjectIdentifier(entry.window)) {
+                if isWindowLiveInSession(entry.window, includingClosingWindow: nil) { return true }
+            }
+            for win in windowsByTabID.values where !groupSet.contains(ObjectIdentifier(win)) {
+                if isWindowLiveInSession(win, includingClosingWindow: nil) { return true }
+            }
+            return false
+        }()
+
+        if !hasOtherGroups,
+           SessionPreferences.shared.rememberOpenTabsOnLaunch,
+           let snapshot = buildCurrentSessionSnapshot(includingClosingWindow: anchorWindow) {
+            PersistenceService.shared.saveSessionSnapshot(snapshot)
+            if let activeVM = ExplorerWindowRegistry.shared.activeViewModel {
+                PersistenceService.shared.saveLastDirectory(activeVM.currentDirectoryURL)
+            }
+        }
+
+        for win in groupWindows {
+            ignoredClosingWindowIDs.insert(ObjectIdentifier(win))
+            win.close()
+        }
+
+        if hasOtherGroups {
+            scheduleSessionAutosave()
+        }
+    }
+
+    /// Activa y trae al frente una ventana/pestaña específica.
+    public func activateTabWindow(_ window: NSWindow) {
+        NSApplication.shared.activate(ignoringOtherApps: true)
+        if window.isMiniaturized {
+            window.deminiaturize(nil)
+        }
+        window.tabGroup?.selectedWindow = window
+        window.makeKeyAndOrderFront(nil)
+        syncActiveTabID(for: window)
+    }
+
+    /// Resumen de todas las pestañas abiertas actualmente en orden para mostrarlas en el menú del Tray Icon.
+    public func allOpenTabSummaries() -> [(window: NSWindow, title: String, symbolName: String, isSelected: Bool)] {
+        let explorerEntries = ExplorerWindowRegistry.shared.allRegisteredWindows()
+        var explorerByID: [ObjectIdentifier: ExplorerViewModel] = [:]
+        for entry in explorerEntries {
+            explorerByID[ObjectIdentifier(entry.window)] = entry.viewModel
+        }
+
+        let tabsByID = Dictionary(uniqueKeysWithValues: openTabs.map { ($0.id, $0) })
+        var webByID: [ObjectIdentifier: BrowserTabItem] = [:]
+        for (tabID, win) in windowsByTabID {
+            if let tab = tabsByID[tabID] {
+                webByID[ObjectIdentifier(win)] = tab
+            }
+        }
+
+        guard let anchor = resolveAnchorWindow(includeMiniaturized: true) else { return [] }
+        let selectedInGroup = anchor.tabGroup?.selectedWindow ?? anchor
+        let windowsToList = anchor.tabGroup?.windows ?? [anchor]
+
+        var result: [(window: NSWindow, title: String, symbolName: String, isSelected: Bool)] = []
+        for win in windowsToList {
+            let winID = ObjectIdentifier(win)
+            let isSelected = (win === selectedInGroup)
+            if let vm = explorerByID[winID] {
+                result.append((win, vm.currentFolderTitle, "folder.fill", isSelected))
+            } else if let tab = webByID[winID] {
+                let symbol: String
+                switch tab.service {
+                case .gmail: symbol = "envelope.fill"
+                case .drive: symbol = "externaldrive.fill.badge.icloud"
+                case .calendar: symbol = "calendar"
+                case .none: symbol = "globe"
+                }
+                result.append((win, tab.title, symbol, isSelected))
+            }
+        }
+        return result
+    }
+
     /// Crea o activa la pestaña nativa (`NSWindow`) en la barra superior de `MacFileExplorer` para el `BrowserTabItem` dado.
     public func presentOrActivateNativeWindowTab(for tab: BrowserTabItem) {
         if let existingWindow = windowsByTabID[tab.id] {
+            if existingWindow.isMiniaturized {
+                existingWindow.deminiaturize(nil)
+            }
             NativeWindowTabIconBuilder.applyWebTabAppearance(to: existingWindow, for: tab)
             existingWindow.tabGroup?.selectedWindow = existingWindow
             existingWindow.makeKeyAndOrderFront(nil)
@@ -347,8 +553,13 @@ public final class GoogleAccountsManager: NSObject {
             return
         }
 
-        let anchorWindow = resolveAnchorWindow()
-        let frame = anchorWindow?.frame ?? NSRect(x: 120, y: 120, width: 1160, height: 720)
+        let anchorWindow = resolveAnchorWindow(includeMiniaturized: true)
+        if let anchorWindow, anchorWindow.isMiniaturized {
+            anchorWindow.deminiaturize(nil)
+        }
+        let frame = anchorWindow?.frame
+            ?? PersistenceService.shared.loadWindowFrame()
+            ?? NSRect(x: 120, y: 120, width: 1160, height: 720)
         let webWindow = createWebTabWindow(for: tab, frame: frame)
 
         attachWindowToTabGroup(webWindow, anchorWindow: anchorWindow)
@@ -356,9 +567,11 @@ public final class GoogleAccountsManager: NSObject {
         scheduleSessionAutosave()
     }
 
-    private func resolveAnchorWindow(preferred sourceWindow: NSWindow? = nil) -> NSWindow? {
+    private func resolveAnchorWindow(preferred sourceWindow: NSWindow? = nil, includeMiniaturized: Bool = false) -> NSWindow? {
         if let sourceWindow, sourceWindow.canBecomeMain, !sourceWindow.isSheet {
-            return sourceWindow
+            if sourceWindow.isVisible || (includeMiniaturized && isWindowLiveInSession(sourceWindow, includingClosingWindow: nil)) {
+                return sourceWindow
+            }
         }
         if let key = NSApplication.shared.keyWindow, key.isVisible, key.canBecomeMain, !key.isSheet {
             return key
@@ -366,11 +579,21 @@ public final class GoogleAccountsManager: NSObject {
         if let main = NSApplication.shared.mainWindow, main.isVisible, main.canBecomeMain, !main.isSheet {
             return main
         }
-        let candidates = NSApplication.shared.windows.filter {
+        let visibleCandidates = NSApplication.shared.windows.filter {
             $0.isVisible && $0.canBecomeMain && !$0.isSheet
         }
-        return candidates.first(where: { $0.tabbingIdentifier == Self.mainWindowTabbingIdentifier })
-            ?? candidates.first
+        if let match = visibleCandidates.first(where: { $0.tabbingIdentifier == Self.mainWindowTabbingIdentifier })
+            ?? visibleCandidates.first {
+            return match
+        }
+        if includeMiniaturized {
+            let miniCandidates = NSApplication.shared.windows.filter {
+                $0.canBecomeMain && !$0.isSheet && isWindowLiveInSession($0, includingClosingWindow: nil)
+            }
+            return miniCandidates.first(where: { $0.tabbingIdentifier == Self.mainWindowTabbingIdentifier })
+                ?? miniCandidates.first
+        }
+        return nil
     }
 
     private func attachWindowToTabGroup(_ newWindow: NSWindow, anchorWindow: NSWindow?) {

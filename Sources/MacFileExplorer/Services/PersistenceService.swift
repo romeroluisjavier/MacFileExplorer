@@ -318,6 +318,21 @@ public final class PersistenceService {
         defaults.set(swap, forKey: Self.swapMouseButtonsKey)
     }
 
+    // MARK: - Icono en la Barra de Menús (Tray Icon)
+
+    private static let showTrayIconKey = "com.macfileexplorer.state.showTrayIcon"
+
+    public func loadShowTrayIcon() -> Bool {
+        if defaults.object(forKey: Self.showTrayIconKey) == nil {
+            return true
+        }
+        return defaults.bool(forKey: Self.showTrayIconKey)
+    }
+
+    public func saveShowTrayIcon(_ show: Bool) {
+        defaults.set(show, forKey: Self.showTrayIconKey)
+    }
+
     // MARK: - Sesión y Pestañas Abiertas al Iniciar
 
     public func loadRememberOpenTabs() -> Bool {
@@ -653,6 +668,25 @@ public final class MousePreferences {
 
     private init() {
         self.swapSideButtons = PersistenceService.shared.loadSwapMouseButtons()
+    }
+}
+
+/// Preferencia reactiva y persistente para mostrar el icono de MacFileExplorer en la barra de estado/menús de macOS (Tray Icon).
+@MainActor
+@Observable
+public final class TrayIconPreferences {
+    public static let shared = TrayIconPreferences()
+
+    public var isTrayIconEnabled: Bool {
+        didSet {
+            guard isTrayIconEnabled != oldValue else { return }
+            PersistenceService.shared.saveShowTrayIcon(isTrayIconEnabled)
+            StatusBarManager.shared.syncVisibility()
+        }
+    }
+
+    private init() {
+        self.isTrayIconEnabled = PersistenceService.shared.loadShowTrayIcon()
     }
 }
 
