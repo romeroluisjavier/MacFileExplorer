@@ -84,6 +84,14 @@ public enum ReleaseNotesCatalog {
             dateLabelEN: "Nov 16, 2026",
             items: [
                 ReleaseNoteItem(
+                    id: "quick-actions-media",
+                    icon: "wand.and.stars",
+                    titleES: "Quick Actions para imágenes y videos desde el clic derecho",
+                    titleEN: "Quick Actions for images and videos from right-click",
+                    summaryES: "Al hacer clic derecho sobre imágenes o videos aparece el menú «Quick Actions». En imágenes puedes convertir a JPG o PNG eligiendo calidad, PPP, ancho o peso máximo en MB (o mantener tamaño original) y rotarlas 90°/180°. En videos puedes convertir de MOV a MP4 eligiendo calidad y peso máximo en MB, recortar (Trim) o eliminar el audio.",
+                    summaryEN: "Right-clicking images or videos now reveals the «Quick Actions» menu. For images, you can convert to JPG or PNG with custom quality, DPI, target width, or max file size in MB (or keep original size) and rotate 90°/180°. For videos, you can convert MOV to MP4 with custom quality and max MB size, trim clips, or remove audio."
+                ),
+                ReleaseNoteItem(
                     id: "bulk-rename-regex-exif",
                     icon: "pencil.and.list.clipboard",
                     titleES: "Renombrado masivo con Regex, numeración y fechas EXIF",

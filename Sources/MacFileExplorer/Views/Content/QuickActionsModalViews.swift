@@ -1,0 +1,389 @@
+@preconcurrency import AVFoundation
+import SwiftUI
+
+/// Modal para convertir una o más imágenes a `.jpg` o `.png` con calidad, PPP (DPI), ancho y peso máximo en MB.
+public struct QuickActionImageConvertModalView: View {
+    @Bindable var viewModel: ExplorerViewModel
+    let targetURLs: [URL]
+    @Environment(\.dismiss) private var dismiss
+
+    @ViewState private var options = QuickActionImageConvertOptions()
+    @ViewState private var isProcessing = false
+
+    private var loc: LocalizationManager { LocalizationManager.shared }
+
+    public init(viewModel: ExplorerViewModel, targetURLs: [URL]) {
+        self.viewModel = viewModel
+        self.targetURLs = targetURLs
+    }
+
+    public var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(spacing: 10) {
+                Image(systemName: "photo.badge.arrow.down")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(Color.accentColor)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(loc.text(es: "Convertir imagen(es)", en: "Convert Image(s)"))
+                        .font(.system(size: 15, weight: .semibold))
+                    Text(loc.text(
+                        es: "\(targetURLs.count) archivo(s) seleccionado(s)",
+                        en: "\(targetURLs.count) file(s) selected"
+                    ))
+                    .font(.system(size: 11.5))
+                    .foregroundStyle(.secondary)
+                }
+            }
+
+            Divider()
+
+            Form {
+                Picker(loc.text(es: "Formato de salida:", en: "Output format:"), selection: $options.format) {
+                    ForEach(QuickActionImageFormat.allCases) { format in
+                        Text(format.displayTitle).tag(format)
+                    }
+                }
+                .pickerStyle(.segmented)
+
+                if options.format == .jpg {
+                    HStack {
+                        Text(loc.text(es: "Calidad JPG:", en: "JPG Quality:"))
+                        Slider(value: $options.quality, in: 0.1...1.0, step: 0.05)
+                        Text("\(Int((options.quality * 100).rounded()))%")
+                            .monospacedDigit()
+                            .frame(width: 42, alignment: .trailing)
+                    }
+                }
+
+                HStack {
+                    Text(loc.text(es: "Resolución (PPP / DPI):", en: "Resolution (DPI):"))
+                    Spacer()
+                    Picker("", selection: $options.dpi) {
+                        Text("72 PPP (Pantalla)").tag(72)
+                        Text("150 PPP (Web/Doc)").tag(150)
+                        Text("300 PPP (Impresión)").tag(300)
+                    }
+                    .frame(width: 190)
+                }
+
+                Toggle(
+                    loc.text(es: "Mantener tamaño original", en: "Keep original size"),
+                    isOn: $options.keepOriginalSize
+                )
+
+                if !options.keepOriginalSize {
+                    HStack {
+                        Text(loc.text(es: "Ancho esperado (px):", en: "Target width (px):"))
+                        Spacer()
+                        TextField("1920", value: $options.targetWidth, format: .number)
+                            .textFieldStyle(.roundedBorder)
+                            .frame(width: 100)
+                        Text("px")
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                Toggle(
+                    loc.text(es: "Limitar peso máximo esperado (MB)", en: "Limit target file size (MB)"),
+                    isOn: $options.useTargetMaxSizeMB
+                )
+
+                if options.useTargetMaxSizeMB {
+                    HStack {
+                        Text(loc.text(es: "Peso máximo (MB):", en: "Max size (MB):"))
+                        Spacer()
+                        TextField("1.0", value: $options.targetMaxSizeMB, format: .number.precision(.fractionLength(1...2)))
+                            .textFieldStyle(.roundedBorder)
+                            .frame(width: 100)
+                        Text("MB")
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+            .formStyle(.grouped)
+
+            HStack {
+                Spacer()
+                Button(loc.text(es: "Cancelar", en: "Cancel")) {
+                    dismiss()
+                }
+                .keyboardShortcut(.cancelAction)
+
+                Button {
+                    isProcessing = true
+                    let urls = targetURLs
+                    let opts = options
+                    Task { @MainActor in
+                        do {
+                            let created = try await QuickActionsService.convertImages(urls, options: opts)
+                            await viewModel.reloadDirectoryAndSelect(created, startRenameOn: nil)
+                            isProcessing = false
+                            dismiss()
+                        } catch {
+                            viewModel.errorMessage = error.localizedDescription
+                            isProcessing = false
+                        }
+                    }
+                } label: {
+                    if isProcessing {
+                        ProgressView().controlSize(.small)
+                    } else {
+                        Text(loc.text(es: "Convertir", en: "Convert"))
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(isProcessing)
+                .keyboardShortcut(.defaultAction)
+            }
+        }
+        .padding(18)
+        .frame(width: 470)
+    }
+}
+
+/// Modal para convertir videos (`.mov`, etc.) a `.mp4` eligiendo calidad y peso máximo en MB.
+public struct QuickActionVideoConvertModalView: View {
+    @Bindable var viewModel: ExplorerViewModel
+    let targetURLs: [URL]
+    @Environment(\.dismiss) private var dismiss
+
+    @ViewState private var options = QuickActionVideoConvertOptions()
+    @ViewState private var isProcessing = false
+
+    private var loc: LocalizationManager { LocalizationManager.shared }
+
+    public init(viewModel: ExplorerViewModel, targetURLs: [URL]) {
+        self.viewModel = viewModel
+        self.targetURLs = targetURLs
+    }
+
+    public var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(spacing: 10) {
+                Image(systemName: "film.stack")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(Color.accentColor)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(loc.text(es: "Convertir video(s) a MP4", en: "Convert Video(s) to MP4"))
+                        .font(.system(size: 15, weight: .semibold))
+                    Text(loc.text(
+                        es: "\(targetURLs.count) video(s) seleccionado(s)",
+                        en: "\(targetURLs.count) video(s) selected"
+                    ))
+                    .font(.system(size: 11.5))
+                    .foregroundStyle(.secondary)
+                }
+            }
+
+            Divider()
+
+            Form {
+                Picker(loc.text(es: "Calidad de exportación:", en: "Export quality:"), selection: $options.quality) {
+                    ForEach(QuickActionVideoQuality.allCases) { quality in
+                        Text(quality.localizedTitle(using: loc)).tag(quality)
+                    }
+                }
+
+                Toggle(
+                    loc.text(es: "Limitar peso máximo esperado (MB)", en: "Limit target file size (MB)"),
+                    isOn: $options.useTargetMaxSizeMB
+                )
+
+                if options.useTargetMaxSizeMB {
+                    HStack {
+                        Text(loc.text(es: "Peso máximo (MB):", en: "Max size (MB):"))
+                        Spacer()
+                        TextField("10.0", value: $options.targetMaxSizeMB, format: .number.precision(.fractionLength(1...2)))
+                            .textFieldStyle(.roundedBorder)
+                            .frame(width: 100)
+                        Text("MB")
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+            .formStyle(.grouped)
+
+            HStack {
+                Spacer()
+                Button(loc.text(es: "Cancelar", en: "Cancel")) {
+                    dismiss()
+                }
+                .keyboardShortcut(.cancelAction)
+
+                Button {
+                    isProcessing = true
+                    let urls = targetURLs
+                    let opts = options
+                    Task { @MainActor in
+                        do {
+                            let created = try await QuickActionsService.convertVideosToMP4(urls, options: opts)
+                            await viewModel.reloadDirectoryAndSelect(created, startRenameOn: nil)
+                            isProcessing = false
+                            dismiss()
+                        } catch {
+                            viewModel.errorMessage = error.localizedDescription
+                            isProcessing = false
+                        }
+                    }
+                } label: {
+                    if isProcessing {
+                        ProgressView().controlSize(.small)
+                    } else {
+                        Text(loc.text(es: "Convertir a MP4", en: "Convert to MP4"))
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(isProcessing)
+                .keyboardShortcut(.defaultAction)
+            }
+        }
+        .padding(18)
+        .frame(width: 450)
+    }
+}
+
+/// Modal para recortar (Trim) un video seleccionando inicio y fin.
+public struct QuickActionVideoTrimModalView: View {
+    @Bindable var viewModel: ExplorerViewModel
+    let targetURL: URL
+    @Environment(\.dismiss) private var dismiss
+
+    @ViewState private var durationSeconds: Double = 10.0
+    @ViewState private var startSeconds: Double = 0.0
+    @ViewState private var endSeconds: Double = 10.0
+    @ViewState private var isLoaded = false
+    @ViewState private var isProcessing = false
+
+    private var loc: LocalizationManager { LocalizationManager.shared }
+
+    public init(viewModel: ExplorerViewModel, targetURL: URL) {
+        self.viewModel = viewModel
+        self.targetURL = targetURL
+    }
+
+    public var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(spacing: 10) {
+                Image(systemName: "scissors")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(Color.accentColor)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(loc.text(es: "Recortar video (Trim)", en: "Trim Video"))
+                        .font(.system(size: 15, weight: .semibold))
+                    Text(targetURL.lastPathComponent)
+                        .font(.system(size: 11.5))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+            }
+
+            Divider()
+
+            if !isLoaded {
+                ProgressView(loc.text(es: "Cargando duración del video…", en: "Loading video duration…"))
+                    .frame(maxWidth: .infinity, minHeight: 90)
+            } else {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Text(loc.text(es: "Inicio:", en: "Start:"))
+                            .frame(width: 55, alignment: .leading)
+                        Slider(
+                            value: Binding(
+                                get: { startSeconds },
+                                set: { newVal in
+                                    startSeconds = min(newVal, max(0, endSeconds - 0.2))
+                                }
+                            ),
+                            in: 0...max(0.2, durationSeconds)
+                        )
+                        Text(formatTime(startSeconds))
+                            .monospacedDigit()
+                            .frame(width: 65, alignment: .trailing)
+                    }
+
+                    HStack {
+                        Text(loc.text(es: "Fin:", en: "End:"))
+                            .frame(width: 55, alignment: .leading)
+                        Slider(
+                            value: Binding(
+                                get: { endSeconds },
+                                set: { newVal in
+                                    endSeconds = max(newVal, min(durationSeconds, startSeconds + 0.2))
+                                }
+                            ),
+                            in: 0...max(0.2, durationSeconds)
+                        )
+                        Text(formatTime(endSeconds))
+                            .monospacedDigit()
+                            .frame(width: 65, alignment: .trailing)
+                    }
+
+                    Text(loc.text(
+                        es: "Duración resultante: \(formatTime(max(0, endSeconds - startSeconds)))",
+                        en: "Resulting duration: \(formatTime(max(0, endSeconds - startSeconds)))"
+                    ))
+                    .font(.system(size: 11.5))
+                    .foregroundStyle(.secondary)
+                }
+                .padding(.vertical, 6)
+            }
+
+            HStack {
+                Spacer()
+                Button(loc.text(es: "Cancelar", en: "Cancel")) {
+                    dismiss()
+                }
+                .keyboardShortcut(.cancelAction)
+
+                Button {
+                    isProcessing = true
+                    let url = targetURL
+                    let start = startSeconds
+                    let end = endSeconds
+                    Task { @MainActor in
+                        do {
+                            let created = try await QuickActionsService.trimVideo(url, startSeconds: start, endSeconds: end)
+                            await viewModel.reloadDirectoryAndSelect([created], startRenameOn: nil)
+                            isProcessing = false
+                            dismiss()
+                        } catch {
+                            viewModel.errorMessage = error.localizedDescription
+                            isProcessing = false
+                        }
+                    }
+                } label: {
+                    if isProcessing {
+                        ProgressView().controlSize(.small)
+                    } else {
+                        Text(loc.text(es: "Recortar y guardar", en: "Trim & Save"))
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(!isLoaded || isProcessing || endSeconds <= startSeconds)
+                .keyboardShortcut(.defaultAction)
+            }
+        }
+        .padding(18)
+        .frame(width: 450)
+        .task {
+            let asset = AVURLAsset(url: targetURL)
+            if let cmDuration = try? await asset.load(.duration) {
+                let secs = max(0.5, CMTimeGetSeconds(cmDuration))
+                durationSeconds = secs
+                startSeconds = 0
+                endSeconds = secs
+            }
+            isLoaded = true
+        }
+    }
+
+    private func formatTime(_ seconds: Double) -> String {
+        let total = max(0, seconds)
+        let mins = Int(total) / 60
+        let secs = total.truncatingRemainder(dividingBy: 60)
+        return String(format: "%02d:%04.1f", mins, secs)
+    }
+}

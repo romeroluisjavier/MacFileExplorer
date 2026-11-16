@@ -405,6 +405,117 @@ public struct ExplorerItemContextMenu: View {
                     targetURLsToOpen()
                 }
             }
+
+            let targetURLs = targetURLsToOpen()
+            let imageURLs = targetURLs.filter { QuickActionsService.isImageURL($0) }
+            let videoURLs = targetURLs.filter { QuickActionsService.isVideoURL($0) }
+
+            if !imageURLs.isEmpty || !videoURLs.isEmpty {
+                Divider()
+
+                Menu {
+                    if !imageURLs.isEmpty {
+                        Button {
+                            ensureSelected()
+                            viewModel.quickActionImageConvertURLs = imageURLs
+                        } label: {
+                            Label(
+                                loc.text(es: "Convertir a JPG / PNG…", en: "Convert to JPG / PNG…"),
+                                systemImage: "photo.badge.arrow.down"
+                            )
+                        }
+
+                        Menu {
+                            Button {
+                                Task { @MainActor in
+                                    do {
+                                        let rotated = try await QuickActionsService.rotateImages(imageURLs, rotation: .right90)
+                                        await viewModel.reloadDirectoryAndSelect(rotated, startRenameOn: nil)
+                                    } catch {
+                                        viewModel.errorMessage = error.localizedDescription
+                                    }
+                                }
+                            } label: {
+                                Label(loc.text(es: "Rotar 90° a la derecha", en: "Rotate 90° Right"), systemImage: "rotate.right")
+                            }
+
+                            Button {
+                                Task { @MainActor in
+                                    do {
+                                        let rotated = try await QuickActionsService.rotateImages(imageURLs, rotation: .left90)
+                                        await viewModel.reloadDirectoryAndSelect(rotated, startRenameOn: nil)
+                                    } catch {
+                                        viewModel.errorMessage = error.localizedDescription
+                                    }
+                                }
+                            } label: {
+                                Label(loc.text(es: "Rotar 90° a la izquierda", en: "Rotate 90° Left"), systemImage: "rotate.left")
+                            }
+
+                            Button {
+                                Task { @MainActor in
+                                    do {
+                                        let rotated = try await QuickActionsService.rotateImages(imageURLs, rotation: .rotate180)
+                                        await viewModel.reloadDirectoryAndSelect(rotated, startRenameOn: nil)
+                                    } catch {
+                                        viewModel.errorMessage = error.localizedDescription
+                                    }
+                                }
+                            } label: {
+                                Label(loc.text(es: "Rotar 180°", en: "Rotate 180°"), systemImage: "arrow.triangle.2.circlepath")
+                            }
+                        } label: {
+                            Label(loc.text(es: "Rotar imagen", en: "Rotate Image"), systemImage: "rotate.right")
+                        }
+                    }
+
+                    if !videoURLs.isEmpty {
+                        if !imageURLs.isEmpty {
+                            Divider()
+                        }
+
+                        Button {
+                            ensureSelected()
+                            viewModel.quickActionVideoConvertURLs = videoURLs
+                        } label: {
+                            Label(
+                                loc.text(es: "Convertir a MP4…", en: "Convert to MP4…"),
+                                systemImage: "film.stack"
+                            )
+                        }
+
+                        if let firstVideo = videoURLs.first {
+                            Button {
+                                ensureSelected()
+                                viewModel.quickActionVideoTrimURL = firstVideo
+                            } label: {
+                                Label(
+                                    loc.text(es: "Recortar video (Trim)…", en: "Trim Video…"),
+                                    systemImage: "scissors"
+                                )
+                            }
+                        }
+
+                        Button {
+                            Task { @MainActor in
+                                do {
+                                    let muted = try await QuickActionsService.removeAudioFromVideos(videoURLs)
+                                    await viewModel.reloadDirectoryAndSelect(muted, startRenameOn: nil)
+                                } catch {
+                                    viewModel.errorMessage = error.localizedDescription
+                                }
+                            }
+                        } label: {
+                            Label(
+                                loc.text(es: "Eliminar audio (Silenciar)", en: "Remove Audio (Mute)"),
+                                systemImage: "speaker.slash"
+                            )
+                        }
+                    }
+                } label: {
+                    Label("Quick Actions", systemImage: "wand.and.stars")
+                }
+            }
         }
     }
 

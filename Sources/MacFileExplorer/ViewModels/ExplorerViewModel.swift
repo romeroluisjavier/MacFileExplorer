@@ -150,6 +150,11 @@ public final class ExplorerViewModel {
     /// Controla la presentación del modal de Renombrado Masivo (Bulk Rename) cuando hay varios elementos seleccionados.
     public var isBulkRenamePresented: Bool = false
 
+    /// Controla la presentación de los modales de Quick Actions para imágenes y videos.
+    public var quickActionImageConvertURLs: [URL]? = nil
+    public var quickActionVideoConvertURLs: [URL]? = nil
+    public var quickActionVideoTrimURL: URL? = nil
+
     // MARK: - Historial de Deshacer / Rehacer (`Cmd+Z` / `Cmd+Shift+Z`)
 
     public private(set) var undoStack: [ExplorerUndoEntry] = []
@@ -2102,7 +2107,7 @@ public final class ExplorerViewModel {
         }
     }
 
-    private func reloadDirectoryAndSelect(_ urlsToSelect: [URL], startRenameOn renameURL: URL?) async {
+    public func reloadDirectoryAndSelect(_ urlsToSelect: [URL], startRenameOn renameURL: URL?) async {
         do {
             let targetURL = currentDirectoryURL.standardizedFileURL
             let fetchedItems = try await fileSystemService.fetchDirectoryContents(at: targetURL)

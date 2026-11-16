@@ -91,6 +91,36 @@ public struct MainExplorerView: View {
         .sheet(isPresented: $viewModel.isBulkRenamePresented) {
             BulkRenameModalView(viewModel: viewModel)
         }
+        .sheet(
+            isPresented: Binding(
+                get: { viewModel.quickActionImageConvertURLs != nil },
+                set: { if !$0 { viewModel.quickActionImageConvertURLs = nil } }
+            )
+        ) {
+            if let urls = viewModel.quickActionImageConvertURLs {
+                QuickActionImageConvertModalView(viewModel: viewModel, targetURLs: urls)
+            }
+        }
+        .sheet(
+            isPresented: Binding(
+                get: { viewModel.quickActionVideoConvertURLs != nil },
+                set: { if !$0 { viewModel.quickActionVideoConvertURLs = nil } }
+            )
+        ) {
+            if let urls = viewModel.quickActionVideoConvertURLs {
+                QuickActionVideoConvertModalView(viewModel: viewModel, targetURLs: urls)
+            }
+        }
+        .sheet(
+            isPresented: Binding(
+                get: { viewModel.quickActionVideoTrimURL != nil },
+                set: { if !$0 { viewModel.quickActionVideoTrimURL = nil } }
+            )
+        ) {
+            if let url = viewModel.quickActionVideoTrimURL {
+                QuickActionVideoTrimModalView(viewModel: viewModel, targetURL: url)
+            }
+        }
         .focusedSceneValue(\.explorerViewModel, viewModel)
     }
 
