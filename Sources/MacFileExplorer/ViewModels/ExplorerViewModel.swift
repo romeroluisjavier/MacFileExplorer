@@ -147,6 +147,9 @@ public final class ExplorerViewModel {
     /// Indica si el panel principal está mostrando el buscador y gestor completo del Historial del Portapapeles.
     public var isShowingClipboardHistory: Bool = false
 
+    /// Controla la presentación del modal de Renombrado Masivo (Bulk Rename) cuando hay varios elementos seleccionados.
+    public var isBulkRenamePresented: Bool = false
+
     // MARK: - Historial de Deshacer / Rehacer (`Cmd+Z` / `Cmd+Shift+Z`)
 
     public private(set) var undoStack: [ExplorerUndoEntry] = []
@@ -402,7 +405,7 @@ public final class ExplorerViewModel {
     }
 
     public var canRename: Bool {
-        selectedItemIDs.count == 1
+        !selectedItemIDs.isEmpty
     }
 
     public var canDelete: Bool {
@@ -1207,8 +1210,13 @@ public final class ExplorerViewModel {
         }
     }
 
-    /// Inicia el renombrado en línea (`F2` o `Enter`) sobre el único elemento seleccionado.
+    /// Inicia el renombrado en línea (`F2` o `Enter`) si hay 1 elemento seleccionado,
+    /// o abre el modal de Renombrado Masivo (Bulk Rename) si hay 2 o más elementos seleccionados.
     public func beginRenamingSelectedItem() {
+        if selectedItemIDs.count > 1 {
+            isBulkRenamePresented = true
+            return
+        }
         guard selectedItemIDs.count == 1,
               let selectedID = selectedItemIDs.first,
               let item = allItems.first(where: { $0.id == selectedID }) else {
@@ -1216,6 +1224,32 @@ public final class ExplorerViewModel {
         }
         renamingItemID = item.id
         renamingDraftName = item.name
+    }
+
+    /// Ejecuta el renombrado masivo sobre todos los elementos válidos de la vista previa y registra una única acción Deshacer (`Cmd+Z`).
+    public func performBulkRename(previews: [BulkRenamePreviewItem]) async {
+        let validItems = previews.filter { $0.isValidToApply }
+        guard !validItems.isEmpty else { return }
+
+        var completedPairs: [FileMovePair] = []
+        completedPairs.reserveCapacity(validItems.count)
+
+        do {
+            for entry in validItems {
+                let renamedURL = try await fileSystemService.renameItem(at: entry.id, to: entry.proposedName)
+                completedPairs.append(FileMovePair(source: entry.id, destination: renamedURL))
+            }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+
+        if !completedPairs.isEmpty {
+            undoStack.append(ExplorerUndoEntry(kind: .bulkRename(pairs: completedPairs)))
+            redoStack.removeAll()
+            let parentDir = completedPairs.first!.destination.deletingLastPathComponent().standardizedFileURL
+            sidebarViewModel.refreshSubdirectoriesIfNeeded(at: parentDir, includeHidden: showHiddenFiles)
+            await reloadDirectoryAndSelect(completedPairs.map(\.destination), startRenameOn: nil)
+        }
     }
 
     /// Confirma el renombrado en línea y actualiza el archivo en disco.
@@ -1591,6 +1625,30 @@ public final class ExplorerViewModel {
                     affectedParents.insert(renamedURL.deletingLastPathComponent().standardizedFileURL)
                     inverseEntry = ExplorerUndoEntry(kind: .rename(oldURL: oldURL, newURL: renamedURL))
                 }
+
+            case .bulkRename(let pairs):
+                var inversePairs: [FileMovePair] = []
+                inversePairs.reserveCapacity(pairs.count)
+                for pair in pairs {
+                    if isUndo {
+                        let restoredURL = try await fileSystemService.renameItem(
+                            at: pair.destination,
+                            to: pair.source.lastPathComponent
+                        )
+                        revealURLs.append(restoredURL)
+                        affectedParents.insert(restoredURL.deletingLastPathComponent().standardizedFileURL)
+                        inversePairs.append(FileMovePair(source: restoredURL, destination: pair.destination))
+                    } else {
+                        let renamedURL = try await fileSystemService.renameItem(
+                            at: pair.source,
+                            to: pair.destination.lastPathComponent
+                        )
+                        revealURLs.append(renamedURL)
+                        affectedParents.insert(renamedURL.deletingLastPathComponent().standardizedFileURL)
+                        inversePairs.append(FileMovePair(source: pair.source, destination: renamedURL))
+                    }
+                }
+                inverseEntry = inversePairs.isEmpty ? nil : ExplorerUndoEntry(kind: .bulkRename(pairs: inversePairs))
             }
 
             if let inverseEntry {

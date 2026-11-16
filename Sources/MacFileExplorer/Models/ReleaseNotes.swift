@@ -84,6 +84,14 @@ public enum ReleaseNotesCatalog {
             dateLabelEN: "Nov 16, 2026",
             items: [
                 ReleaseNoteItem(
+                    id: "bulk-rename-regex-exif",
+                    icon: "pencil.and.list.clipboard",
+                    titleES: "Renombrado masivo con Regex, numeración y fechas EXIF",
+                    titleEN: "Bulk Rename with Regex, sequential numbering & EXIF dates",
+                    summaryES: "Al seleccionar varios archivos o carpetas y presionar Enter (o F2 / Renombrar), se abre el nuevo panel de Renombrado masivo. Puedes cambiar cientos de nombres a la vez usando expresiones regulares, numeración secuencial o la fecha de metadatos EXIF de tus fotos, con vista previa en tiempo real, detección de conflictos y soporte para deshacer con ⌘Z.",
+                    summaryEN: "Selecting multiple files or folders and pressing Enter (or F2 / Rename) opens the new Bulk Rename panel. You can rename hundreds of files at once using regular expressions, sequential numbering, or photo EXIF metadata dates, complete with live preview, conflict detection, and ⌘Z undo support."
+                ),
+                ReleaseNoteItem(
                     id: "clipboard-history-maccy",
                     icon: "doc.on.clipboard.fill",
                     titleES: "Historial del Portapapeles estilo Maccy, menú superior Portapapeles y desplegable global (⌃⌘V)",

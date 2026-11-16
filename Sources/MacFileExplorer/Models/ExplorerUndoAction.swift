@@ -30,6 +30,8 @@ public enum ExplorerUndoOperationKind: Sendable {
     case trash(pairs: [FileMovePair])
     /// Renombrado en línea (`F2` / `Enter`).
     case rename(oldURL: URL, newURL: URL)
+    /// Renombrado masivo de múltiples archivos/carpetas.
+    case bulkRename(pairs: [FileMovePair])
 }
 
 /// Registro individual en la pila de Deshacer / Rehacer de `ExplorerViewModel`.
@@ -64,6 +66,8 @@ public struct ExplorerUndoEntry: Identifiable, Sendable {
             return loc.text(es: "Eliminar", en: "Delete")
         case .rename:
             return loc.text(es: "Renombrar", en: "Rename")
+        case .bulkRename:
+            return loc.text(es: "Renombrado masivo", en: "Bulk Rename")
         }
     }
 }

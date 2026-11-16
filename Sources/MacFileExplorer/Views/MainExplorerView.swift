@@ -88,6 +88,9 @@ public struct MainExplorerView: View {
         .sheet(isPresented: $viewModel.isShareToSlackPresented) {
             ShareToSlackModalView(viewModel: viewModel)
         }
+        .sheet(isPresented: $viewModel.isBulkRenamePresented) {
+            BulkRenameModalView(viewModel: viewModel)
+        }
         .focusedSceneValue(\.explorerViewModel, viewModel)
     }
 
