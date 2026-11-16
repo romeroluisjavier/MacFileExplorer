@@ -1,4 +1,5 @@
 @preconcurrency import AVFoundation
+import AVKit
 import SwiftUI
 
 /// Modal para convertir una o más imágenes a `.jpg` o `.png` con calidad, PPP (DPI), ancho y peso máximo en MB.
@@ -244,17 +245,19 @@ public struct QuickActionVideoConvertModalView: View {
     }
 }
 
-/// Modal para recortar (Trim) un video seleccionando inicio y fin.
+/// Modal para recortar (Trim) un video con vista previa en vivo para elegir exactamente dónde cortar.
 public struct QuickActionVideoTrimModalView: View {
     @Bindable var viewModel: ExplorerViewModel
     let targetURL: URL
     @Environment(\.dismiss) private var dismiss
 
+    @ViewState private var player: AVPlayer? = nil
     @ViewState private var durationSeconds: Double = 10.0
     @ViewState private var startSeconds: Double = 0.0
     @ViewState private var endSeconds: Double = 10.0
     @ViewState private var isLoaded = false
     @ViewState private var isProcessing = false
+    @ViewState private var segmentStopTask: Task<Void, Never>? = nil
 
     private var loc: LocalizationManager { LocalizationManager.shared }
 
@@ -264,7 +267,7 @@ public struct QuickActionVideoTrimModalView: View {
     }
 
     public var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 10) {
                 Image(systemName: "scissors")
                     .font(.system(size: 20, weight: .semibold))
@@ -278,47 +281,105 @@ public struct QuickActionVideoTrimModalView: View {
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                 }
+
+                Spacer()
+
+                if isLoaded, player != nil {
+                    Button {
+                        playSelectedSegment()
+                    } label: {
+                        Label(
+                            loc.text(es: "Reproducir tramo", en: "Play Segment"),
+                            systemImage: "play.fill"
+                        )
+                        .font(.system(size: 11.5, weight: .medium))
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                }
             }
 
-            Divider()
+            // Vista previa del video en vivo
+            ZStack {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(Color.black.opacity(0.9))
 
-            if !isLoaded {
-                ProgressView(loc.text(es: "Cargando duración del video…", en: "Loading video duration…"))
-                    .frame(maxWidth: .infinity, minHeight: 90)
-            } else {
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
+                if let player {
+                    VideoPlayer(player: player)
+                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                } else {
+                    ProgressView(loc.text(es: "Cargando video…", en: "Loading video…"))
+                        .tint(.white)
+                }
+            }
+            .frame(height: 290)
+
+            if isLoaded {
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack(spacing: 8) {
                         Text(loc.text(es: "Inicio:", en: "Start:"))
-                            .frame(width: 55, alignment: .leading)
+                            .frame(width: 50, alignment: .leading)
                         Slider(
                             value: Binding(
                                 get: { startSeconds },
                                 set: { newVal in
-                                    startSeconds = min(newVal, max(0, endSeconds - 0.2))
+                                    let clamped = min(newVal, max(0, endSeconds - 0.2))
+                                    startSeconds = clamped
+                                    seekPlayer(to: clamped)
                                 }
                             ),
                             in: 0...max(0.2, durationSeconds)
                         )
                         Text(formatTime(startSeconds))
                             .monospacedDigit()
-                            .frame(width: 65, alignment: .trailing)
+                            .frame(width: 62, alignment: .trailing)
+
+                        Button {
+                            if let current = player?.currentTime() {
+                                let secs = CMTimeGetSeconds(current)
+                                if secs.isFinite {
+                                    startSeconds = min(max(0, secs), max(0, endSeconds - 0.2))
+                                }
+                            }
+                        } label: {
+                            Image(systemName: "arrow.left.to.line")
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.mini)
+                        .help(loc.text(es: "Fijar inicio en la posición actual del video", en: "Set start to current playhead"))
                     }
 
-                    HStack {
+                    HStack(spacing: 8) {
                         Text(loc.text(es: "Fin:", en: "End:"))
-                            .frame(width: 55, alignment: .leading)
+                            .frame(width: 50, alignment: .leading)
                         Slider(
                             value: Binding(
                                 get: { endSeconds },
                                 set: { newVal in
-                                    endSeconds = max(newVal, min(durationSeconds, startSeconds + 0.2))
+                                    let clamped = max(newVal, min(durationSeconds, startSeconds + 0.2))
+                                    endSeconds = clamped
+                                    seekPlayer(to: clamped)
                                 }
                             ),
                             in: 0...max(0.2, durationSeconds)
                         )
                         Text(formatTime(endSeconds))
                             .monospacedDigit()
-                            .frame(width: 65, alignment: .trailing)
+                            .frame(width: 62, alignment: .trailing)
+
+                        Button {
+                            if let current = player?.currentTime() {
+                                let secs = CMTimeGetSeconds(current)
+                                if secs.isFinite {
+                                    endSeconds = max(min(durationSeconds, secs), min(durationSeconds, startSeconds + 0.2))
+                                }
+                            }
+                        } label: {
+                            Image(systemName: "arrow.right.to.line")
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.mini)
+                        .help(loc.text(es: "Fijar fin en la posición actual del video", en: "Set end to current playhead"))
                     }
 
                     Text(loc.text(
@@ -328,17 +389,18 @@ public struct QuickActionVideoTrimModalView: View {
                     .font(.system(size: 11.5))
                     .foregroundStyle(.secondary)
                 }
-                .padding(.vertical, 6)
             }
 
             HStack {
                 Spacer()
                 Button(loc.text(es: "Cancelar", en: "Cancel")) {
+                    cleanupPlayer()
                     dismiss()
                 }
                 .keyboardShortcut(.cancelAction)
 
                 Button {
+                    cleanupPlayer()
                     isProcessing = true
                     let url = targetURL
                     let start = startSeconds
@@ -367,7 +429,7 @@ public struct QuickActionVideoTrimModalView: View {
             }
         }
         .padding(18)
-        .frame(width: 450)
+        .frame(width: 620)
         .task {
             let asset = AVURLAsset(url: targetURL)
             if let cmDuration = try? await asset.load(.duration) {
@@ -376,8 +438,44 @@ public struct QuickActionVideoTrimModalView: View {
                 startSeconds = 0
                 endSeconds = secs
             }
+            player = AVPlayer(url: targetURL)
             isLoaded = true
         }
+        .onDisappear {
+            cleanupPlayer()
+        }
+    }
+
+    private func seekPlayer(to seconds: Double) {
+        segmentStopTask?.cancel()
+        player?.pause()
+        let target = CMTime(seconds: max(0, seconds), preferredTimescale: 600)
+        player?.seek(to: target, toleranceBefore: .zero, toleranceAfter: .zero)
+    }
+
+    private func playSelectedSegment() {
+        guard let player else { return }
+        segmentStopTask?.cancel()
+        let start = CMTime(seconds: max(0, startSeconds), preferredTimescale: 600)
+        let segmentDuration = max(0.1, endSeconds - startSeconds)
+        player.seek(to: start, toleranceBefore: .zero, toleranceAfter: .zero) { _ in
+            Task { @MainActor in
+                player.play()
+            }
+        }
+        segmentStopTask = Task { @MainActor in
+            try? await Task.sleep(for: .seconds(segmentDuration))
+            if !Task.isCancelled {
+                player.pause()
+            }
+        }
+    }
+
+    private func cleanupPlayer() {
+        segmentStopTask?.cancel()
+        segmentStopTask = nil
+        player?.pause()
+        player = nil
     }
 
     private func formatTime(_ seconds: Double) -> String {
