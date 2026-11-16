@@ -977,7 +977,6 @@ public final class ClipboardQuickPopupController: NSObject {
 
         installPopupKeyMonitorIfNeeded()
         panel.makeKeyAndOrderFront(nil)
-        NSApplication.shared.activate(ignoringOtherApps: true)
     }
 
     public func closePopup(restorePreviousApp: Bool) {
