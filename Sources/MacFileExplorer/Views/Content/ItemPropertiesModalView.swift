@@ -1,6 +1,32 @@
+@preconcurrency import AVFoundation
+import ImageIO
 import SwiftUI
 import AppKit
 import UniformTypeIdentifiers
+
+/// Metadatos EXIF y multimedia extraídos para imágenes y videos.
+public struct MediaMetadataInfo: Sendable, Equatable {
+    public var resolution: String?
+    public var dpi: String?
+    public var colorSpace: String?
+    public var camera: String?
+    public var lens: String?
+    public var focalLength: String?
+    public var aperture: String?
+    public var shutterSpeed: String?
+    public var iso: String?
+    public var captureDate: String?
+    public var duration: String?
+    public var frameRate: String?
+    public var audioInfo: String?
+
+    public var isEmpty: Bool {
+        resolution == nil && dpi == nil && colorSpace == nil && camera == nil
+            && lens == nil && focalLength == nil && aperture == nil
+            && shutterSpeed == nil && iso == nil && captureDate == nil
+            && duration == nil && frameRate == nil && audioInfo == nil
+    }
+}
 
 /// Estadísticas detalladas calculadas en segundo plano para el diálogo de "Propiedades" (estilo Windows 11 Explorer).
 public struct DetailedItemMetadata: Sendable {
@@ -15,6 +41,7 @@ public struct DetailedItemMetadata: Sendable {
     public var isExecutable: Bool = false
     public var posixPermissionsOctal: String = ""
     public var ownerName: String = ""
+    public var media: MediaMetadataInfo = MediaMetadataInfo()
 }
 
 /// Modal "Propiedades / Properties" estilo Windows 11 Explorer con estética nativa de macOS.
@@ -151,6 +178,11 @@ public struct ItemPropertiesContentView: View {
 
                 // 5. Atributos y Permisos (Solo lectura, Oculto, Permisos POSIX)
                 attributesSection
+
+                if !metadata.media.isEmpty {
+                    Divider()
+                    mediaMetadataSection
+                }
             }
             .padding(.horizontal, horizontalPadding)
             .padding(.vertical, verticalPadding)
@@ -163,6 +195,141 @@ public struct ItemPropertiesContentView: View {
             }
             // Calcular metadatos extendidos y tamaño recursivo si es carpeta
             await inspectItemMetadata()
+            await inspectMediaMetadata()
+        }
+    }
+
+    @ViewBuilder
+    private var mediaMetadataSection: some View {
+        let m = metadata.media
+        VStack(alignment: .leading, spacing: 8) {
+            Text(loc.text(es: "Metadatos EXIF y Multimedia", en: "EXIF & Media Metadata"))
+                .font(.system(size: 11.5, weight: .semibold))
+                .foregroundStyle(.secondary)
+
+            if let resolution = m.resolution {
+                propertyRow(label: loc.text(es: "Resolución:", en: "Resolution:"), value: resolution)
+            }
+            if let dpi = m.dpi {
+                propertyRow(label: loc.text(es: "PPP (DPI):", en: "DPI:"), value: dpi)
+            }
+            if let colorSpace = m.colorSpace {
+                propertyRow(label: loc.text(es: "Espacio de color:", en: "Color space:"), value: colorSpace)
+            }
+            if let duration = m.duration {
+                propertyRow(label: loc.text(es: "Duración:", en: "Duration:"), value: duration)
+            }
+            if let frameRate = m.frameRate {
+                propertyRow(label: loc.text(es: "Cuadros/seg:", en: "Frame rate:"), value: frameRate)
+            }
+            if let audioInfo = m.audioInfo {
+                propertyRow(label: loc.text(es: "Audio:", en: "Audio:"), value: audioInfo)
+            }
+            if let camera = m.camera {
+                propertyRow(label: loc.text(es: "Cámara:", en: "Camera:"), value: camera)
+            }
+            if let lens = m.lens {
+                propertyRow(label: loc.text(es: "Lente:", en: "Lens:"), value: lens)
+            }
+            if let focalLength = m.focalLength {
+                propertyRow(label: loc.text(es: "Distancia focal:", en: "Focal length:"), value: focalLength)
+            }
+            if let aperture = m.aperture {
+                propertyRow(label: loc.text(es: "Apertura:", en: "Aperture:"), value: aperture)
+            }
+            if let shutterSpeed = m.shutterSpeed {
+                propertyRow(label: loc.text(es: "Velocidad:", en: "Shutter speed:"), value: shutterSpeed)
+            }
+            if let iso = m.iso {
+                propertyRow(label: "ISO:", value: iso)
+            }
+            if let captureDate = m.captureDate {
+                propertyRow(label: loc.text(es: "Fecha captura:", en: "Capture date:"), value: captureDate)
+            }
+        }
+    }
+
+    private func inspectMediaMetadata() async {
+        let url = item.url
+        if QuickActionsService.isImageURL(url) {
+            let extracted = await Task.detached(priority: .utility) { () -> MediaMetadataInfo in
+                var info = MediaMetadataInfo()
+                guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
+                      let props = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any] else {
+                    return info
+                }
+                if let w = props[kCGImagePropertyPixelWidth] as? Int,
+                   let h = props[kCGImagePropertyPixelHeight] as? Int {
+                    info.resolution = "\(w) × \(h) px"
+                }
+                if let dpiW = props[kCGImagePropertyDPIWidth] as? Double {
+                    info.dpi = "\(Int(dpiW.rounded())) PPP"
+                }
+                if let colorModel = props[kCGImagePropertyColorModel] as? String {
+                    info.colorSpace = colorModel
+                }
+                if let tiff = props[kCGImagePropertyTIFFDictionary] as? [CFString: Any] {
+                    let make = (tiff[kCGImagePropertyTIFFMake] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                    let model = (tiff[kCGImagePropertyTIFFModel] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                    let combined = [make, model].filter { !$0.isEmpty }.joined(separator: " ")
+                    if !combined.isEmpty {
+                        info.camera = combined
+                    }
+                }
+                if let exif = props[kCGImagePropertyExifDictionary] as? [CFString: Any] {
+                    if let lensModel = exif[kCGImagePropertyExifLensModel] as? String, !lensModel.isEmpty {
+                        info.lens = lensModel
+                    }
+                    if let focal = exif[kCGImagePropertyExifFocalLength] as? Double {
+                        info.focalLength = String(format: "%.1f mm", focal)
+                    }
+                    if let fNumber = exif[kCGImagePropertyExifFNumber] as? Double {
+                        info.aperture = String(format: "f/%.1f", fNumber)
+                    }
+                    if let exp = exif[kCGImagePropertyExifExposureTime] as? Double, exp > 0 {
+                        if exp < 1.0 {
+                            info.shutterSpeed = "1/\(Int((1.0 / exp).rounded())) s"
+                        } else {
+                            info.shutterSpeed = String(format: "%.1f s", exp)
+                        }
+                    }
+                    if let isoArray = exif[kCGImagePropertyExifISOSpeedRatings] as? [Int], let firstISO = isoArray.first {
+                        info.iso = "\(firstISO)"
+                    }
+                    if let dateStr = exif[kCGImagePropertyExifDateTimeOriginal] as? String, !dateStr.isEmpty {
+                        info.captureDate = dateStr
+                    }
+                }
+                return info
+            }.value
+            metadata.media = extracted
+        } else if QuickActionsService.isVideoURL(url) {
+            let asset = AVURLAsset(url: url)
+            var info = MediaMetadataInfo()
+            if let cmDuration = try? await asset.load(.duration) {
+                let totalSecs = max(0, CMTimeGetSeconds(cmDuration))
+                let mins = Int(totalSecs) / 60
+                let secs = Int(totalSecs) % 60
+                info.duration = String(format: "%02d:%02d", mins, secs)
+            }
+            if let videoTrack = try? await asset.loadTracks(withMediaType: .video).first {
+                if let naturalSize = try? await videoTrack.load(.naturalSize),
+                   let transform = try? await videoTrack.load(.preferredTransform) {
+                    let transformed = naturalSize.applying(transform)
+                    let w = Int(abs(transformed.width).rounded())
+                    let h = Int(abs(transformed.height).rounded())
+                    if w > 0 && h > 0 {
+                        info.resolution = "\(w) × \(h) px"
+                    }
+                }
+                if let fps = try? await videoTrack.load(.nominalFrameRate), fps > 0 {
+                    info.frameRate = String(format: "%.2f fps", fps)
+                }
+            }
+            if let audioTracks = try? await asset.loadTracks(withMediaType: .audio) {
+                info.audioInfo = audioTracks.isEmpty ? "Sin audio" : "\(audioTracks.count) pista(s)"
+            }
+            metadata.media = info
         }
     }
 

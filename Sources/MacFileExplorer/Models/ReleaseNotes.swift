@@ -84,6 +84,14 @@ public enum ReleaseNotesCatalog {
             dateLabelEN: "Nov 16, 2026",
             items: [
                 ReleaseNoteItem(
+                    id: "exif-media-metadata-properties",
+                    icon: "camera.aperture",
+                    titleES: "Visor de metadatos EXIF y multimedia en Propiedades",
+                    titleEN: "EXIF & Media Metadata viewer in Properties",
+                    summaryES: "Al abrir Propiedades (⌘I) sobre cualquier imagen o video, ahora se muestran sus datos técnicos: resolución, PPP, cámara, lente, apertura, velocidad, ISO, duración del video, cuadros por segundo y pistas de audio.",
+                    summaryEN: "Opening Properties (⌘I) on any image or video now displays its technical metadata: resolution, DPI, camera, lens, aperture, shutter speed, ISO, video duration, frame rate, and audio tracks."
+                ),
+                ReleaseNoteItem(
                     id: "recent-24h-virtual-folder",
                     icon: "clock.arrow.2.circlepath",
                     titleES: "Carpeta virtual «Modificados hoy (24h)» en Acceso rápido",
