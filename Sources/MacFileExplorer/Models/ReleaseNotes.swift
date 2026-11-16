@@ -77,9 +77,9 @@ public struct ReleaseNoteSection: Identifiable, Sendable {
 public enum ReleaseNotesCatalog {
     public static let sections: [ReleaseNoteSection] = [
         ReleaseNoteSection(
-            id: "v1.2-slack-mxmaster-responsive",
-            versionLabelES: "Versión 1.2 — Slack, Ratón MX Master y Barra Adaptable",
-            versionLabelEN: "Version 1.2 — Slack, MX Master Mouse & Responsive Toolbar",
+            id: "v1.3-clipboard-tray-quicklook-sessions",
+            versionLabelES: "Versión 1.3 — Portapapeles Maccy, Tray Icon, Vista Rápida y Sesiones",
+            versionLabelEN: "Version 1.3 — Maccy Clipboard, Tray Icon, Quick Look & Sessions",
             dateLabelES: "16 nov 2026",
             dateLabelEN: "Nov 16, 2026",
             items: [
@@ -114,7 +114,16 @@ public enum ReleaseNotesCatalog {
                     titleEN: "Remember open folders, tabs & Google sessions on relaunch",
                     summaryES: "Ahora MacFileExplorer recuerda automáticamente no solo la carpeta activa, sino también todas las pestañas que tenías abiertas (carpetas, Gmail, Google Drive, Google Calendar y marcadores web) respetando su orden y cuál estabas viendo al cerrar la aplicación. Puedes activar o desactivar esta opción en cualquier momento desde el menú Ver de la barra superior o el menú Ver de la barra de herramientas.",
                     summaryEN: "MacFileExplorer now automatically remembers not only your active folder, but also every tab you had open (folders, Gmail, Google Drive, Google Calendar, and web bookmarks) along with their exact order and active tab when you quit. You can turn this option on or off at any time from the top View menu or the toolbar View menu."
-                ),
+                )
+            ]
+        ),
+        ReleaseNoteSection(
+            id: "v1.2-slack-mxmaster-responsive",
+            versionLabelES: "Versión 1.2 — Slack, Ratón MX Master y Barra Adaptable",
+            versionLabelEN: "Version 1.2 — Slack, MX Master Mouse & Responsive Toolbar",
+            dateLabelES: "13 nov 2026",
+            dateLabelEN: "Nov 13, 2026",
+            items: [
                 ReleaseNoteItem(
                     id: "version-1-2-release",
                     icon: "sparkles",
