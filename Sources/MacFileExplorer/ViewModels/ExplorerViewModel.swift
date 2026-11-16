@@ -155,6 +155,9 @@ public final class ExplorerViewModel {
     public var quickActionVideoConvertURLs: [URL]? = nil
     public var quickActionVideoTrimURL: URL? = nil
 
+    /// Indica si está activa la carpeta virtual "Modificados hoy (24h)" sobre el árbol actual.
+    public var isShowingRecent24Hours: Bool = false
+
     // MARK: - Historial de Deshacer / Rehacer (`Cmd+Z` / `Cmd+Shift+Z`)
 
     public private(set) var undoStack: [ExplorerUndoEntry] = []
@@ -482,15 +485,44 @@ public final class ExplorerViewModel {
         selectionAnchorID = nil
         selectedSidebarNode = nil
         isEditingAddressBar = false
+        isShowingRecent24Hours = false
         isShowingClipboardHistory = true
         if ClipboardHistoryManager.shared.selectedEntryID == nil {
             ClipboardHistoryManager.shared.selectedEntryID = ClipboardHistoryManager.shared.filteredItems.first?.id
         }
     }
 
+    /// Abre la carpeta virtual "Archivos Recientes / Modificados hoy (24h)" escaneando recursivamente el árbol actual.
+    public func openRecent24HoursVirtualFolder() {
+        cancelRename()
+        isQuickLookPresented = false
+        selectedItemIDs.removeAll()
+        selectionAnchorID = nil
+        selectedSidebarNode = nil
+        isEditingAddressBar = false
+        isShowingClipboardHistory = false
+        isShowingRecent24Hours = true
+        isLoading = true
+
+        let rootURL = currentDirectoryURL
+        let includeHidden = showHiddenFiles
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            let recentItems = await self.fileSystemService.fetchRecentModifiedFiles(
+                in: rootURL,
+                hours: 24.0,
+                includeHidden: includeHidden
+            )
+            guard self.isShowingRecent24Hours else { return }
+            self.setAllItems(recentItems, precomputedDisplayed: recentItems)
+            self.isLoading = false
+        }
+    }
+
     /// Navega hacia una carpeta seleccionada desde el árbol lateral izquierdo manteniéndola focalizada.
     public func selectSidebarFolder(_ node: NavigationNode) {
         isShowingClipboardHistory = false
+        isShowingRecent24Hours = false
         selectedItemIDs.removeAll()
         selectionAnchorID = nil
         selectedSidebarNode = node
@@ -500,6 +532,7 @@ public final class ExplorerViewModel {
     /// Navega a un directorio, registrando opcionalmente el cambio en el historial Atrás/Adelante.
     public func navigate(to destinationURL: URL, recordHistory: Bool = true, fromSidebar: Bool = false) {
         isShowingClipboardHistory = false
+        isShowingRecent24Hours = false
         let standardized = destinationURL.standardizedFileURL
 
         var isDir: ObjCBool = false

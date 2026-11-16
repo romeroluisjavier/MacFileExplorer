@@ -84,6 +84,14 @@ public enum ReleaseNotesCatalog {
             dateLabelEN: "Nov 16, 2026",
             items: [
                 ReleaseNoteItem(
+                    id: "recent-24h-virtual-folder",
+                    icon: "clock.arrow.2.circlepath",
+                    titleES: "Carpeta virtual «Modificados hoy (24h)» en Acceso rápido",
+                    titleEN: "«Modified Today (24h)» virtual folder in Quick Access",
+                    summaryES: "Se agregó el acceso rápido «Modificados hoy (24h)» en el panel lateral izquierdo para listar al instante todos los archivos tocados en las últimas 24 horas dentro del árbol de carpetas actual.",
+                    summaryEN: "Added a «Modified Today (24h)» virtual folder in the left sidebar to instantly list all files modified in the last 24 hours within the current folder tree."
+                ),
+                ReleaseNoteItem(
                     id: "quick-actions-media",
                     icon: "wand.and.stars",
                     titleES: "Quick Actions para imágenes y videos desde el clic derecho",

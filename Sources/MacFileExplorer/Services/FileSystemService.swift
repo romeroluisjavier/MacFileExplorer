@@ -693,4 +693,71 @@ public final class FileSystemService: Sendable {
             }
         }
     }
+
+    /// Recorre recursivamente el árbol de carpetas a partir de `rootURL` y devuelve todos los archivos
+    /// modificados en las últimas `hours` horas (por defecto 24h), ordenados del más reciente al más antiguo.
+    public func fetchRecentModifiedFiles(
+        in rootURL: URL,
+        hours: Double = 24.0,
+        includeHidden: Bool = false
+    ) async -> [FileItem] {
+        await Task.detached(priority: .userInitiated) {
+            let fm = FileManager.default
+            let cutoffDate = Date().addingTimeInterval(-hours * 3600.0)
+            let keys: [URLResourceKey] = [
+                .isDirectoryKey,
+                .isPackageKey,
+                .isHiddenKey,
+                .isSymbolicLinkKey,
+                .contentModificationDateKey,
+                .fileSizeKey,
+                .contentTypeKey,
+                .localizedTypeDescriptionKey
+            ]
+            let options: FileManager.DirectoryEnumerationOptions = includeHidden
+                ? [.skipsPackageDescendants]
+                : [.skipsHiddenFiles, .skipsPackageDescendants]
+
+            guard let enumerator = fm.enumerator(
+                at: rootURL.standardizedFileURL,
+                includingPropertiesForKeys: keys,
+                options: options
+            ) else {
+                return []
+            }
+
+            var results: [FileItem] = []
+            while let fileURL = enumerator.nextObject() as? URL {
+                if Task.isCancelled { break }
+                guard let values = try? fileURL.resourceValues(forKeys: Set(keys)) else { continue }
+                let isDir = values.isDirectory ?? false
+                let isPkg = values.isPackage ?? false
+                if isDir && !isPkg { continue }
+
+                let modDate = values.contentModificationDate ?? .distantPast
+                guard modDate >= cutoffDate else { continue }
+
+                let item = FileItem(
+                    url: fileURL.standardizedFileURL,
+                    name: fileURL.lastPathComponent,
+                    fileExtension: fileURL.pathExtension,
+                    isDirectory: isDir,
+                    isPackage: isPkg,
+                    isHidden: values.isHidden ?? false,
+                    isSymbolicLink: values.isSymbolicLink ?? false,
+                    modificationDate: modDate,
+                    size: values.fileSize.map { Int64($0) },
+                    contentType: values.contentType,
+                    kindDescription: values.localizedTypeDescription ?? "Archivo"
+                )
+                results.append(item)
+                if results.count >= 2500 {
+                    break
+                }
+            }
+
+            results.sort { $0.modificationDate > $1.modificationDate }
+            return results
+        }.value
+    }
 }
