@@ -49,18 +49,12 @@ public struct MainExplorerView: View {
                 // 4. Barra de Estado Inferior (Conteo total, seleccionados, suma de tamaños y conmutador de vista)
                 StatusBarView(viewModel: viewModel)
             }
-
-            // 5. Ventana Flotante de Vista Rápida (Quick Look con Barra Espaciadora + botón "Open in Preview")
-            if viewModel.isQuickLookPresented, let previewItem = viewModel.quickLookItem {
-                QuickLookPreviewModalView(viewModel: viewModel, item: previewItem)
-                    .zIndex(100)
-            }
         }
-        .animation(.snappy(duration: 0.18), value: viewModel.isQuickLookPresented)
         .navigationTitle(viewModel.currentFolderTitle)
         .explorerKeyboardShortcuts(viewModel: viewModel)
         .background {
             WindowFrameAutosaveView(folderTitle: viewModel.currentFolderTitle, viewModel: viewModel)
+            QuickLookPanelHostBridge(viewModel: viewModel)
             hiddenShortcutButtons
         }
         .task {

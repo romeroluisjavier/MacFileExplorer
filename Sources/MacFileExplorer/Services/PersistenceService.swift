@@ -27,6 +27,7 @@ public final class PersistenceService {
         static let sortAscending = "com.macfileexplorer.state.sortAscending"
         static let showHiddenFiles = "com.macfileexplorer.state.showHiddenFiles"
         static let windowFrame = "com.macfileexplorer.state.windowFrame"
+        static let quickLookWindowFrame = "com.macfileexplorer.state.quickLookWindowFrame"
         static let visibleQuickAccessFolders = "com.macfileexplorer.state.visibleQuickAccessFolders"
         static let customQuickAccessFolderPaths = "com.macfileexplorer.state.customQuickAccessFolderPaths"
         static let showNewButtonInToolbar = "com.macfileexplorer.state.showNewButtonInToolbar"
@@ -138,14 +139,37 @@ public final class PersistenceService {
     // MARK: - Posición y Tamaño de Ventana en Pantalla
 
     public func saveWindowFrame(_ frame: NSRect) {
-        guard frame.width >= 600, frame.height >= 400 else { return }
-        defaults.set(NSStringFromRect(frame), forKey: Keys.windowFrame)
+        saveFrame(frame, forKey: Keys.windowFrame, minWidth: 600, minHeight: 400)
     }
 
     public func loadWindowFrame() -> NSRect? {
-        guard let raw = defaults.string(forKey: Keys.windowFrame) else { return nil }
+        loadFrame(forKey: Keys.windowFrame, minWidth: 600, minHeight: 400)
+    }
+
+    public func saveQuickLookWindowFrame(_ frame: NSRect) {
+        saveFrame(frame, forKey: Keys.quickLookWindowFrame, minWidth: 480, minHeight: 340)
+    }
+
+    public func loadQuickLookWindowFrame() -> NSRect? {
+        guard let rect = loadFrame(forKey: Keys.quickLookWindowFrame, minWidth: 480, minHeight: 340) else {
+            return nil
+        }
+        let screens = NSScreen.screens
+        if screens.isEmpty || screens.contains(where: { $0.visibleFrame.intersects(rect) }) {
+            return rect
+        }
+        return nil
+    }
+
+    private func saveFrame(_ frame: NSRect, forKey key: String, minWidth: CGFloat, minHeight: CGFloat) {
+        guard frame.width >= minWidth, frame.height >= minHeight else { return }
+        defaults.set(NSStringFromRect(frame), forKey: key)
+    }
+
+    private func loadFrame(forKey key: String, minWidth: CGFloat, minHeight: CGFloat) -> NSRect? {
+        guard let raw = defaults.string(forKey: key) else { return nil }
         let rect = NSRectFromString(raw)
-        guard rect.width >= 600, rect.height >= 400 else { return nil }
+        guard rect.width >= minWidth, rect.height >= minHeight else { return nil }
         return rect
     }
 

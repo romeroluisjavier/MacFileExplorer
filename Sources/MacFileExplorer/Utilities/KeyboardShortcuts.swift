@@ -202,8 +202,9 @@ public struct ExplorerKeyEventMonitorModifier: ViewModifier {
             return false
         }
         if let activeWin = eventWindow ?? NSApp.keyWindow {
+            let isChildQuickLook = (activeWin is QuickLookPreviewPanel) && (activeWin.parent === hostWindow)
             let sameActiveTabGroup = (hostWindow.tabGroup != nil && activeWin.tabGroup === hostWindow.tabGroup)
-            guard activeWin === hostWindow || sameActiveTabGroup else {
+            guard activeWin === hostWindow || sameActiveTabGroup || isChildQuickLook else {
                 return false
             }
         }
@@ -211,7 +212,7 @@ public struct ExplorerKeyEventMonitorModifier: ViewModifier {
         // Si un NSTextView / TextField está editando texto activamente, solo interceptamos Escape
         let activeResponderWindow = selectedInGroup
         let isEditingText: Bool = {
-            guard let firstResponder = activeResponderWindow.firstResponder ?? NSApp.keyWindow?.firstResponder else { return false }
+            guard let firstResponder = (NSApp.keyWindow ?? activeResponderWindow).firstResponder else { return false }
             return firstResponder is NSTextView || firstResponder is NSText
         }()
 

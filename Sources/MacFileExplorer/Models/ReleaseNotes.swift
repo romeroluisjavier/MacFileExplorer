@@ -84,6 +84,14 @@ public enum ReleaseNotesCatalog {
             dateLabelEN: "Nov 13, 2026",
             items: [
                 ReleaseNoteItem(
+                    id: "quicklook-movable-resizable-maximize",
+                    icon: "arrow.up.left.and.arrow.down.right",
+                    titleES: "Ventana de Vista Rápida movible, redimensionable y maximizable",
+                    titleEN: "Movable, resizable & double-click maximizable Quick Look window",
+                    summaryES: "La ventana de previsualización rápida (Espacio) ahora funciona como una ventana flotante independiente: puedes moverla libremente arrastrando su barra superior, ajustar su tamaño desde cualquier borde o esquina, y maximizarla o restaurar su tamaño haciendo doble clic en la barra de título (o usando el botón de expandir).",
+                    summaryEN: "The Quick Look preview window (Space) now works as an independent floating window: you can move it freely by dragging its top bar, resize it from any edge or corner, and maximize or restore its size by double-clicking the title bar (or clicking the expand button)."
+                ),
+                ReleaseNoteItem(
                     id: "remember-open-tabs-and-web-sessions",
                     icon: "clock.arrow.circlepath",
                     titleES: "Recordar carpetas, pestañas y sesiones de Google al reabrir",
