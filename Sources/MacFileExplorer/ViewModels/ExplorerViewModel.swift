@@ -55,7 +55,17 @@ public final class ExplorerViewModel {
     public private(set) var isSlowLoadingOverlayVisible: Bool = false
 
     /// Mensaje de alerta o error reciente para mostrar al usuario si una operación de I/O falla.
-    public var errorMessage: String?
+    public var errorMessage: String? {
+        didSet {
+            if let errorMessage, !errorMessage.isEmpty {
+                InternalErrorLogger.shared.logError(
+                    category: "EXPLORER_ERROR",
+                    message: errorMessage,
+                    context: ["directory": currentDirectoryURL.path(percentEncoded: false)]
+                )
+            }
+        }
+    }
 
     /// Texto de filtrado rápido en la caja de búsqueda superior derecha.
     public var searchQuery: String = "" {

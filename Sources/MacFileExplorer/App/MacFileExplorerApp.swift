@@ -12,6 +12,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             NSApplication.shared.applicationIconImage = icon
         }
         MouseNavigationManager.shared.installIfNeeded()
+        InternalErrorLogger.shared.install()
         ClipboardHistoryManager.shared.installIfNeeded()
         StatusBarManager.shared.installIfNeeded()
         LocalizationManager.shared.installMenuTrackingObserverIfNeeded()
