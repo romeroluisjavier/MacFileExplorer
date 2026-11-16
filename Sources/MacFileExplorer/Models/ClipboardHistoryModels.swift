@@ -1,4 +1,5 @@
 import AppKit
+import Carbon
 import CryptoKit
 import Foundation
 import Observation
@@ -137,8 +138,242 @@ public enum ClipboardMaxItemsOption: Int, Codable, CaseIterable, Identifiable, S
     }
 }
 
-/// Atajo rápido de teclado para abrir el buscador rápido del Historial del Portapapeles estilo Maccy.
+/// Cantidad de elementos recientes mostrados en el menú desplegable rápido (`⌃⌘V` estilo Maccy).
+public enum ClipboardDropdownCountOption: Int, Codable, CaseIterable, Identifiable, Sendable {
+    case ten = 10
+    case fifteen = 15
+    case twenty = 20
+    case thirty = 30
+
+    public var id: Int { rawValue }
+
+    @MainActor
+    public func localizedTitle(using loc: LocalizationManager = .shared) -> String {
+        switch self {
+        case .ten:
+            return loc.text(es: "Últimos 10 elementos (Predeterminado)", en: "Last 10 items (Default)")
+        case .fifteen:
+            return loc.text(es: "Últimos 15 elementos", en: "Last 15 items")
+        case .twenty:
+            return loc.text(es: "Últimos 20 elementos", en: "Last 20 items")
+        case .thirty:
+            return loc.text(es: "Últimos 30 elementos", en: "Last 30 items")
+        }
+    }
+}
+
+/// Modelo personalizable de combinación de teclas (código de tecla física + modificadores `⌃`, `⌥`, `⇧`, `⌘`)
+/// compatible con registro global de hotkeys en macOS (`RegisterEventHotKey`) y eventos locales de `NSEvent`.
+public struct ClipboardKeyShortcut: Codable, Equatable, Sendable {
+    public var keyCode: UInt16
+    public var command: Bool
+    public var control: Bool
+    public var option: Bool
+    public var shift: Bool
+    public var keyDisplayLabel: String
+    public var isEnabled: Bool
+
+    public init(
+        keyCode: UInt16,
+        command: Bool = false,
+        control: Bool = false,
+        option: Bool = false,
+        shift: Bool = false,
+        keyDisplayLabel: String,
+        isEnabled: Bool = true
+    ) {
+        self.keyCode = keyCode
+        self.command = command
+        self.control = control
+        self.option = option
+        self.shift = shift
+        self.keyDisplayLabel = keyDisplayLabel
+        self.isEnabled = isEnabled
+    }
+
+    // MARK: - Atajos Predeterminados (Estilo Maccy del Usuario)
+
+    /// `⌃⌘V` (`Ctrl + Cmd + V`): Abre el menú desplegable rápido de los últimos 10 ítems sin importar dónde estés en la Mac.
+    public static let defaultQuickPasteDropdown = ClipboardKeyShortcut(
+        keyCode: 9, // 'v'
+        command: true,
+        control: true,
+        option: false,
+        shift: false,
+        keyDisplayLabel: "V"
+    )
+
+    /// `⇧⌘C` (`Shift + Cmd + C`): Abre el buscador completo del Historial del Portapapeles en MacFileExplorer.
+    public static let defaultFullHistorySearch = ClipboardKeyShortcut(
+        keyCode: 8, // 'c'
+        command: true,
+        control: false,
+        option: false,
+        shift: true,
+        keyDisplayLabel: "C"
+    )
+
+    /// `⌥P` (`Option + P`): Fijar o desfijar el elemento seleccionado en el historial.
+    public static let defaultPinItem = ClipboardKeyShortcut(
+        keyCode: 35, // 'p'
+        command: false,
+        control: false,
+        option: true,
+        shift: false,
+        keyDisplayLabel: "P"
+    )
+
+    /// `⌥⌫` (`Option + Backspace`): Eliminar el elemento seleccionado del historial.
+    public static let defaultDeleteItem = ClipboardKeyShortcut(
+        keyCode: 51, // Backspace
+        command: false,
+        control: false,
+        option: true,
+        shift: false,
+        keyDisplayLabel: "⌫"
+    )
+
+    /// `⌥↵` (`Option + Enter`): Copiar / Pegar elemento seleccionado como texto plano sin formato.
+    public static let defaultPlainTextCopy = ClipboardKeyShortcut(
+        keyCode: 36, // Return
+        command: false,
+        control: false,
+        option: true,
+        shift: false,
+        keyDisplayLabel: "↵"
+    )
+
+    /// `⌥⌘⌫` (`Option + Cmd + Backspace`): Limpiar todos los elementos no fijados del historial.
+    public static let defaultClearHistory = ClipboardKeyShortcut(
+        keyCode: 51, // Backspace
+        command: true,
+        control: false,
+        option: true,
+        shift: false,
+        keyDisplayLabel: "⌫"
+    )
+
+    /// Representación visual estilo macOS (ej. `⌃⌘V`, `⇧⌘C`, `⌥P`, `⌥⌫`).
+    public var displayString: String {
+        guard isEnabled else { return "—" }
+        var result = ""
+        if control { result += "⌃" }
+        if option { result += "⌥" }
+        if shift { result += "⇧" }
+        if command { result += "⌘" }
+        result += keyDisplayLabel.uppercased()
+        return result
+    }
+
+    /// Modificadores `NSEvent.ModifierFlags` correspondientes.
+    public var modifierFlags: NSEvent.ModifierFlags {
+        var flags: NSEvent.ModifierFlags = []
+        if command { flags.insert(.command) }
+        if control { flags.insert(.control) }
+        if option { flags.insert(.option) }
+        if shift { flags.insert(.shift) }
+        return flags
+    }
+
+    /// Modificadores de Carbon (`cmdKey`, `controlKey`, `optionKey`, `shiftKey`) para `RegisterEventHotKey`.
+    public var carbonModifiers: UInt32 {
+        var mods: UInt32 = 0
+        if command { mods |= UInt32(cmdKey) }
+        if shift { mods |= UInt32(shiftKey) }
+        if option { mods |= UInt32(optionKey) }
+        if control { mods |= UInt32(controlKey) }
+        return mods
+    }
+
+    /// Verifica si un evento de teclado coincide con este atajo.
+    public func matches(
+        keyCode eventKeyCode: UInt16,
+        charactersIgnoringModifiers: String?,
+        flags: NSEvent.ModifierFlags
+    ) -> Bool {
+        guard isEnabled else { return false }
+        let cleanFlags = flags.intersection([.command, .control, .option, .shift])
+        guard cleanFlags == modifierFlags else { return false }
+        if eventKeyCode == keyCode {
+            return true
+        }
+        if let chars = charactersIgnoringModifiers?.uppercased(),
+           !chars.isEmpty,
+           chars == keyDisplayLabel.uppercased() {
+            return true
+        }
+        return false
+    }
+
+    /// Construye un `ClipboardKeyShortcut` a partir de un `NSEvent` capturado en el grabador de atajos.
+    public static func from(event: NSEvent) -> ClipboardKeyShortcut? {
+        let flags = event.modifierFlags.intersection([.command, .control, .option, .shift])
+        // Ignorar pulsaciones de solo modificadores
+        let modifierOnlyKeyCodes: Set<UInt16> = [54, 55, 56, 57, 58, 59, 60, 61, 62, 63]
+        guard !modifierOnlyKeyCodes.contains(event.keyCode) else { return nil }
+        guard !flags.isEmpty else { return nil }
+
+        let label = Self.humanReadableKeyLabel(keyCode: event.keyCode, characters: event.charactersIgnoringModifiers)
+        return ClipboardKeyShortcut(
+            keyCode: event.keyCode,
+            command: flags.contains(.command),
+            control: flags.contains(.control),
+            option: flags.contains(.option),
+            shift: flags.contains(.shift),
+            keyDisplayLabel: label,
+            isEnabled: true
+        )
+    }
+
+    public static func humanReadableKeyLabel(keyCode: UInt16, characters: String?) -> String {
+        switch keyCode {
+        case 0: return "A"
+        case 1: return "S"
+        case 2: return "D"
+        case 3: return "F"
+        case 4: return "H"
+        case 5: return "G"
+        case 6: return "Z"
+        case 7: return "X"
+        case 8: return "C"
+        case 9: return "V"
+        case 11: return "B"
+        case 12: return "Q"
+        case 13: return "W"
+        case 14: return "E"
+        case 15: return "R"
+        case 16: return "Y"
+        case 17: return "T"
+        case 31: return "O"
+        case 32: return "U"
+        case 34: return "I"
+        case 35: return "P"
+        case 36, 76: return "↵"
+        case 37: return "L"
+        case 38: return "J"
+        case 40: return "K"
+        case 45: return "N"
+        case 46: return "M"
+        case 49: return "Space"
+        case 51: return "⌫"
+        case 53: return "Esc"
+        case 117: return "⌦"
+        case 123: return "←"
+        case 124: return "→"
+        case 125: return "↓"
+        case 126: return "↑"
+        default:
+            if let chars = characters?.trimmingCharacters(in: .whitespacesAndNewlines), !chars.isEmpty {
+                return chars.uppercased()
+            }
+            return "Key\(keyCode)"
+        }
+    }
+}
+
+/// Presets rápidos para el atajo de abrir el menú desplegable del portapapeles.
 public enum ClipboardPopupShortcutPreset: String, Codable, CaseIterable, Identifiable, Sendable {
+    case controlCommandV = "ctrl_cmd_v"
     case shiftCommandC = "shift_cmd_c"
     case optionCommandC = "opt_cmd_c"
     case optionCommandV = "opt_cmd_v"
@@ -149,6 +384,7 @@ public enum ClipboardPopupShortcutPreset: String, Codable, CaseIterable, Identif
 
     public var badgeText: String {
         switch self {
+        case .controlCommandV: return "⌃⌘V"
         case .shiftCommandC: return "⇧⌘C"
         case .optionCommandC: return "⌥⌘C"
         case .optionCommandV: return "⌥⌘V"
@@ -157,11 +393,32 @@ public enum ClipboardPopupShortcutPreset: String, Codable, CaseIterable, Identif
         }
     }
 
+    public var keyShortcut: ClipboardKeyShortcut {
+        switch self {
+        case .controlCommandV:
+            return .defaultQuickPasteDropdown
+        case .shiftCommandC:
+            return .defaultFullHistorySearch
+        case .optionCommandC:
+            return ClipboardKeyShortcut(keyCode: 8, command: true, control: false, option: true, shift: false, keyDisplayLabel: "C")
+        case .optionCommandV:
+            return ClipboardKeyShortcut(keyCode: 9, command: true, control: false, option: true, shift: false, keyDisplayLabel: "V")
+        case .controlOptionCommandV:
+            return ClipboardKeyShortcut(keyCode: 9, command: true, control: true, option: true, shift: false, keyDisplayLabel: "V")
+        case .disabled:
+            var disabled = ClipboardKeyShortcut.defaultQuickPasteDropdown
+            disabled.isEnabled = false
+            return disabled
+        }
+    }
+
     @MainActor
     public func localizedTitle(using loc: LocalizationManager = .shared) -> String {
         switch self {
+        case .controlCommandV:
+            return loc.text(es: "⌃⌘V (Pegar desde menú Maccy)", en: "⌃⌘V (Paste from Maccy menu)")
         case .shiftCommandC:
-            return loc.text(es: "⇧⌘C (Estándar de Maccy)", en: "⇧⌘C (Maccy Default)")
+            return "⇧⌘C"
         case .optionCommandC:
             return "⌥⌘C"
         case .optionCommandV:
@@ -173,22 +430,8 @@ public enum ClipboardPopupShortcutPreset: String, Codable, CaseIterable, Identif
         }
     }
 
-    /// Verifica si un evento de teclado coincide con este atajo.
     public func matches(keyCode: UInt16, charactersIgnoringModifiers: String?, flags: NSEvent.ModifierFlags) -> Bool {
-        let cleanFlags = flags.intersection([.command, .shift, .option, .control])
-        let char = charactersIgnoringModifiers?.lowercased()
-        switch self {
-        case .shiftCommandC:
-            return (keyCode == 8 || char == "c") && cleanFlags == [.command, .shift]
-        case .optionCommandC:
-            return (keyCode == 8 || char == "c") && cleanFlags == [.command, .option]
-        case .optionCommandV:
-            return (keyCode == 9 || char == "v") && cleanFlags == [.command, .option]
-        case .controlOptionCommandV:
-            return (keyCode == 9 || char == "v") && cleanFlags == [.command, .option, .control]
-        case .disabled:
-            return false
-        }
+        keyShortcut.matches(keyCode: keyCode, charactersIgnoringModifiers: charactersIgnoringModifiers, flags: flags)
     }
 }
 
@@ -244,7 +487,40 @@ public struct ClipboardHistoryEntry: Identifiable, Codable, Equatable, Sendable 
         self.sourceAppBundleID = sourceAppBundleID
     }
 
-    /// Título resumido en una sola línea para mostrar en la barra lateral, en la lista principal o en el popup estilo Maccy.
+    /// Título estilo Maccy (con `⏎` para saltos de línea, igual que en la captura de referencia de Maccy).
+    @MainActor
+    public func maccyMenuTitle(maxLength: Int = 62, using loc: LocalizationManager = .shared) -> String {
+        switch kind {
+        case .image:
+            if let text = textContent?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty {
+                return maccyFormattedTextPreview(text, maxLength: maxLength)
+            }
+            if let w = imagePixelWidth, let h = imagePixelHeight, w > 0, h > 0 {
+                return loc.text(es: "Imagen (\(w)×\(h) px)", en: "Image (\(w)×\(h) px)")
+            }
+            return loc.text(es: "Imagen", en: "Image")
+
+        case .files:
+            if filePaths.count == 1, let first = filePaths.first {
+                return URL(fileURLWithPath: first).absoluteString
+            }
+            let names = filePaths.map { URL(fileURLWithPath: $0).lastPathComponent }.filter { !$0.isEmpty }
+            guard let first = names.first else {
+                return loc.text(es: "Archivos copiados", en: "Copied Files")
+            }
+            return loc.text(
+                es: "\(first) y \(names.count - 1) más",
+                en: "\(first) & \(names.count - 1) more"
+            )
+
+        case .link, .text:
+            let raw = textContent ?? ""
+            let preview = maccyFormattedTextPreview(raw, maxLength: maxLength)
+            return preview.isEmpty ? loc.text(es: "(Texto vacío)", en: "(Empty text)") : preview
+        }
+    }
+
+    /// Título resumido en una sola línea para mostrar en la barra lateral o en la lista principal.
     @MainActor
     public func displayTitle(using loc: LocalizationManager = .shared) -> String {
         switch kind {
@@ -353,6 +629,23 @@ public struct ClipboardHistoryEntry: Identifiable, Codable, Equatable, Sendable 
         }
 
         return tokens.allSatisfy { searchableBlob.contains($0) }
+    }
+
+    private func maccyFormattedTextPreview(_ text: String, maxLength: Int) -> String {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let lines = trimmed
+            .replacingOccurrences(of: "\r\n", with: "\n")
+            .replacingOccurrences(of: "\r", with: "\n")
+            .components(separatedBy: "\n")
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+        let withNewlineGlyph = lines.joined(separator: "⏎")
+        guard withNewlineGlyph.count > maxLength else { return withNewlineGlyph }
+        let headCount = max(12, (maxLength - 3) * 2 / 3)
+        let tailCount = max(8, maxLength - 3 - headCount)
+        let head = withNewlineGlyph.prefix(headCount)
+        let tail = withNewlineGlyph.suffix(tailCount)
+        return "\(head)...\(tail)"
     }
 
     private func singleLinePreview(of text: String, maxLength: Int = 140) -> String {

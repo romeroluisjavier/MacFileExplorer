@@ -387,6 +387,169 @@ struct MacFileExplorerApp: App {
                 .keyboardShortcut("h", modifiers: [.command, .shift])
             }
 
+            CommandMenu(loc.text(es: "Portapapeles", en: "Clipboard")) {
+                Toggle(isOn: $clipboardPrefs.isEnabled) {
+                    Label(
+                        loc.text(es: "Activar Historial del Portapapeles", en: "Enable Clipboard History"),
+                        systemImage: "doc.on.clipboard"
+                    )
+                }
+
+                Divider()
+
+                Button {
+                    ClipboardQuickPopupController.shared.showPopup()
+                } label: {
+                    Label(
+                        loc.text(
+                            es: "Abrir menú desplegable rápido (\(clipboardPrefs.quickPasteDropdownShortcut.displayString))",
+                            en: "Open Quick Paste Dropdown (\(clipboardPrefs.quickPasteDropdownShortcut.displayString))"
+                        ),
+                        systemImage: "macwindow.on.rectangle"
+                    )
+                }
+                .disabled(!clipboardPrefs.isEnabled)
+
+                Button {
+                    ClipboardQuickPopupController.shared.openFullHistoryInMainWindow()
+                } label: {
+                    Label(
+                        loc.text(
+                            es: "Buscar en todo el historial… (\(clipboardPrefs.fullHistorySearchShortcut.displayString))",
+                            en: "Search Full Clipboard History… (\(clipboardPrefs.fullHistorySearchShortcut.displayString))"
+                        ),
+                        systemImage: "magnifyingglass"
+                    )
+                }
+                .disabled(!clipboardPrefs.isEnabled)
+
+                Divider()
+
+                Menu {
+                    Picker(
+                        loc.text(es: "Tiempo de guardado", en: "Retention Time"),
+                        selection: $clipboardPrefs.retentionPeriod
+                    ) {
+                        ForEach(ClipboardRetentionPeriod.allCases) { period in
+                            Label(period.localizedTitle(using: loc), systemImage: "clock")
+                                .tag(period)
+                        }
+                    }
+                    .pickerStyle(.inline)
+                } label: {
+                    Label(loc.text(es: "Tiempo de guardado", en: "Retention Time"), systemImage: "clock")
+                }
+
+                Menu {
+                    Picker(
+                        loc.text(es: "Cantidad máxima", en: "Maximum Items"),
+                        selection: $clipboardPrefs.maxItemsOption
+                    ) {
+                        ForEach(ClipboardMaxItemsOption.allCases) { option in
+                            Label(option.localizedTitle(using: loc), systemImage: "number.circle")
+                                .tag(option)
+                        }
+                    }
+                    .pickerStyle(.inline)
+                } label: {
+                    Label(loc.text(es: "Cantidad máxima", en: "Maximum Items"), systemImage: "number.circle")
+                }
+
+                Menu {
+                    Picker(
+                        loc.text(es: "Elementos en menú desplegable", en: "Items in Quick Dropdown"),
+                        selection: $clipboardPrefs.dropdownCountOption
+                    ) {
+                        ForEach(ClipboardDropdownCountOption.allCases) { option in
+                            Label(option.localizedTitle(using: loc), systemImage: "list.number")
+                                .tag(option)
+                        }
+                    }
+                    .pickerStyle(.inline)
+                } label: {
+                    Label(
+                        loc.text(es: "Elementos en menú desplegable (últimos 10)", en: "Items in Quick Dropdown (Last 10)"),
+                        systemImage: "list.number"
+                    )
+                }
+
+                Divider()
+
+                Menu {
+                    Button {
+                        ClipboardShortcutsWindowController.shared.show()
+                    } label: {
+                        Label(
+                            loc.text(es: "Personalizar todos los atajos de teclado…", en: "Customize All Keyboard Shortcuts…"),
+                            systemImage: "keyboard"
+                        )
+                    }
+
+                    Divider()
+
+                    Picker(
+                        loc.text(es: "Atajo de Pegar (Menú desplegable)", en: "Paste Dropdown Shortcut"),
+                        selection: $clipboardPrefs.popupShortcutPreset
+                    ) {
+                        ForEach(ClipboardPopupShortcutPreset.allCases) { preset in
+                            Label(preset.localizedTitle(using: loc), systemImage: "command")
+                                .tag(preset)
+                        }
+                    }
+                    .pickerStyle(.inline)
+
+                    Divider()
+
+                    Button {
+                        clipboardPrefs.resetShortcutsToDefaults()
+                    } label: {
+                        Label(
+                            loc.text(es: "Restablecer atajos predeterminados (Maccy)", en: "Reset Shortcuts to Defaults (Maccy)"),
+                            systemImage: "arrow.counterclockwise"
+                        )
+                    }
+                } label: {
+                    Label(
+                        loc.text(es: "Configuración de atajos (Shortcuts)", en: "Shortcuts Configuration"),
+                        systemImage: "keyboard"
+                    )
+                }
+
+                Button {
+                    ClipboardShortcutsWindowController.shared.show()
+                } label: {
+                    Label(
+                        loc.text(es: "Abrir panel de atajos y ajustes…", en: "Open Shortcuts & Settings Panel…"),
+                        systemImage: "slider.horizontal.3"
+                    )
+                }
+
+                Toggle(isOn: $clipboardPrefs.autoPasteOnSelect) {
+                    Label(
+                        loc.text(
+                            es: "Pegar automáticamente al elegir del menú desplegable",
+                            en: "Auto-paste on dropdown selection"
+                        ),
+                        systemImage: "arrow.turn.down.left"
+                    )
+                }
+
+                Divider()
+
+                Button(role: .destructive) {
+                    ClipboardHistoryManager.shared.clearUnpinnedHistory()
+                } label: {
+                    Label(
+                        loc.text(
+                            es: "Limpiar historial no fijado (\(clipboardPrefs.clearHistoryShortcut.displayString))",
+                            en: "Clear Unpinned History (\(clipboardPrefs.clearHistoryShortcut.displayString))"
+                        ),
+                        systemImage: "trash"
+                    )
+                }
+                .disabled(ClipboardHistoryManager.shared.items.allSatisfy(\.isPinned))
+            }
+
             CommandMenu(loc.text(es: "Idioma", en: "Language")) {
                 languageSelectionPicker
             }

@@ -1,9 +1,36 @@
 import AppKit
+import Carbon
 import Foundation
 import Observation
 import UniformTypeIdentifiers
 
-/// Preferencias reactivas y persistentes del Historial del Portapapeles estilo Maccy.
+/// Callback C para `RegisterEventHotKey` de Carbon que reenvía los atajos globales (`⌃⌘V` / `⇧⌘C`) al `@MainActor`.
+private func clipboardCarbonHotKeyHandler(
+    nextHandler: EventHandlerCallRef?,
+    event: EventRef?,
+    userData: UnsafeMutableRawPointer?
+) -> OSStatus {
+    guard let event else { return OSStatus(eventNotHandledErr) }
+    var hotKeyID = EventHotKeyID()
+    let status = GetEventParameter(
+        event,
+        EventParamName(kEventParamDirectObject),
+        EventParamType(typeEventHotKeyID),
+        nil,
+        MemoryLayout<EventHotKeyID>.size,
+        nil,
+        &hotKeyID
+    )
+    guard status == noErr else { return status }
+    let id = hotKeyID.id
+    Task { @MainActor in
+        ClipboardHistoryManager.shared.handleCarbonHotKeyTriggered(id: id)
+    }
+    return noErr
+}
+
+/// Preferencias reactivas y persistentes del Historial del Portapapeles estilo Maccy,
+/// incluyendo tiempo de retención, cantidad máxima, cantidad en el desplegable rápido y todos los atajos configurables.
 @MainActor
 @Observable
 public final class ClipboardHistoryPreferences {
@@ -16,11 +43,20 @@ public final class ClipboardHistoryPreferences {
         static let isEnabled = "com.macfileexplorer.clipboardHistory.isEnabled"
         static let maxItems = "com.macfileexplorer.clipboardHistory.maxItems"
         static let retentionPeriod = "com.macfileexplorer.clipboardHistory.retentionPeriod"
-        static let shortcutPreset = "com.macfileexplorer.clipboardHistory.shortcutPreset"
+        static let dropdownCount = "com.macfileexplorer.clipboardHistory.dropdownCount"
+        static let autoPasteOnSelect = "com.macfileexplorer.clipboardHistory.autoPasteOnSelect"
+        static let shortcutPreset = "com.macfileexplorer.clipboardHistory.shortcutPreset.v2"
         static let isSidebarSectionExpanded = "com.macfileexplorer.clipboardHistory.isSidebarSectionExpanded"
+
+        static let quickPasteDropdownShortcut = "com.macfileexplorer.clipboardHistory.shortcut.quickPasteDropdown"
+        static let fullHistorySearchShortcut = "com.macfileexplorer.clipboardHistory.shortcut.fullHistorySearch"
+        static let pinShortcut = "com.macfileexplorer.clipboardHistory.shortcut.pin"
+        static let deleteShortcut = "com.macfileexplorer.clipboardHistory.shortcut.delete"
+        static let plainTextShortcut = "com.macfileexplorer.clipboardHistory.shortcut.plainText"
+        static let clearHistoryShortcut = "com.macfileexplorer.clipboardHistory.shortcut.clearHistory"
     }
 
-    /// Activa o desactiva la captura y la sección del Historial del Portapapeles en el panel lateral izquierdo.
+    /// Activa o desactiva la captura y la sección del Historial del Portapapeles.
     public var isEnabled: Bool {
         didSet {
             guard isEnabled != oldValue else { return }
@@ -48,16 +84,92 @@ public final class ClipboardHistoryPreferences {
         }
     }
 
-    /// Atajo de teclado rápido para abrir el buscador flotante estilo Maccy (`⇧⌘C` por defecto).
-    public var popupShortcutPreset: ClipboardPopupShortcutPreset {
+    /// Cantidad de elementos recientes mostrados en el menú desplegable rápido (`⌃⌘V`, por defecto los últimos 10).
+    public var dropdownCountOption: ClipboardDropdownCountOption {
         didSet {
-            guard popupShortcutPreset != oldValue else { return }
-            defaults.set(popupShortcutPreset.rawValue, forKey: Keys.shortcutPreset)
+            guard dropdownCountOption != oldValue else { return }
+            defaults.set(dropdownCountOption.rawValue, forKey: Keys.dropdownCount)
+        }
+    }
+
+    /// Si está activo, al elegir un ítem del desplegable rápido (`⌃⌘V`) se envía `⌘V` automáticamente a la aplicación activa.
+    public var autoPasteOnSelect: Bool {
+        didSet {
+            guard autoPasteOnSelect != oldValue else { return }
+            defaults.set(autoPasteOnSelect, forKey: Keys.autoPasteOnSelect)
+        }
+    }
+
+    /// Atajo global para abrir el menú desplegable rápido estilo Maccy en cualquier lugar de la Mac (`⌃⌘V` por defecto).
+    public var quickPasteDropdownShortcut: ClipboardKeyShortcut {
+        didSet {
+            guard quickPasteDropdownShortcut != oldValue else { return }
+            saveShortcut(quickPasteDropdownShortcut, forKey: Keys.quickPasteDropdownShortcut)
+            ClipboardHistoryManager.shared.syncGlobalHotKeys()
             StatusBarManager.shared.refreshTooltipAndMenu()
         }
     }
 
-    /// Estado de expansión de la sección "Historial del Portapapeles" debajo de Google Accounts en la barra lateral.
+    /// Atajo para abrir la sección de búsqueda completa del Historial del Portapapeles (`⇧⌘C` por defecto).
+    public var fullHistorySearchShortcut: ClipboardKeyShortcut {
+        didSet {
+            guard fullHistorySearchShortcut != oldValue else { return }
+            saveShortcut(fullHistorySearchShortcut, forKey: Keys.fullHistorySearchShortcut)
+            ClipboardHistoryManager.shared.syncGlobalHotKeys()
+            StatusBarManager.shared.refreshTooltipAndMenu()
+        }
+    }
+
+    /// Atajo para fijar o desfijar un elemento en el historial (`⌥P` por defecto).
+    public var pinShortcut: ClipboardKeyShortcut {
+        didSet {
+            guard pinShortcut != oldValue else { return }
+            saveShortcut(pinShortcut, forKey: Keys.pinShortcut)
+        }
+    }
+
+    /// Atajo para eliminar un elemento del historial (`⌥⌫` por defecto).
+    public var deleteShortcut: ClipboardKeyShortcut {
+        didSet {
+            guard deleteShortcut != oldValue else { return }
+            saveShortcut(deleteShortcut, forKey: Keys.deleteShortcut)
+        }
+    }
+
+    /// Atajo para copiar/pegar como texto plano sin formato (`⌥↵` por defecto).
+    public var plainTextShortcut: ClipboardKeyShortcut {
+        didSet {
+            guard plainTextShortcut != oldValue else { return }
+            saveShortcut(plainTextShortcut, forKey: Keys.plainTextShortcut)
+        }
+    }
+
+    /// Atajo para limpiar todos los elementos no fijados del historial (`⌥⌘⌫` por defecto).
+    public var clearHistoryShortcut: ClipboardKeyShortcut {
+        didSet {
+            guard clearHistoryShortcut != oldValue else { return }
+            saveShortcut(clearHistoryShortcut, forKey: Keys.clearHistoryShortcut)
+        }
+    }
+
+    /// Preset rápido sincronizado con `quickPasteDropdownShortcut`.
+    public var popupShortcutPreset: ClipboardPopupShortcutPreset {
+        get {
+            if !quickPasteDropdownShortcut.isEnabled { return .disabled }
+            for preset in ClipboardPopupShortcutPreset.allCases where preset != .disabled {
+                if preset.keyShortcut == quickPasteDropdownShortcut {
+                    return preset
+                }
+            }
+            return .controlCommandV
+        }
+        set {
+            defaults.set(newValue.rawValue, forKey: Keys.shortcutPreset)
+            quickPasteDropdownShortcut = newValue.keyShortcut
+        }
+    }
+
+    /// Estado de expansión de la sección "Portapapeles" debajo de Google Accounts en la barra lateral.
     public var isSidebarSectionExpanded: Bool {
         didSet {
             guard isSidebarSectionExpanded != oldValue else { return }
@@ -86,11 +198,17 @@ public final class ClipboardHistoryPreferences {
             self.retentionPeriod = .thirtyDays
         }
 
-        if let rawShortcut = defaults.string(forKey: Keys.shortcutPreset),
-           let parsedShortcut = ClipboardPopupShortcutPreset(rawValue: rawShortcut) {
-            self.popupShortcutPreset = parsedShortcut
+        if let rawDropdownCount = defaults.object(forKey: Keys.dropdownCount) as? Int,
+           let parsedDropdownCount = ClipboardDropdownCountOption(rawValue: rawDropdownCount) {
+            self.dropdownCountOption = parsedDropdownCount
         } else {
-            self.popupShortcutPreset = .shiftCommandC
+            self.dropdownCountOption = .ten
+        }
+
+        if defaults.object(forKey: Keys.autoPasteOnSelect) == nil {
+            self.autoPasteOnSelect = true
+        } else {
+            self.autoPasteOnSelect = defaults.bool(forKey: Keys.autoPasteOnSelect)
         }
 
         if defaults.object(forKey: Keys.isSidebarSectionExpanded) == nil {
@@ -98,13 +216,72 @@ public final class ClipboardHistoryPreferences {
         } else {
             self.isSidebarSectionExpanded = defaults.bool(forKey: Keys.isSidebarSectionExpanded)
         }
+
+        self.quickPasteDropdownShortcut = Self.loadShortcut(
+            from: defaults,
+            forKey: Keys.quickPasteDropdownShortcut,
+            defaultValue: .defaultQuickPasteDropdown
+        )
+        self.fullHistorySearchShortcut = Self.loadShortcut(
+            from: defaults,
+            forKey: Keys.fullHistorySearchShortcut,
+            defaultValue: .defaultFullHistorySearch
+        )
+        self.pinShortcut = Self.loadShortcut(
+            from: defaults,
+            forKey: Keys.pinShortcut,
+            defaultValue: .defaultPinItem
+        )
+        self.deleteShortcut = Self.loadShortcut(
+            from: defaults,
+            forKey: Keys.deleteShortcut,
+            defaultValue: .defaultDeleteItem
+        )
+        self.plainTextShortcut = Self.loadShortcut(
+            from: defaults,
+            forKey: Keys.plainTextShortcut,
+            defaultValue: .defaultPlainTextCopy
+        )
+        self.clearHistoryShortcut = Self.loadShortcut(
+            from: defaults,
+            forKey: Keys.clearHistoryShortcut,
+            defaultValue: .defaultClearHistory
+        )
+    }
+
+    /// Restablece todos los atajos del portapapeles a sus valores predeterminados estilo Maccy (`⌃⌘V`, `⇧⌘C`, `⌥P`, `⌥⌫`, `⌥↵`, `⌥⌘⌫`).
+    public func resetShortcutsToDefaults() {
+        quickPasteDropdownShortcut = .defaultQuickPasteDropdown
+        fullHistorySearchShortcut = .defaultFullHistorySearch
+        pinShortcut = .defaultPinItem
+        deleteShortcut = .defaultDeleteItem
+        plainTextShortcut = .defaultPlainTextCopy
+        clearHistoryShortcut = .defaultClearHistory
+    }
+
+    private func saveShortcut(_ shortcut: ClipboardKeyShortcut, forKey key: String) {
+        if let data = try? JSONEncoder().encode(shortcut) {
+            defaults.set(data, forKey: key)
+        }
+    }
+
+    private static func loadShortcut(
+        from defaults: UserDefaults,
+        forKey key: String,
+        defaultValue: ClipboardKeyShortcut
+    ) -> ClipboardKeyShortcut {
+        guard let data = defaults.data(forKey: key),
+              let decoded = try? JSONDecoder().decode(ClipboardKeyShortcut.self, from: data) else {
+            return defaultValue
+        }
+        return decoded
     }
 }
 
 /// Gestor central (`@MainActor @Observable`) del Historial del Portapapeles estilo Maccy.
 /// Monitorea automáticamente `NSPasteboard.general` (texto, enlaces, archivos e imágenes/capturas de pantalla),
-/// almacena imágenes en disco en formato PNG, aplica deduplicación por hash SHA-256 y ejecuta políticas
-/// configurables de límite por cantidad y por antigüedad.
+/// registra atajos globales a nivel sistema mediante Carbon `RegisterEventHotKey` (`⌃⌘V` sin importar en qué app estés),
+/// almacena imágenes en disco en formato PNG y ejecuta políticas configurables de límite por cantidad y antigüedad.
 @MainActor
 @Observable
 public final class ClipboardHistoryManager {
@@ -135,7 +312,11 @@ public final class ClipboardHistoryManager {
     private var lastObservedChangeCount: Int = -1
     private var lastSelfWrittenChangeCount: Int = -1
     private var localShortcutMonitor: Any?
-    private var globalShortcutMonitor: Any?
+
+    // Referencias de Carbon EventHotKey para funcionar en cualquier aplicación de macOS sin permisos extra
+    private var carbonEventHandlerRef: EventHandlerRef?
+    private var quickPasteHotKeyRef: EventHotKeyRef?
+    private var fullSearchHotKeyRef: EventHotKeyRef?
 
     /// Tipos de `NSPasteboard` confidenciales o transitorios (gestores de contraseñas como 1Password, Keychain, etc.) que deben ignorarse.
     private static let ignoredPasteboardTypeRawValues: Set<String> = [
@@ -171,6 +352,7 @@ public final class ClipboardHistoryManager {
             lastObservedChangeCount = NSPasteboard.general.changeCount
             syncMonitoringState()
             installShortcutMonitorsIfNeeded()
+            syncGlobalHotKeys()
         }
     }
 
@@ -179,6 +361,15 @@ public final class ClipboardHistoryManager {
     /// Entradas que coinciden con `searchQuery` y `selectedFilter` manteniendo primero los elementos fijados.
     public var filteredItems: [ClipboardHistoryEntry] {
         items.filter { $0.matches(query: searchQuery, filter: selectedFilter) }
+    }
+
+    /// Devuelve los elementos para el menú desplegable rápido (`⌃⌘V`):
+    /// Si el usuario no escribió filtro, muestra los últimos N elementos configurados (por defecto 10);
+    /// si escribió en la caja de búsqueda del popup, filtra sobre todo el historial y muestra hasta N resultados.
+    public func dropdownPopupItems(query: String) -> [ClipboardHistoryEntry] {
+        let limit = max(1, ClipboardHistoryPreferences.shared.dropdownCountOption.rawValue)
+        let matching = items.filter { $0.matches(query: query, filter: .all) }
+        return Array(matching.prefix(limit))
     }
 
     /// Entrada actualmente seleccionada para previsualizar en el panel derecho (o la primera disponible).
@@ -194,11 +385,12 @@ public final class ClipboardHistoryManager {
         items.filter(\.isPinned).count
     }
 
-    // MARK: - Control de Monitoreo en Segundo Plano y Atajos Globales
+    // MARK: - Control de Monitoreo en Segundo Plano y Atajos Globales Carbon (`RegisterEventHotKey`)
 
     public func installIfNeeded() {
         syncMonitoringState()
         installShortcutMonitorsIfNeeded()
+        syncGlobalHotKeys()
     }
 
     public func syncMonitoringState() {
@@ -207,6 +399,7 @@ public final class ClipboardHistoryManager {
         } else {
             stopPolling()
         }
+        syncGlobalHotKeys()
     }
 
     private func startPollingIfNeeded() {
@@ -226,6 +419,85 @@ public final class ClipboardHistoryManager {
         pollTimer = nil
     }
 
+    /// Registra o actualiza los atajos globales a nivel sistema en macOS mediante Carbon `RegisterEventHotKey`
+    /// para que `⌃⌘V` abra el desplegable rápido de los últimos 10 ítems sin importar en qué aplicación esté parado el usuario.
+    public func syncGlobalHotKeys() {
+        if let existingQuick = quickPasteHotKeyRef {
+            UnregisterEventHotKey(existingQuick)
+            quickPasteHotKeyRef = nil
+        }
+        if let existingFull = fullSearchHotKeyRef {
+            UnregisterEventHotKey(existingFull)
+            fullSearchHotKeyRef = nil
+        }
+
+        let prefs = ClipboardHistoryPreferences.shared
+        guard prefs.isEnabled else { return }
+
+        if carbonEventHandlerRef == nil {
+            var eventType = EventTypeSpec(
+                eventClass: OSType(kEventClassKeyboard),
+                eventKind: UInt32(kEventHotKeyPressed)
+            )
+            InstallEventHandler(
+                GetApplicationEventTarget(),
+                clipboardCarbonHotKeyHandler,
+                1,
+                &eventType,
+                nil,
+                &carbonEventHandlerRef
+            )
+        }
+
+        let signature: OSType = 0x4D464543 // 'MFEC'
+
+        let quickShortcut = prefs.quickPasteDropdownShortcut
+        if quickShortcut.isEnabled {
+            let hotKeyID = EventHotKeyID(signature: signature, id: 1)
+            var ref: EventHotKeyRef?
+            let status = RegisterEventHotKey(
+                UInt32(quickShortcut.keyCode),
+                quickShortcut.carbonModifiers,
+                hotKeyID,
+                GetApplicationEventTarget(),
+                0,
+                &ref
+            )
+            if status == noErr {
+                quickPasteHotKeyRef = ref
+            }
+        }
+
+        let fullShortcut = prefs.fullHistorySearchShortcut
+        if fullShortcut.isEnabled && fullShortcut != quickShortcut {
+            let hotKeyID = EventHotKeyID(signature: signature, id: 2)
+            var ref: EventHotKeyRef?
+            let status = RegisterEventHotKey(
+                UInt32(fullShortcut.keyCode),
+                fullShortcut.carbonModifiers,
+                hotKeyID,
+                GetApplicationEventTarget(),
+                0,
+                &ref
+            )
+            if status == noErr {
+                fullSearchHotKeyRef = ref
+            }
+        }
+    }
+
+    fileprivate func handleCarbonHotKeyTriggered(id: UInt32) {
+        guard ClipboardHistoryPreferences.shared.isEnabled else { return }
+        switch id {
+        case 1:
+            ClipboardQuickPopupController.shared.togglePopup()
+        case 2:
+            ClipboardQuickPopupController.shared.openFullHistoryInMainWindow()
+        default:
+            break
+        }
+    }
+
     private func installShortcutMonitorsIfNeeded() {
         if localShortcutMonitor == nil {
             localShortcutMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
@@ -234,41 +506,46 @@ public final class ClipboardHistoryManager {
                 let chars = event.charactersIgnoringModifiers
                 let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
                 let handled = MainActor.assumeIsolated {
-                    self.handleShortcutKeyDown(keyCode: keyCode, charactersIgnoringModifiers: chars, flags: flags)
+                    self.handleLocalShortcutKeyDown(keyCode: keyCode, charactersIgnoringModifiers: chars, flags: flags)
                 }
                 return handled ? nil : event
             }
         }
-
-        if globalShortcutMonitor == nil {
-            globalShortcutMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
-                let keyCode = event.keyCode
-                let chars = event.charactersIgnoringModifiers
-                let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-                Task { @MainActor [weak self] in
-                    guard let self else { return }
-                    _ = self.handleShortcutKeyDown(keyCode: keyCode, charactersIgnoringModifiers: chars, flags: flags)
-                }
-            }
-        }
     }
 
-    private func handleShortcutKeyDown(
+    private func handleLocalShortcutKeyDown(
         keyCode: UInt16,
         charactersIgnoringModifiers: String?,
         flags: NSEvent.ModifierFlags
     ) -> Bool {
-        let prefs = ClipboardHistoryPreferences.shared
-        guard prefs.isEnabled else { return false }
-        guard prefs.popupShortcutPreset.matches(
-            keyCode: keyCode,
-            charactersIgnoringModifiers: charactersIgnoringModifiers,
-            flags: flags
-        ) else {
+        // Si la ventana de grabación de atajos está activa, no interceptar
+        if ClipboardShortcutsWindowController.shared.isRecordingShortcut {
             return false
         }
-        ClipboardQuickPopupController.shared.togglePopup()
-        return true
+        let prefs = ClipboardHistoryPreferences.shared
+        guard prefs.isEnabled else { return false }
+
+        if quickPasteHotKeyRef == nil,
+           prefs.quickPasteDropdownShortcut.matches(
+               keyCode: keyCode,
+               charactersIgnoringModifiers: charactersIgnoringModifiers,
+               flags: flags
+           ) {
+            ClipboardQuickPopupController.shared.togglePopup()
+            return true
+        }
+
+        if fullSearchHotKeyRef == nil,
+           prefs.fullHistorySearchShortcut.matches(
+               keyCode: keyCode,
+               charactersIgnoringModifiers: charactersIgnoringModifiers,
+               flags: flags
+           ) {
+            ClipboardQuickPopupController.shared.openFullHistoryInMainWindow()
+            return true
+        }
+
+        return false
     }
 
     // MARK: - Captura del Portapapeles (`NSPasteboard`)
@@ -551,7 +828,8 @@ public final class ClipboardHistoryManager {
 
     // MARK: - Acciones sobre Entradas del Historial (Compatibles con Maccy)
 
-    /// Copia cualquier entrada del historial de vuelta al portapapeles del sistema (`Enter` o clic, o `⌘1`..`⌘9`).
+    /// Copia cualquier entrada del historial de vuelta al portapapeles del sistema (`Enter`, clic o `⌘1`..`⌘9`).
+    /// Al quedar en `NSPasteboard.general`, el pegado normal (`⌘V`) también utiliza este elemento como último copiado.
     public func copyEntryToPasteboard(
         _ entry: ClipboardHistoryEntry,
         plainTextOnly: Bool = false,
@@ -606,6 +884,21 @@ public final class ClipboardHistoryManager {
             if self?.recentlyCopiedFeedbackEntryID == feedbackID {
                 self?.recentlyCopiedFeedbackEntryID = nil
             }
+        }
+    }
+
+    /// Simula `⌘V` en la aplicación activa tras seleccionar un elemento en el menú desplegable rápido estilo Maccy.
+    public func synthesizeCommandVInActiveApplication() {
+        guard ClipboardHistoryPreferences.shared.autoPasteOnSelect else { return }
+        guard AXIsProcessTrusted() else { return }
+        let source = CGEventSource(stateID: .combinedSessionState)
+        let vKeyCode: CGKeyCode = 0x09 // 'v'
+        if let keyDown = CGEvent(keyboardEventSource: source, virtualKey: vKeyCode, keyDown: true),
+           let keyUp = CGEvent(keyboardEventSource: source, virtualKey: vKeyCode, keyDown: false) {
+            keyDown.flags = .maskCommand
+            keyUp.flags = .maskCommand
+            keyDown.post(tap: .cgAnnotatedSessionEventTap)
+            keyUp.post(tap: .cgAnnotatedSessionEventTap)
         }
     }
 
@@ -761,7 +1054,6 @@ public final class ClipboardHistoryManager {
             if let bundle = newEntry.sourceAppBundleID, !bundle.isEmpty {
                 updated.sourceAppBundleID = bundle
             }
-            // Si habíamos creado un archivo de imagen duplicado temporal, limpiarlo y conservar el original
             if let newImg = newEntry.imageFileName, newImg != updated.imageFileName {
                 removeImageFileIfNeeded(for: newEntry)
             }

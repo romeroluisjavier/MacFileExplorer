@@ -349,9 +349,25 @@ public final class StatusBarManager: NSObject, NSMenuDelegate {
     private func buildClipboardHistorySubmenu(using loc: LocalizationManager) -> NSMenu {
         let submenu = NSMenu(title: loc.text(es: "Portapapeles", en: "Clipboard History"))
         submenu.autoenablesItems = false
+        let prefs = ClipboardHistoryPreferences.shared
+
+        let openQuickPopupItem = NSMenuItem(
+            title: loc.text(
+                es: "Menú desplegable rápido (\(prefs.quickPasteDropdownShortcut.displayString))",
+                en: "Quick Paste Dropdown (\(prefs.quickPasteDropdownShortcut.displayString))"
+            ),
+            action: #selector(handleOpenClipboardQuickPopup(_:)),
+            keyEquivalent: ""
+        )
+        openQuickPopupItem.target = self
+        openQuickPopupItem.image = LocalizationManager.symbolImage(named: "macwindow.on.rectangle")
+        submenu.addItem(openQuickPopupItem)
 
         let openSearchItem = NSMenuItem(
-            title: loc.text(es: "Buscar en todo el historial…", en: "Search Full History…"),
+            title: loc.text(
+                es: "Buscar en todo el historial… (\(prefs.fullHistorySearchShortcut.displayString))",
+                en: "Search Full History… (\(prefs.fullHistorySearchShortcut.displayString))"
+            ),
             action: #selector(handleOpenClipboardHistoryInMainWindow(_:)),
             keyEquivalent: ""
         )
@@ -359,17 +375,17 @@ public final class StatusBarManager: NSObject, NSMenuDelegate {
         openSearchItem.image = LocalizationManager.symbolImage(named: "magnifyingglass")
         submenu.addItem(openSearchItem)
 
-        let openQuickPopupItem = NSMenuItem(
-            title: loc.text(es: "Buscador flotante rápido (Maccy)", en: "Quick Floating Search (Maccy)"),
-            action: #selector(handleOpenClipboardQuickPopup(_:)),
-            keyEquivalent: "C"
+        let settingsItem = NSMenuItem(
+            title: loc.text(es: "Configurar atajos y retención…", en: "Configure Shortcuts & Retention…"),
+            action: #selector(handleOpenClipboardShortcutsSettings(_:)),
+            keyEquivalent: ""
         )
-        openQuickPopupItem.keyEquivalentModifierMask = [.command, .shift]
-        openQuickPopupItem.target = self
-        openQuickPopupItem.image = LocalizationManager.symbolImage(named: "macwindow.on.rectangle")
-        submenu.addItem(openQuickPopupItem)
+        settingsItem.target = self
+        settingsItem.image = LocalizationManager.symbolImage(named: "keyboard")
+        submenu.addItem(settingsItem)
 
-        let recentItems = Array(ClipboardHistoryManager.shared.items.prefix(8))
+        let limit = max(1, prefs.dropdownCountOption.rawValue)
+        let recentItems = Array(ClipboardHistoryManager.shared.items.prefix(limit))
         if !recentItems.isEmpty {
             submenu.addItem(.separator())
             for entry in recentItems {
@@ -433,6 +449,10 @@ public final class StatusBarManager: NSObject, NSMenuDelegate {
 
     @objc public func handleOpenClipboardQuickPopup(_ sender: Any?) {
         ClipboardQuickPopupController.shared.showPopup()
+    }
+
+    @objc public func handleOpenClipboardShortcutsSettings(_ sender: Any?) {
+        ClipboardShortcutsWindowController.shared.show()
     }
 
     @objc private func handleCopyClipboardEntryFromMenu(_ sender: NSMenuItem) {

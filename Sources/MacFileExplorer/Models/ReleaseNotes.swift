@@ -86,10 +86,10 @@ public enum ReleaseNotesCatalog {
                 ReleaseNoteItem(
                     id: "clipboard-history-maccy",
                     icon: "doc.on.clipboard.fill",
-                    titleES: "Historial completo del Portapapeles estilo Maccy (texto, enlaces, archivos e imágenes)",
-                    titleEN: "Full Maccy-style Clipboard History (text, links, files & images)",
-                    summaryES: "Se incorporó una nueva sección de Portapapeles en el menú lateral izquierdo (debajo de Cuentas de Google) y en el icono de la barra de menús que guarda automáticamente todo lo que copies, incluyendo capturas de pantalla e imágenes. Cuenta con un buscador completo por texto o categoría, previsualización de imágenes, atajos compatibles con Maccy (⇧⌘C, ⌘1..9, ⌥P para fijar, ⌥⌫ para borrar), configuración del tiempo o cantidad máxima a conservar, y opción para activarlo o desactivarlo desde el menú Ver.",
-                    summaryEN: "Added a new Clipboard History section in the left sidebar (below Google Accounts) and in the menu bar icon that automatically saves everything you copy, including screenshots and images. It features a full search and category filter view, full image previews, Maccy-compatible shortcuts (⇧⌘C, ⌘1..9, ⌥P to pin, ⌥⌫ to delete), configurable retention time and item count limits, and an option to enable or disable it from the View menu."
+                    titleES: "Historial del Portapapeles estilo Maccy, menú superior Portapapeles y desplegable global (⌃⌘V)",
+                    titleEN: "Maccy-style Clipboard History, top Clipboard menu & global paste dropdown (⌃⌘V)",
+                    summaryES: "Se sumó un menú específico «Portapapeles» en la barra superior de macOS y una nueva sección debajo de Cuentas de Google que guarda automáticamente todo lo que copies (texto, enlaces, archivos e imágenes). Al presionar ⌃⌘V desde cualquier aplicación de la Mac se abre un menú desplegable estilo Maccy con los últimos 10 elementos copiados (incluyendo miniaturas de imágenes y acceso rápido con ⌘1..9) mientras que el pegado normal sigue usando lo último copiado. Además puedes configurar el tiempo de guardado, la cantidad máxima, personalizar todos los atajos de teclado o activar y desactivar la función cuando quieras.",
+                    summaryEN: "Added a dedicated «Clipboard» menu in the top macOS menu bar and a new sidebar section below Google Accounts that automatically saves everything you copy (text, links, files, and images). Pressing ⌃⌘V anywhere on your Mac opens a Maccy-style dropdown menu showing the last 10 copied items (with inline image previews and ⌘1..9 quick shortcuts) while normal paste continues using the latest copied item. You can also configure retention time, maximum item count, customize all keyboard shortcuts, or enable and disable the feature anytime."
                 ),
                 ReleaseNoteItem(
                     id: "menu-bar-tray-icon",

@@ -212,6 +212,7 @@ public final class LocalizationManager: NSObject, NSMenuDelegate {
             ("Visualización", "View"),
             ("Ver", "View"),
             ("Ir", "Go"),
+            ("Portapapeles", "Clipboard"),
             ("Idioma", "Language"),
             ("Ventana", "Window"),
             ("Ayuda", "Help"),

@@ -3,7 +3,7 @@ import SwiftUI
 
 /// Vista principal del Historial del Portapapeles estilo Maccy integrada en el área central de `MacFileExplorer`.
 /// Permite buscar cualquier texto, enlace, archivo o imagen copiada, configurar el tiempo y cantidad máxima de guardado,
-/// fijar elementos favoritos (`⌥P`), eliminar (`⌥⌫`), copiar con `Enter` o `⌘1`..`⌘9` y previsualizar imágenes a tamaño completo.
+/// personalizar todos los atajos de teclado (`⌃⌘V`, `⇧⌘C`, `⌥P`, `⌥⌫`, `⌥↵`, `⌥⌘⌫`) y previsualizar imágenes a tamaño completo.
 public struct ClipboardHistoryMainView: View {
     @Bindable var viewModel: ExplorerViewModel
     @Bindable var historyManager: ClipboardHistoryManager = .shared
@@ -143,7 +143,7 @@ public struct ClipboardHistoryMainView: View {
         .padding(.vertical, 10)
     }
 
-    // MARK: - Barra de Filtros por Categoría y Configuración de Tiempo / Cantidad
+    // MARK: - Barra de Filtros por Categoría y Configuración de Tiempo / Cantidad / Atajos
 
     private var filterAndSettingsBar: some View {
         ScrollView(.horizontal, showsIndicators: false) {
@@ -212,10 +212,6 @@ public struct ClipboardHistoryMainView: View {
                 }
                 .menuStyle(.borderlessButton)
                 .fixedSize()
-                .help(loc.text(
-                    es: "Configurar cuántos elementos guardar en el historial del portapapeles",
-                    en: "Configure how many items to keep in clipboard history"
-                ))
 
                 // Configuración 2: Tiempo de retención
                 Menu {
@@ -245,31 +241,19 @@ public struct ClipboardHistoryMainView: View {
                 }
                 .menuStyle(.borderlessButton)
                 .fixedSize()
-                .help(loc.text(
-                    es: "Configurar cuánto tiempo conservar los elementos copiados",
-                    en: "Configure how long to keep copied items"
-                ))
 
-                // Configuración 3: Atajo estilo Maccy
-                Menu {
-                    Picker(
-                        loc.text(es: "Atajo rápido estilo Maccy", en: "Maccy-style quick shortcut"),
-                        selection: $prefs.popupShortcutPreset
-                    ) {
-                        ForEach(ClipboardPopupShortcutPreset.allCases) { preset in
-                            Text(preset.localizedTitle(using: loc))
-                                .tag(preset)
-                        }
-                    }
-                    .pickerStyle(.inline)
+                // Configuración 3: Abrir ventana de Configuración de Atajos
+                Button {
+                    ClipboardShortcutsWindowController.shared.show()
                 } label: {
                     HStack(spacing: 4) {
-                        Image(systemName: "command")
+                        Image(systemName: "keyboard")
                             .font(.system(size: 11))
                         Text(
-                            prefs.popupShortcutPreset == .disabled
-                                ? loc.text(es: "Atajo: Off", en: "Shortcut: Off")
-                                : loc.text(es: "Atajo: \(prefs.popupShortcutPreset.badgeText)", en: "Shortcut: \(prefs.popupShortcutPreset.badgeText)")
+                            loc.text(
+                                es: "Atajos (\(prefs.quickPasteDropdownShortcut.displayString))…",
+                                en: "Shortcuts (\(prefs.quickPasteDropdownShortcut.displayString))…"
+                            )
                         )
                         .font(.system(size: 11, weight: .medium))
                     }
@@ -280,22 +264,24 @@ public struct ClipboardHistoryMainView: View {
                             .fill(Color.primary.opacity(0.05))
                     )
                 }
-                .menuStyle(.borderlessButton)
-                .fixedSize()
+                .buttonStyle(.plain)
                 .help(loc.text(
-                    es: "Atajo para abrir el buscador rápido del portapapeles (como Maccy)",
-                    en: "Shortcut to open the quick clipboard search popup (like Maccy)"
+                    es: "Configurar todos los atajos del portapapeles (Pegar del menú: \(prefs.quickPasteDropdownShortcut.displayString))",
+                    en: "Configure all clipboard shortcuts (Paste menu: \(prefs.quickPasteDropdownShortcut.displayString))"
                 ))
 
-                // Botón Limpiar no fijados (⌥⌘⌫)
+                // Botón Limpiar no fijados
                 Button {
                     historyManager.clearUnpinnedHistory()
                 } label: {
                     HStack(spacing: 4) {
                         Image(systemName: "trash")
                             .font(.system(size: 11))
-                        Text(loc.text(es: "Limpiar (⌥⌘⌫)", en: "Clear (⌥⌘⌫)"))
-                            .font(.system(size: 11, weight: .medium))
+                        Text(loc.text(
+                            es: "Limpiar (\(prefs.clearHistoryShortcut.displayString))",
+                            en: "Clear (\(prefs.clearHistoryShortcut.displayString))"
+                        ))
+                        .font(.system(size: 11, weight: .medium))
                     }
                     .foregroundStyle(.red)
                     .padding(.horizontal, 8)
@@ -307,10 +293,6 @@ public struct ClipboardHistoryMainView: View {
                 }
                 .buttonStyle(.plain)
                 .disabled(historyManager.items.allSatisfy(\.isPinned))
-                .help(loc.text(
-                    es: "Borrar todos los elementos no fijados del historial (⌥⌘⌫)",
-                    en: "Clear all unpinned items from history (⌥⌘⌫)"
-                ))
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 7)
@@ -327,7 +309,7 @@ public struct ClipboardHistoryMainView: View {
                     ForEach(Array(historyManager.filteredItems.enumerated()), id: \.element.id) { index, entry in
                         ClipboardHistoryRowView(
                             entry: entry,
-                            shortcutNumber: index < 9 ? (index + 1) : nil,
+                            shortcutNumber: index < 9 ? (index + 1) : (index == 9 ? 0 : nil),
                             isSelected: historyManager.selectedEntry?.id == entry.id,
                             isCopiedFeedbackVisible: historyManager.recentlyCopiedFeedbackEntryID == entry.id,
                             onSelect: {
@@ -365,7 +347,6 @@ public struct ClipboardHistoryMainView: View {
     private var inspectorDetailPane: some View {
         if let entry = historyManager.selectedEntry {
             VStack(alignment: .leading, spacing: 0) {
-                // Cabecera del elemento seleccionado
                 HStack(spacing: 10) {
                     Image(systemName: entry.kind.systemImage)
                         .font(.system(size: 16, weight: .semibold))
@@ -409,7 +390,10 @@ public struct ClipboardHistoryMainView: View {
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
-                    .help(loc.text(es: "Fijar / Desfijar (⌥P)", en: "Pin / Unpin (⌥P)"))
+                    .help(loc.text(
+                        es: "Fijar / Desfijar (\(prefs.pinShortcut.displayString))",
+                        en: "Pin / Unpin (\(prefs.pinShortcut.displayString))"
+                    ))
 
                     Button(role: .destructive) {
                         historyManager.deleteEntry(entry.id)
@@ -419,7 +403,10 @@ public struct ClipboardHistoryMainView: View {
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
-                    .help(loc.text(es: "Eliminar del historial (⌥⌫)", en: "Delete from history (⌥⌫)"))
+                    .help(loc.text(
+                        es: "Eliminar del historial (\(prefs.deleteShortcut.displayString))",
+                        en: "Delete from history (\(prefs.deleteShortcut.displayString))"
+                    ))
                 }
                 .padding(.horizontal, 14)
                 .padding(.vertical, 10)
@@ -427,7 +414,6 @@ public struct ClipboardHistoryMainView: View {
 
                 Divider()
 
-                // Cuerpo de previsualización según el tipo de contenido
                 Group {
                     if let previewImg = historyManager.image(for: entry) {
                         imagePreviewBody(entry: entry, image: previewImg)
@@ -441,7 +427,6 @@ public struct ClipboardHistoryMainView: View {
 
                 Divider()
 
-                // Pie de metadatos y atajos de Maccy
                 HStack(spacing: 14) {
                     Label(
                         entry.lastCopiedAt.formatted(date: .abbreviated, time: .standard),
@@ -459,8 +444,8 @@ public struct ClipboardHistoryMainView: View {
                     Spacer()
 
                     Text(loc.text(
-                        es: "Atajos Maccy: ↵ Copiar • ⌥↵ Texto plano • ⌥P Fijar • ⌥⌫ Borrar • ⌘1..9 Copia rápida",
-                        en: "Maccy shortcuts: ↵ Copy • ⌥↵ Plain text • ⌥P Pin • ⌥⌫ Delete • ⌘1..9 Quick copy"
+                        es: "Menú rápido: \(prefs.quickPasteDropdownShortcut.displayString) • ↵ Copiar • \(prefs.plainTextShortcut.displayString) Texto plano • \(prefs.pinShortcut.displayString) Fijar • \(prefs.deleteShortcut.displayString) Borrar",
+                        en: "Quick menu: \(prefs.quickPasteDropdownShortcut.displayString) • ↵ Copy • \(prefs.plainTextShortcut.displayString) Plain text • \(prefs.pinShortcut.displayString) Pin • \(prefs.deleteShortcut.displayString) Delete"
                     ))
                     .font(.system(size: 10.5))
                     .foregroundStyle(.tertiary)
@@ -608,8 +593,14 @@ public struct ClipboardHistoryMainView: View {
                 Button {
                     historyManager.copyEntryToPasteboard(entry, plainTextOnly: true)
                 } label: {
-                    Label(loc.text(es: "Copiar sin formato (⌥↵)", en: "Copy Plain Text (⌥↵)"), systemImage: "text.alignleft")
-                        .font(.system(size: 11.5))
+                    Label(
+                        loc.text(
+                            es: "Copiar sin formato (\(prefs.plainTextShortcut.displayString))",
+                            en: "Copy Plain Text (\(prefs.plainTextShortcut.displayString))"
+                        ),
+                        systemImage: "text.alignleft"
+                    )
+                    .font(.system(size: 11.5))
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.small)
@@ -674,7 +665,7 @@ public struct ClipboardHistoryMainView: View {
         historyManager.items.filter { $0.matches(query: historyManager.searchQuery, filter: filter) }.count
     }
 
-    // MARK: - Atajos de Teclado Internos estilo Maccy (↑/↓, Enter, ⌥Enter, ⌥P, ⌥⌫, ⌘1..9)
+    // MARK: - Atajos de Teclado Internos Configurables
 
     private func installLocalKeyMonitorIfNeeded() {
         guard keyMonitor == nil else { return }
@@ -702,12 +693,13 @@ public struct ClipboardHistoryMainView: View {
         flags: NSEvent.ModifierFlags
     ) -> Bool {
         guard viewModel.isShowingClipboardHistory else { return false }
+        guard !ClipboardShortcutsWindowController.shared.isRecordingShortcut else { return false }
         let list = historyManager.filteredItems
         let cleanFlags = flags.intersection([.command, .shift, .option, .control])
 
-        // ⌘1 .. ⌘9 -> Copia rápida por índice como en Maccy
-        if cleanFlags == .command, let chars, let digit = Int(chars), (1...9).contains(digit) {
-            let idx = digit - 1
+        // ⌘1 .. ⌘9 y ⌘0 (ítem 10) -> Copia rápida por índice como en Maccy
+        if cleanFlags == .command, let chars, let digit = Int(chars) {
+            let idx = digit == 0 ? 9 : (digit - 1)
             if list.indices.contains(idx) {
                 let target = list[idx]
                 historyManager.selectedEntryID = target.id
@@ -716,35 +708,41 @@ public struct ClipboardHistoryMainView: View {
             }
         }
 
-        // ⌥P -> Fijar / Desfijar elemento seleccionado
-        if cleanFlags == .option && (keyCode == 35 || chars == "p") {
+        // Atajo configurable: Fijar / Desfijar elemento seleccionado (por defecto ⌥P)
+        if prefs.pinShortcut.matches(keyCode: keyCode, charactersIgnoringModifiers: chars, flags: cleanFlags) {
             if let current = historyManager.selectedEntry {
                 historyManager.togglePin(current.id)
                 return true
             }
         }
 
-        // ⌥⌫ (Option + Backspace/Delete) -> Eliminar elemento seleccionado
-        if cleanFlags == .option && (keyCode == 51 || keyCode == 117) {
+        // Atajo configurable: Eliminar elemento seleccionado (por defecto ⌥⌫)
+        if prefs.deleteShortcut.matches(keyCode: keyCode, charactersIgnoringModifiers: chars, flags: cleanFlags) {
             if let current = historyManager.selectedEntry {
                 historyManager.deleteEntry(current.id)
                 return true
             }
         }
 
-        // ⌥⌘⌫ (Option + Cmd + Backspace) -> Limpiar todos los elementos no fijados
-        if cleanFlags == [.command, .option] && (keyCode == 51 || keyCode == 117) {
+        // Atajo configurable: Limpiar todos los elementos no fijados (por defecto ⌥⌘⌫)
+        if prefs.clearHistoryShortcut.matches(keyCode: keyCode, charactersIgnoringModifiers: chars, flags: cleanFlags) {
             historyManager.clearUnpinnedHistory()
             return true
         }
 
-        // Enter / Return (36 / 76): Copiar elemento seleccionado (con ⌥ copia texto plano)
-        if keyCode == 36 || keyCode == 76 {
-            if cleanFlags.isEmpty || cleanFlags == .option {
-                if let current = historyManager.selectedEntry {
-                    historyManager.copyEntryToPasteboard(current, plainTextOnly: cleanFlags == .option)
-                    return true
-                }
+        // Atajo configurable: Copiar como texto plano sin formato (por defecto ⌥↵)
+        if prefs.plainTextShortcut.matches(keyCode: keyCode, charactersIgnoringModifiers: chars, flags: cleanFlags) {
+            if let current = historyManager.selectedEntry {
+                historyManager.copyEntryToPasteboard(current, plainTextOnly: true)
+                return true
+            }
+        }
+
+        // Enter / Return (36 / 76) sin modificadores -> Copiar elemento seleccionado
+        if (keyCode == 36 || keyCode == 76) && cleanFlags.isEmpty {
+            if let current = historyManager.selectedEntry {
+                historyManager.copyEntryToPasteboard(current, plainTextOnly: false)
+                return true
             }
         }
 
@@ -764,7 +762,7 @@ public struct ClipboardHistoryMainView: View {
     }
 }
 
-// MARK: - Fila Individual del Historial del Portapapeles
+// MARK: - Fila Individual del Historial del Portapapeles (Vista Completa)
 
 struct ClipboardHistoryRowView: View {
     let entry: ClipboardHistoryEntry
@@ -781,7 +779,6 @@ struct ClipboardHistoryRowView: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            // Miniatura si es imagen o icono representativo del tipo
             rowLeadingVisual
 
             VStack(alignment: .leading, spacing: 3) {
@@ -830,7 +827,6 @@ struct ClipboardHistoryRowView: View {
                             .padding(4)
                     }
                     .buttonStyle(.plain)
-                    .help(loc.text(es: "Fijar / Desfijar (⌥P)", en: "Pin / Unpin (⌥P)"))
 
                     Button(action: onDelete) {
                         Image(systemName: "trash")
@@ -839,7 +835,6 @@ struct ClipboardHistoryRowView: View {
                             .padding(4)
                     }
                     .buttonStyle(.plain)
-                    .help(loc.text(es: "Eliminar (⌥⌫)", en: "Delete (⌥⌫)"))
                 }
             } else if let shortcutNumber {
                 Text("⌘\(shortcutNumber)")
@@ -905,15 +900,31 @@ struct ClipboardHistoryRowView: View {
     }
 }
 
-// MARK: - Ventana Flotante Rápida Estilo Maccy (`⇧⌘C`)
+// MARK: - Panel Flotante Desplegable Estilo Maccy (`⌃⌘V` en cualquier lugar de la Mac)
+
+@MainActor
+private final class MaccyDropdownPanel: NSPanel {
+    override var canBecomeKey: Bool { true }
+    override var canBecomeMain: Bool { false }
+}
 
 @MainActor
 public final class ClipboardQuickPopupController: NSObject {
 
     public static let shared = ClipboardQuickPopupController()
 
-    private var popupPanel: NSPanel?
+    private var popupPanel: MaccyDropdownPanel?
     private weak var previousActiveApp: NSRunningApplication?
+    private var resignKeyObserver: NSObjectProtocol?
+    private var popupKeyMonitor: Any?
+
+    @Observable
+    fileprivate final class PopupState {
+        var query: String = ""
+        var highlightedEntryID: UUID?
+    }
+
+    fileprivate let state = PopupState()
 
     private override init() {
         super.init()
@@ -931,40 +942,69 @@ public final class ClipboardQuickPopupController: NSObject {
         }
     }
 
+    /// Abre el menú desplegable estilo Maccy con los últimos 10 elementos cerca del puntero del ratón,
+    /// sin importar en qué aplicación o escritorio esté parado el usuario.
     public func showPopup() {
         let front = NSWorkspace.shared.frontmostApplication
         if front?.bundleIdentifier != Bundle.main.bundleIdentifier {
             previousActiveApp = front
         }
 
+        state.query = ""
+        let initialItems = ClipboardHistoryManager.shared.dropdownPopupItems(query: "")
+        state.highlightedEntryID = initialItems.first?.id
+
         let panel = ensurePanel()
-        if let screen = NSScreen.main ?? NSScreen.screens.first {
+        let mouseLoc = NSEvent.mouseLocation
+        let targetScreen = NSScreen.screens.first(where: { $0.frame.contains(mouseLoc) })
+            ?? NSScreen.main
+            ?? NSScreen.screens.first
+
+        let panelWidth: CGFloat = 530
+        let panelHeight: CGFloat = 430
+
+        if let screen = targetScreen {
             let visible = screen.visibleFrame
-            let w: CGFloat = 580
-            let h: CGFloat = 440
-            let rect = NSRect(
-                x: visible.midX - w / 2,
-                y: visible.midY - h / 2 + 60,
-                width: w,
-                height: h
-            )
-            panel.setFrame(rect, display: true)
+            var originX = mouseLoc.x - 40
+            var originY = mouseLoc.y - panelHeight - 8
+            if originY < visible.minY + 12 {
+                originY = min(mouseLoc.y + 18, visible.maxY - panelHeight - 12)
+            }
+            originX = min(max(originX, visible.minX + 12), visible.maxX - panelWidth - 12)
+            originY = min(max(originY, visible.minY + 12), visible.maxY - panelHeight - 12)
+            panel.setFrame(NSRect(x: originX, y: originY, width: panelWidth, height: panelHeight), display: true)
         }
 
-        ClipboardHistoryManager.shared.searchQuery = ""
-        ClipboardHistoryManager.shared.selectedFilter = .all
-        ClipboardHistoryManager.shared.selectedEntryID = ClipboardHistoryManager.shared.filteredItems.first?.id
-
-        NSApplication.shared.activate(ignoringOtherApps: true)
+        installPopupKeyMonitorIfNeeded()
         panel.makeKeyAndOrderFront(nil)
+        NSApplication.shared.activate(ignoringOtherApps: true)
     }
 
     public func closePopup(restorePreviousApp: Bool) {
+        removePopupKeyMonitor()
         popupPanel?.orderOut(nil)
         if restorePreviousApp, let prev = previousActiveApp, !prev.isTerminated {
             prev.activate()
         }
         previousActiveApp = nil
+    }
+
+    fileprivate func selectAndPaste(_ entry: ClipboardHistoryEntry, plainTextOnly: Bool = false) {
+        let targetApp = previousActiveApp
+        ClipboardHistoryManager.shared.copyEntryToPasteboard(entry, plainTextOnly: plainTextOnly)
+        removePopupKeyMonitor()
+        popupPanel?.orderOut(nil)
+
+        if let targetApp, !targetApp.isTerminated {
+            targetApp.activate()
+            previousActiveApp = nil
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(75))
+                ClipboardHistoryManager.shared.synthesizeCommandVInActiveApplication()
+            }
+        } else {
+            previousActiveApp = nil
+        }
     }
 
     public func openFullHistoryInMainWindow() {
@@ -973,109 +1013,706 @@ public final class ClipboardQuickPopupController: NSObject {
         ExplorerWindowRegistry.shared.activeViewModel?.openClipboardHistorySection()
     }
 
-    private func ensurePanel() -> NSPanel {
+    private func ensurePanel() -> MaccyDropdownPanel {
         if let existing = popupPanel {
             return existing
         }
-        let panel = NSPanel(
-            contentRect: NSRect(x: 200, y: 200, width: 580, height: 440),
-            styleMask: [.titled, .closable, .resizable, .fullSizeContentView],
+        let panel = MaccyDropdownPanel(
+            contentRect: NSRect(x: 200, y: 200, width: 530, height: 430),
+            styleMask: [.nonactivatingPanel, .titled, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
         panel.isFloatingPanel = true
-        panel.level = .floating
+        panel.level = .popUpMenu
+        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient]
         panel.titleVisibility = .hidden
         panel.titlebarAppearsTransparent = true
         panel.isMovableByWindowBackground = true
         panel.isReleasedWhenClosed = false
         panel.tabbingMode = .disallowed
-        panel.minSize = NSSize(width: 440, height: 320)
+        panel.backgroundColor = .clear
+        panel.isOpaque = false
+        panel.hasShadow = true
 
-        let hc = NSHostingController(rootView: ClipboardQuickPopupView())
+        panel.standardWindowButton(.closeButton)?.isHidden = true
+        panel.standardWindowButton(.miniaturizeButton)?.isHidden = true
+        panel.standardWindowButton(.zoomButton)?.isHidden = true
+
+        let hc = NSHostingController(rootView: ClipboardQuickPopupView(controller: self, state: state))
         hc.sizingOptions = []
         panel.contentViewController = hc
+
+        resignKeyObserver = NotificationCenter.default.addObserver(
+            forName: NSWindow.didResignKeyNotification,
+            object: panel,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                guard let self, self.isVisible else { return }
+                self.closePopup(restorePreviousApp: false)
+            }
+        }
+
         self.popupPanel = panel
         return panel
     }
+
+    private func installPopupKeyMonitorIfNeeded() {
+        guard popupKeyMonitor == nil else { return }
+        popupKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            guard let self else { return event }
+            let keyCode = event.keyCode
+            let chars = event.charactersIgnoringModifiers?.lowercased()
+            let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+            let handled = MainActor.assumeIsolated {
+                self.handlePopupKeyDown(keyCode: keyCode, chars: chars, flags: flags)
+            }
+            return handled ? nil : event
+        }
+    }
+
+    private func removePopupKeyMonitor() {
+        if let monitor = popupKeyMonitor {
+            NSEvent.removeMonitor(monitor)
+            popupKeyMonitor = nil
+        }
+    }
+
+    private func handlePopupKeyDown(
+        keyCode: UInt16,
+        chars: String?,
+        flags: NSEvent.ModifierFlags
+    ) -> Bool {
+        guard isVisible else { return false }
+        let prefs = ClipboardHistoryPreferences.shared
+        let manager = ClipboardHistoryManager.shared
+        let items = manager.dropdownPopupItems(query: state.query)
+        let cleanFlags = flags.intersection([.command, .shift, .option, .control])
+
+        // Escape (53) -> Cerrar menú desplegable y devolver foco
+        if keyCode == 53 {
+            closePopup(restorePreviousApp: true)
+            return true
+        }
+
+        // ⌘1 .. ⌘9 y ⌘0 (ítem 10) -> Pegar inmediatamente ese elemento como en Maccy
+        if cleanFlags == .command, let chars, let digit = Int(chars) {
+            let idx = digit == 0 ? 9 : (digit - 1)
+            if items.indices.contains(idx) {
+                selectAndPaste(items[idx], plainTextOnly: false)
+                return true
+            }
+        }
+
+        // Atajo configurable: Pegar texto plano (por defecto ⌥↵)
+        if prefs.plainTextShortcut.matches(keyCode: keyCode, charactersIgnoringModifiers: chars, flags: cleanFlags) {
+            if let current = items.first(where: { $0.id == state.highlightedEntryID }) ?? items.first {
+                selectAndPaste(current, plainTextOnly: true)
+                return true
+            }
+        }
+
+        // Enter / Return (36 / 76) -> Pegar elemento resaltado
+        if (keyCode == 36 || keyCode == 76) && cleanFlags.isEmpty {
+            if let current = items.first(where: { $0.id == state.highlightedEntryID }) ?? items.first {
+                selectAndPaste(current, plainTextOnly: false)
+                return true
+            }
+        }
+
+        // Atajo configurable: Fijar / Desfijar (por defecto ⌥P)
+        if prefs.pinShortcut.matches(keyCode: keyCode, charactersIgnoringModifiers: chars, flags: cleanFlags) {
+            if let current = items.first(where: { $0.id == state.highlightedEntryID }) ?? items.first {
+                manager.togglePin(current.id)
+                return true
+            }
+        }
+
+        // Atajo configurable: Eliminar elemento (por defecto ⌥⌫)
+        if prefs.deleteShortcut.matches(keyCode: keyCode, charactersIgnoringModifiers: chars, flags: cleanFlags) {
+            if let current = items.first(where: { $0.id == state.highlightedEntryID }) ?? items.first {
+                manager.deleteEntry(current.id)
+                let updated = manager.dropdownPopupItems(query: state.query)
+                state.highlightedEntryID = updated.first?.id
+                return true
+            }
+        }
+
+        // Atajo configurable: Limpiar historial no fijado (por defecto ⌥⌘⌫)
+        if prefs.clearHistoryShortcut.matches(keyCode: keyCode, charactersIgnoringModifiers: chars, flags: cleanFlags) {
+            manager.clearUnpinnedHistory()
+            let updated = manager.dropdownPopupItems(query: state.query)
+            state.highlightedEntryID = updated.first?.id
+            return true
+        }
+
+        // Flechas Arriba (126) / Abajo (125)
+        if (keyCode == 126 || keyCode == 125) && cleanFlags.isEmpty {
+            guard !items.isEmpty else { return true }
+            let currentIdx = items.firstIndex(where: { $0.id == state.highlightedEntryID }) ?? 0
+            let nextIdx = keyCode == 126
+                ? (currentIdx > 0 ? currentIdx - 1 : items.count - 1)
+                : (currentIdx + 1 < items.count ? currentIdx + 1 : 0)
+            state.highlightedEntryID = items[nextIdx].id
+            return true
+        }
+
+        return false
+    }
 }
 
+/// Vista del menú desplegable rápido estilo Maccy (idéntica al diseño de la captura de referencia:
+/// cabecera compacta con caja `type to search...`, listado de los últimos 10 ítems con imágenes en vivo y `⌘1`..`⌘9`).
 private struct ClipboardQuickPopupView: View {
+    let controller: ClipboardQuickPopupController
+    @Bindable var state: ClipboardQuickPopupController.PopupState
     @Bindable var historyManager: ClipboardHistoryManager = .shared
     @FocusState private var isSearchFocused: Bool
 
     private var loc: LocalizationManager { LocalizationManager.shared }
 
+    private var displayedItems: [ClipboardHistoryEntry] {
+        historyManager.dropdownPopupItems(query: state.query)
+    }
+
     var body: some View {
-        VStack(spacing: 0) {
-            HStack(spacing: 8) {
-                Image(systemName: "doc.on.clipboard.fill")
-                    .foregroundStyle(Color.purple)
-                TextField(
-                    loc.text(es: "Buscar en el portapapeles (Maccy)…", en: "Search clipboard (Maccy)…"),
-                    text: $historyManager.searchQuery
-                )
-                .textFieldStyle(.plain)
-                .font(.system(size: 13.5))
-                .focused($isSearchFocused)
+        VStack(alignment: .leading, spacing: 6) {
+            // Cabecera idéntica a Maccy: título sutil a la izquierda + campo de búsqueda redondeado a la derecha
+            HStack(spacing: 10) {
+                Text("MacFileExplorer")
+                    .font(.system(size: 13.5, weight: .medium))
+                    .foregroundStyle(.secondary)
 
-                Button {
-                    ClipboardQuickPopupController.shared.openFullHistoryInMainWindow()
-                } label: {
-                    Label(loc.text(es: "Abrir completo", en: "Open Full View"), systemImage: "arrow.up.left.and.arrow.down.right")
-                        .font(.system(size: 11, weight: .medium))
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
+                HStack(spacing: 6) {
+                    TextField(
+                        loc.text(es: "escribir para buscar...", en: "type to search..."),
+                        text: $state.query
+                    )
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 13))
+                    .focused($isSearchFocused)
+                    .onChange(of: state.query) { _, newValue in
+                        let updated = historyManager.dropdownPopupItems(query: newValue)
+                        state.highlightedEntryID = updated.first?.id
+                    }
 
-                Button {
-                    ClipboardQuickPopupController.shared.closePopup(restorePreviousApp: true)
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundStyle(.secondary)
-                }
-                .buttonStyle(.plain)
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
-
-            Divider()
-
-            ScrollView(.vertical) {
-                LazyVStack(spacing: 3) {
-                    ForEach(Array(historyManager.filteredItems.enumerated()), id: \.element.id) { idx, entry in
-                        ClipboardHistoryRowView(
-                            entry: entry,
-                            shortcutNumber: idx < 9 ? (idx + 1) : nil,
-                            isSelected: historyManager.selectedEntry?.id == entry.id,
-                            isCopiedFeedbackVisible: historyManager.recentlyCopiedFeedbackEntryID == entry.id,
-                            onSelect: {
-                                historyManager.selectedEntryID = entry.id
-                                historyManager.copyEntryToPasteboard(entry)
-                                ClipboardQuickPopupController.shared.closePopup(restorePreviousApp: true)
-                            },
-                            onCopy: {
-                                historyManager.copyEntryToPasteboard(entry)
-                                ClipboardQuickPopupController.shared.closePopup(restorePreviousApp: true)
-                            },
-                            onTogglePin: {
-                                historyManager.togglePin(entry.id)
-                            },
-                            onDelete: {
-                                historyManager.deleteEntry(entry.id)
-                            }
-                        )
+                    if !state.query.isEmpty {
+                        Button {
+                            state.query = ""
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 11))
+                                .foregroundStyle(.secondary)
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
-                .padding(8)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .fill(Color.primary.opacity(0.08))
+                )
             }
+            .padding(.horizontal, 12)
+            .padding(.top, 10)
+            .padding(.bottom, 2)
+
+            // Listado de los últimos 10 ítems copiados (con previsualización directa de imágenes como en Maccy)
+            if displayedItems.isEmpty {
+                VStack(spacing: 6) {
+                    Text(loc.text(es: "Sin elementos coincidentes", en: "No matching items"))
+                        .font(.system(size: 12.5, weight: .medium))
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, minHeight: 120)
+            } else {
+                ScrollViewReader { proxy in
+                    ScrollView(.vertical, showsIndicators: false) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            ForEach(Array(displayedItems.enumerated()), id: \.element.id) { idx, entry in
+                                MaccyDropdownRowView(
+                                    entry: entry,
+                                    shortcutBadge: idx < 9 ? "⌘\(idx + 1)" : (idx == 9 ? "⌘0" : nil),
+                                    isHighlighted: state.highlightedEntryID == entry.id,
+                                    onHoverRow: {
+                                        state.highlightedEntryID = entry.id
+                                    },
+                                    onSelectRow: {
+                                        controller.selectAndPaste(entry, plainTextOnly: false)
+                                    }
+                                )
+                                .id(entry.id)
+                            }
+                        }
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                    }
+                    .onChange(of: state.highlightedEntryID) { _, newID in
+                        if let newID {
+                            proxy.scrollTo(newID, anchor: .center)
+                        }
+                    }
+                }
+            }
+
+            Divider()
+                .padding(.horizontal, 10)
+
+            // Pie compacto con acceso al buscador completo, configuración de atajos y limpiar
+            HStack(spacing: 12) {
+                Button {
+                    controller.openFullHistoryInMainWindow()
+                } label: {
+                    Label(
+                        loc.text(es: "Ver todo el historial…", en: "Search Full History…"),
+                        systemImage: "magnifyingglass"
+                    )
+                    .font(.system(size: 11.5, weight: .medium))
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
+
+                Spacer()
+
+                Button {
+                    controller.closePopup(restorePreviousApp: false)
+                    ClipboardShortcutsWindowController.shared.show()
+                } label: {
+                    Label(
+                        loc.text(es: "Atajos y ajustes…", en: "Shortcuts & Settings…"),
+                        systemImage: "keyboard"
+                    )
+                    .font(.system(size: 11.5, weight: .medium))
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
+
+                Button {
+                    historyManager.clearUnpinnedHistory()
+                } label: {
+                    Text(loc.text(es: "Limpiar", en: "Clear"))
+                        .font(.system(size: 11.5, weight: .medium))
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 12)
+            .padding(.bottom, 8)
         }
-        .background(.regularMaterial)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(.ultraThickMaterial)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .strokeBorder(Color.primary.opacity(0.16), lineWidth: 1)
+        )
         .onAppear {
             isSearchFocused = true
         }
-        .onExitCommand {
-            ClipboardQuickPopupController.shared.closePopup(restorePreviousApp: true)
+    }
+}
+
+/// Fila individual del menú desplegable estilo Maccy:
+/// - Si es una imagen, muestra directamente la imagen renderizada (igual que en Maccy).
+/// - Si es texto/enlace/archivo, muestra el texto formateado en una línea con `⏎` para saltos de línea.
+/// - A la derecha muestra `⌘1` … `⌘9`.
+private struct MaccyDropdownRowView: View {
+    let entry: ClipboardHistoryEntry
+    let shortcutBadge: String?
+    let isHighlighted: Bool
+    let onHoverRow: () -> Void
+    let onSelectRow: () -> Void
+
+    private var loc: LocalizationManager { LocalizationManager.shared }
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 8) {
+            if entry.isPinned {
+                Image(systemName: "pin.fill")
+                    .font(.system(size: 9.5, weight: .bold))
+                    .foregroundStyle(isHighlighted ? .white : .orange)
+            }
+
+            if let image = ClipboardHistoryManager.shared.image(for: entry) {
+                Image(nsImage: image)
+                    .resizable()
+                    .interpolation(.high)
+                    .scaledToFit()
+                    .frame(maxWidth: 320, maxHeight: 46, alignment: .leading)
+                    .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
+            } else {
+                Text(entry.maccyMenuTitle(using: loc))
+                    .font(.system(size: 13, weight: .regular))
+                    .foregroundStyle(isHighlighted ? Color.white : Color.primary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            }
+
+            Spacer(minLength: 8)
+
+            if let shortcutBadge {
+                Text(shortcutBadge)
+                    .font(.system(size: 12, weight: .regular, design: .rounded))
+                    .foregroundStyle(isHighlighted ? Color.white.opacity(0.9) : Color.secondary)
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 5)
+        .background(
+            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                .fill(isHighlighted ? Color.accentColor : Color.clear)
+        )
+        .contentShape(Rectangle())
+        .onHover { hovering in
+            if hovering {
+                onHoverRow()
+            }
+        }
+        .onTapGesture {
+            onSelectRow()
+        }
+    }
+}
+
+// MARK: - Ventana de Configuración de Todos los Atajos y Opciones del Portapapeles
+
+@MainActor
+public final class ClipboardShortcutsWindowController: NSObject {
+
+    public static let shared = ClipboardShortcutsWindowController()
+
+    private var window: NSWindow?
+    public var isRecordingShortcut: Bool = false
+
+    private override init() {
+        super.init()
+    }
+
+    public func show() {
+        let loc = LocalizationManager.shared
+        if let existing = window {
+            existing.title = loc.text(
+                es: "Configuración y Atajos del Portapapeles",
+                en: "Clipboard Settings & Keyboard Shortcuts"
+            )
+            NSApplication.shared.activate(ignoringOtherApps: true)
+            existing.makeKeyAndOrderFront(nil)
+            return
+        }
+
+        let win = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 560, height: 520),
+            styleMask: [.titled, .closable, .miniaturizable],
+            backing: .buffered,
+            defer: false
+        )
+        win.isReleasedWhenClosed = false
+        win.tabbingMode = .disallowed
+        win.title = loc.text(
+            es: "Configuración y Atajos del Portapapeles",
+            en: "Clipboard Settings & Keyboard Shortcuts"
+        )
+        win.contentViewController = NSHostingController(rootView: ClipboardShortcutsSettingsView())
+        win.center()
+        self.window = win
+
+        NSApplication.shared.activate(ignoringOtherApps: true)
+        win.makeKeyAndOrderFront(nil)
+    }
+}
+
+public struct ClipboardShortcutsSettingsView: View {
+    @Bindable private var prefs: ClipboardHistoryPreferences = .shared
+    @ViewState private var recordingTarget: ShortcutActionKind? = nil
+    @ViewState private var recordingMonitor: Any? = nil
+
+    private var loc: LocalizationManager { LocalizationManager.shared }
+
+    fileprivate enum ShortcutActionKind: String, CaseIterable, Identifiable {
+        case quickPasteDropdown
+        case fullHistorySearch
+        case pinItem
+        case deleteItem
+        case plainTextCopy
+        case clearHistory
+
+        var id: String { rawValue }
+    }
+
+    public init() {}
+
+    public var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            // Cabecera
+            HStack(spacing: 10) {
+                Image(systemName: "doc.on.clipboard.fill")
+                    .font(.system(size: 22))
+                    .foregroundStyle(Color.purple)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(loc.text(
+                        es: "Configuración del Portapapeles y Atajos (Maccy)",
+                        en: "Clipboard History & Shortcuts (Maccy)"
+                    ))
+                    .font(.system(size: 15, weight: .semibold))
+
+                    Text(loc.text(
+                        es: "El pegado estándar (⌘V) siempre pega lo último copiado. Usa el atajo desplegable (⌃⌘V) para elegir entre los últimos elementos copiados desde cualquier app.",
+                        en: "Standard paste (⌘V) always pastes the latest item. Use the dropdown shortcut (⌃⌘V) to pick from recent items anywhere on your Mac."
+                    ))
+                    .font(.system(size: 11.5))
+                    .foregroundStyle(.secondary)
+                }
+            }
+
+            Divider()
+
+            // Sección 1: Retención y Comportamiento General
+            VStack(alignment: .leading, spacing: 10) {
+                Text(loc.text(es: "Almacenamiento y Menú Desplegable", en: "Storage & Dropdown Menu"))
+                    .font(.system(size: 12.5, weight: .semibold))
+                    .foregroundStyle(.secondary)
+
+                Toggle(isOn: $prefs.isEnabled) {
+                    Text(loc.text(
+                        es: "Activar Historial del Portapapeles",
+                        en: "Enable Clipboard History"
+                    ))
+                    .font(.system(size: 13, weight: .medium))
+                }
+
+                HStack {
+                    Text(loc.text(es: "Tiempo de guardado:", en: "Keep history for:"))
+                        .font(.system(size: 12.5))
+                    Spacer()
+                    Picker("", selection: $prefs.retentionPeriod) {
+                        ForEach(ClipboardRetentionPeriod.allCases) { period in
+                            Text(period.localizedTitle(using: loc)).tag(period)
+                        }
+                    }
+                    .frame(width: 240)
+                }
+
+                HStack {
+                    Text(loc.text(es: "Cantidad máxima en historial:", en: "Maximum items in history:"))
+                        .font(.system(size: 12.5))
+                    Spacer()
+                    Picker("", selection: $prefs.maxItemsOption) {
+                        ForEach(ClipboardMaxItemsOption.allCases) { option in
+                            Text(option.localizedTitle(using: loc)).tag(option)
+                        }
+                    }
+                    .frame(width: 240)
+                }
+
+                HStack {
+                    Text(loc.text(es: "Elementos en el menú desplegable (⌃⌘V):", en: "Items in quick dropdown menu (⌃⌘V):"))
+                        .font(.system(size: 12.5))
+                    Spacer()
+                    Picker("", selection: $prefs.dropdownCountOption) {
+                        ForEach(ClipboardDropdownCountOption.allCases) { option in
+                            Text(option.localizedTitle(using: loc)).tag(option)
+                        }
+                    }
+                    .frame(width: 240)
+                }
+
+                Toggle(isOn: $prefs.autoPasteOnSelect) {
+                    Text(loc.text(
+                        es: "Pegar automáticamente en la aplicación activa al elegir del menú desplegable",
+                        en: "Automatically paste into active application when selecting from dropdown"
+                    ))
+                    .font(.system(size: 12.5))
+                }
+            }
+
+            Divider()
+
+            // Sección 2: Todos los Atajos Configurables
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text(loc.text(es: "Atajos de Teclado Configurables", en: "Configurable Keyboard Shortcuts"))
+                        .font(.system(size: 12.5, weight: .semibold))
+                        .foregroundStyle(.secondary)
+
+                    Spacer()
+
+                    Button {
+                        stopRecording()
+                        prefs.resetShortcutsToDefaults()
+                    } label: {
+                        Label(
+                            loc.text(es: "Restablecer predeterminados", en: "Reset to Defaults"),
+                            systemImage: "arrow.counterclockwise"
+                        )
+                        .font(.system(size: 11))
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                }
+
+                shortcutRow(
+                    kind: .quickPasteDropdown,
+                    title: loc.text(
+                        es: "Abrir menú desplegable para pegar (Global en la Mac)",
+                        en: "Open quick paste dropdown menu (Global on Mac)"
+                    ),
+                    shortcut: $prefs.quickPasteDropdownShortcut
+                )
+
+                shortcutRow(
+                    kind: .fullHistorySearch,
+                    title: loc.text(
+                        es: "Abrir buscador completo del Historial",
+                        en: "Open full Clipboard History search"
+                    ),
+                    shortcut: $prefs.fullHistorySearchShortcut
+                )
+
+                shortcutRow(
+                    kind: .pinItem,
+                    title: loc.text(
+                        es: "Fijar / Desfijar elemento en el menú",
+                        en: "Pin / Unpin item in menu"
+                    ),
+                    shortcut: $prefs.pinShortcut
+                )
+
+                shortcutRow(
+                    kind: .deleteItem,
+                    title: loc.text(
+                        es: "Eliminar elemento seleccionado del historial",
+                        en: "Delete selected item from history"
+                    ),
+                    shortcut: $prefs.deleteShortcut
+                )
+
+                shortcutRow(
+                    kind: .plainTextCopy,
+                    title: loc.text(
+                        es: "Pegar / Copiar sin formato (Texto plano)",
+                        en: "Paste / Copy as plain text"
+                    ),
+                    shortcut: $prefs.plainTextShortcut
+                )
+
+                shortcutRow(
+                    kind: .clearHistory,
+                    title: loc.text(
+                        es: "Limpiar todo el historial no fijado",
+                        en: "Clear all unpinned history"
+                    ),
+                    shortcut: $prefs.clearHistoryShortcut
+                )
+            }
+
+            Spacer(minLength: 4)
+        }
+        .padding(20)
+        .frame(width: 560)
+        .onDisappear {
+            stopRecording()
+        }
+    }
+
+    private func shortcutRow(
+        kind: ShortcutActionKind,
+        title: String,
+        shortcut: Binding<ClipboardKeyShortcut>
+    ) -> some View {
+        let isRecordingThis = recordingTarget == kind
+        return HStack(spacing: 10) {
+            Toggle("", isOn: shortcut.isEnabled)
+                .labelsHidden()
+                .controlSize(.small)
+
+            Text(title)
+                .font(.system(size: 12.5))
+                .foregroundStyle(shortcut.wrappedValue.isEnabled ? .primary : .secondary)
+
+            Spacer()
+
+            Button {
+                if isRecordingThis {
+                    stopRecording()
+                } else {
+                    startRecording(for: kind)
+                }
+            } label: {
+                Text(
+                    isRecordingThis
+                        ? loc.text(es: "Presiona las teclas…", en: "Press keys…")
+                        : shortcut.wrappedValue.displayString
+                )
+                .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                .foregroundStyle(isRecordingThis ? Color.white : Color.primary)
+                .frame(minWidth: 110)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 4)
+                .background(
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .fill(isRecordingThis ? Color.accentColor : Color.primary.opacity(0.08))
+                )
+            }
+            .buttonStyle(.plain)
+            .help(loc.text(
+                es: "Haz clic y presiona la nueva combinación de teclas en tu teclado",
+                en: "Click and press the new key combination on your keyboard"
+            ))
+        }
+        .padding(.vertical, 2)
+    }
+
+    private func startRecording(for kind: ShortcutActionKind) {
+        stopRecording()
+        recordingTarget = kind
+        ClipboardShortcutsWindowController.shared.isRecordingShortcut = true
+
+        recordingMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            let keyCode = event.keyCode
+            let recorded = ClipboardKeyShortcut.from(event: event)
+            let consumed = MainActor.assumeIsolated { () -> Bool in
+                if keyCode == 53 { // Escape cancela la grabación
+                    stopRecording()
+                    return true
+                }
+                if let recorded {
+                    applyRecordedShortcut(recorded, to: kind)
+                    stopRecording()
+                    return true
+                }
+                return false
+            }
+            return consumed ? nil : event
+        }
+    }
+
+    private func stopRecording() {
+        if let monitor = recordingMonitor {
+            NSEvent.removeMonitor(monitor)
+            recordingMonitor = nil
+        }
+        recordingTarget = nil
+        ClipboardShortcutsWindowController.shared.isRecordingShortcut = false
+    }
+
+    private func applyRecordedShortcut(_ shortcut: ClipboardKeyShortcut, to kind: ShortcutActionKind) {
+        switch kind {
+        case .quickPasteDropdown:
+            prefs.quickPasteDropdownShortcut = shortcut
+        case .fullHistorySearch:
+            prefs.fullHistorySearchShortcut = shortcut
+        case .pinItem:
+            prefs.pinShortcut = shortcut
+        case .deleteItem:
+            prefs.deleteShortcut = shortcut
+        case .plainTextCopy:
+            prefs.plainTextShortcut = shortcut
+        case .clearHistory:
+            prefs.clearHistoryShortcut = shortcut
         }
     }
 }
