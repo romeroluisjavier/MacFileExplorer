@@ -990,19 +990,17 @@ public final class ClipboardQuickPopupController: NSObject {
 
     fileprivate func selectAndPaste(_ entry: ClipboardHistoryEntry, plainTextOnly: Bool = false) {
         let targetApp = previousActiveApp
+        previousActiveApp = nil
         ClipboardHistoryManager.shared.copyEntryToPasteboard(entry, plainTextOnly: plainTextOnly)
         removePopupKeyMonitor()
         popupPanel?.orderOut(nil)
 
         if let targetApp, !targetApp.isTerminated {
             targetApp.activate()
-            previousActiveApp = nil
-            Task { @MainActor in
-                try? await Task.sleep(for: .milliseconds(75))
-                ClipboardHistoryManager.shared.synthesizeCommandVInActiveApplication()
-            }
-        } else {
-            previousActiveApp = nil
+        }
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(100))
+            ClipboardHistoryManager.shared.synthesizeCommandVInActiveApplication()
         }
     }
 

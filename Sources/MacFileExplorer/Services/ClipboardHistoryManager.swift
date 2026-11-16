@@ -887,18 +887,28 @@ public final class ClipboardHistoryManager {
         }
     }
 
+    private var didPromptAccessibilityForAutoPaste = false
+
     /// Simula `⌘V` en la aplicación activa tras seleccionar un elemento en el menú desplegable rápido estilo Maccy.
     public func synthesizeCommandVInActiveApplication() {
         guard ClipboardHistoryPreferences.shared.autoPasteOnSelect else { return }
-        guard AXIsProcessTrusted() else { return }
-        let source = CGEventSource(stateID: .combinedSessionState)
+        if !AXIsProcessTrusted() {
+            if !didPromptAccessibilityForAutoPaste {
+                didPromptAccessibilityForAutoPaste = true
+                let promptKey = "AXTrustedCheckOptionPrompt" as CFString
+                let options = [promptKey: kCFBooleanTrue] as CFDictionary
+                _ = AXIsProcessTrustedWithOptions(options)
+            }
+            return
+        }
+        let source = CGEventSource(stateID: .hidSystemState)
         let vKeyCode: CGKeyCode = 0x09 // 'v'
         if let keyDown = CGEvent(keyboardEventSource: source, virtualKey: vKeyCode, keyDown: true),
            let keyUp = CGEvent(keyboardEventSource: source, virtualKey: vKeyCode, keyDown: false) {
             keyDown.flags = .maskCommand
             keyUp.flags = .maskCommand
-            keyDown.post(tap: .cgAnnotatedSessionEventTap)
-            keyUp.post(tap: .cgAnnotatedSessionEventTap)
+            keyDown.post(tap: .cghidEventTap)
+            keyUp.post(tap: .cghidEventTap)
         }
     }
 
