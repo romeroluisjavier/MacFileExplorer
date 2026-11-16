@@ -84,6 +84,14 @@ public enum ReleaseNotesCatalog {
             dateLabelEN: "Nov 16, 2026",
             items: [
                 ReleaseNoteItem(
+                    id: "multi-format-archive-tool",
+                    icon: "archivebox.fill",
+                    titleES: "Compresor y descompresor multipropósito (.zip, .7z, .tar.gz, .rar)",
+                    titleEN: "Multi-format compressor & extractor (.zip, .7z, .tar.gz, .rar)",
+                    summaryES: "Ahora puedes comprimir archivos y carpetas en .zip, .tar.gz o .7z y extraer archivos .zip, .7z, .tar.gz y .rar desde el menú contextual con barra de progreso nativa y sin crear carpetas intermedias innecesarias ni archivos basura.",
+                    summaryEN: "You can now compress files and folders into .zip, .tar.gz, or .7z and extract .zip, .7z, .tar.gz, and .rar archives from the context menu with a native progress bar and without leaving junk intermediate folders."
+                ),
+                ReleaseNoteItem(
                     id: "exif-media-metadata-properties",
                     icon: "camera.aperture",
                     titleES: "Visor de metadatos EXIF y multimedia en Propiedades",

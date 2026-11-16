@@ -407,6 +407,66 @@ public struct ExplorerItemContextMenu: View {
             }
 
             let targetURLs = targetURLsToOpen()
+            let archiveURLs = targetURLs.filter { ArchiveService.isArchiveURL($0) }
+
+            Menu {
+                if archiveURLs.count == 1, let archiveURL = archiveURLs.first {
+                    Button {
+                        Task { @MainActor in
+                            viewModel.archiveProgressMessage = loc.text(
+                                es: "Extrayendo \(archiveURL.lastPathComponent)…",
+                                en: "Extracting \(archiveURL.lastPathComponent)…"
+                            )
+                            viewModel.archiveProgressValue = 0.25
+                            do {
+                                let extracted = try await ArchiveService.extract(archiveURL: archiveURL)
+                                viewModel.archiveProgressValue = 1.0
+                                await viewModel.reloadDirectoryAndSelect(extracted, startRenameOn: nil)
+                            } catch {
+                                viewModel.errorMessage = error.localizedDescription
+                            }
+                            viewModel.archiveProgressMessage = nil
+                            viewModel.archiveProgressValue = nil
+                        }
+                    } label: {
+                        Label(
+                            loc.text(es: "Extraer aquí (sin carpetas basura)", en: "Extract Here (Clean)"),
+                            systemImage: "arrow.up.bin"
+                        )
+                    }
+
+                    Divider()
+                }
+
+                ForEach(ArchiveFormat.allCases) { format in
+                    Button {
+                        Task { @MainActor in
+                            viewModel.archiveProgressMessage = loc.text(
+                                es: "Comprimiendo en .\(format.rawValue)…",
+                                en: "Compressing to .\(format.rawValue)…"
+                            )
+                            viewModel.archiveProgressValue = 0.25
+                            do {
+                                let created = try await ArchiveService.compress(urls: targetURLs, format: format)
+                                viewModel.archiveProgressValue = 1.0
+                                await viewModel.reloadDirectoryAndSelect([created], startRenameOn: nil)
+                            } catch {
+                                viewModel.errorMessage = error.localizedDescription
+                            }
+                            viewModel.archiveProgressMessage = nil
+                            viewModel.archiveProgressValue = nil
+                        }
+                    } label: {
+                        Label(
+                            loc.text(es: "Comprimir como .\(format.rawValue)", en: "Compress as .\(format.rawValue)"),
+                            systemImage: "doc.zipper"
+                        )
+                    }
+                }
+            } label: {
+                Label(loc.text(es: "Comprimir / Extraer", en: "Compress / Extract"), systemImage: "archivebox")
+            }
+
             let imageURLs = targetURLs.filter { QuickActionsService.isImageURL($0) }
             let videoURLs = targetURLs.filter { QuickActionsService.isVideoURL($0) }
 

@@ -158,6 +158,10 @@ public final class ExplorerViewModel {
     /// Indica si está activa la carpeta virtual "Modificados hoy (24h)" sobre el árbol actual.
     public var isShowingRecent24Hours: Bool = false
 
+    /// Estado de progreso nativo para operaciones de compresión y descompresión.
+    public var archiveProgressMessage: String? = nil
+    public var archiveProgressValue: Double? = nil
+
     // MARK: - Historial de Deshacer / Rehacer (`Cmd+Z` / `Cmd+Shift+Z`)
 
     public private(set) var undoStack: [ExplorerUndoEntry] = []

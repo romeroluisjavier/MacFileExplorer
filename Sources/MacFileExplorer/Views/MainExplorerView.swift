@@ -31,6 +31,23 @@ public struct MainExplorerView: View {
                     Divider()
                 }
 
+                if let archiveMsg = viewModel.archiveProgressMessage {
+                    HStack(spacing: 10) {
+                        Image(systemName: "archivebox.fill")
+                            .foregroundStyle(Color.accentColor)
+                        Text(archiveMsg)
+                            .font(.system(size: 12, weight: .medium))
+                        ProgressView(value: viewModel.archiveProgressValue ?? 0.35, total: 1.0)
+                            .progressViewStyle(.linear)
+                            .frame(maxWidth: 240)
+                        Spacer()
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 6)
+                    .background(Color.accentColor.opacity(0.08))
+                    Divider()
+                }
+
                 // 3. Cuerpo Central Dividido: Panel Lateral Izquierdo + Área Principal
                 HSplitView {
                     NavigationPaneView(
