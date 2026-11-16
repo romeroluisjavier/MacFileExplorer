@@ -407,6 +407,9 @@ public struct QuickLookPreviewModalView: View {
                         .frame(maxWidth: 720)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .id(item.id)
+                    } else if let activeURL, RichCodePreviewSupport.supportsRichPreview(for: activeURL) {
+                        RichCodePreviewView(fileURL: activeURL)
+                            .id(item.id)
                     } else {
                         Color(nsColor: .underPageBackgroundColor)
                         NativeQLPreviewRepresentable(fileURL: activeURL)

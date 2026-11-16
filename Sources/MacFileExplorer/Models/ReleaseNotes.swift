@@ -84,6 +84,14 @@ public enum ReleaseNotesCatalog {
             dateLabelEN: "Nov 16, 2026",
             items: [
                 ReleaseNoteItem(
+                    id: "rich-quicklook-markdown-json-code",
+                    icon: "doc.richtext",
+                    titleES: "Vista rápida mejorada para Markdown, JSON y código",
+                    titleEN: "Enhanced Quick Look for Markdown, JSON & source code",
+                    summaryES: "Al presionar Espacio sobre archivos .md, .json o código fuente, la vista rápida ahora renderiza el Markdown formateado, muestra el JSON como un árbol colapsable interactivo y resalta la sintaxis del código con números de línea.",
+                    summaryEN: "Pressing Space on .md, .json, or source code files now renders formatted Markdown, displays JSON as an interactive collapsible tree, and highlights code syntax with line numbers."
+                ),
+                ReleaseNoteItem(
                     id: "multi-format-archive-tool",
                     icon: "archivebox.fill",
                     titleES: "Compresor y descompresor multipropósito (.zip, .7z, .tar.gz, .rar)",
