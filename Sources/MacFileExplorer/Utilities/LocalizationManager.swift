@@ -419,6 +419,7 @@ public final class LocalizationManager: NSObject, NSMenuDelegate {
             ("Invertir botones laterales del ratón (Atrás/Adelante)", "Swap mouse side buttons (Back/Forward)"),
             ("Recordar carpetas y pestañas abiertas al iniciar", "Remember open folders & tabs on launch"),
             ("Mostrar icono en la barra de menús (Tray Icon)", "Show icon in menu bar (Tray Icon)"),
+            ("Mostrar Historial del Portapapeles (Maccy)", "Show Clipboard History (Maccy)"),
             ("Atrás", "Back"),
             ("Adelante", "Forward"),
             ("Subir un nivel", "Enclosing Folder"),
@@ -750,6 +751,8 @@ public final class LocalizationManager: NSObject, NSMenuDelegate {
             return "clock.arrow.circlepath"
         case "mostrar icono en la barra de menús (tray icon)", "show icon in menu bar (tray icon)":
             return "menubar.rectangle"
+        case "mostrar historial del portapapeles (maccy)", "show clipboard history (maccy)":
+            return "doc.on.clipboard"
         case "mostrar barra de marcadores", "show bookmarks bar":
             return "bookmark"
         case "mostrar botón nuevo", "show new button":

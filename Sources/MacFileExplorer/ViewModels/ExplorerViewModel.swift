@@ -144,6 +144,9 @@ public final class ExplorerViewModel {
     public var isShareToSlackPresented: Bool = false
     public var slackShareURLs: [URL] = []
 
+    /// Indica si el panel principal está mostrando el buscador y gestor completo del Historial del Portapapeles.
+    public var isShowingClipboardHistory: Bool = false
+
     // MARK: - Historial de Deshacer / Rehacer (`Cmd+Z` / `Cmd+Shift+Z`)
 
     public private(set) var undoStack: [ExplorerUndoEntry] = []
@@ -463,8 +466,23 @@ public final class ExplorerViewModel {
 
     // MARK: - Acciones de Navegación
 
+    /// Abre la vista principal del Historial del Portapapeles estilo Maccy en el área de contenidos.
+    public func openClipboardHistorySection() {
+        cancelRename()
+        isQuickLookPresented = false
+        selectedItemIDs.removeAll()
+        selectionAnchorID = nil
+        selectedSidebarNode = nil
+        isEditingAddressBar = false
+        isShowingClipboardHistory = true
+        if ClipboardHistoryManager.shared.selectedEntryID == nil {
+            ClipboardHistoryManager.shared.selectedEntryID = ClipboardHistoryManager.shared.filteredItems.first?.id
+        }
+    }
+
     /// Navega hacia una carpeta seleccionada desde el árbol lateral izquierdo manteniéndola focalizada.
     public func selectSidebarFolder(_ node: NavigationNode) {
+        isShowingClipboardHistory = false
         selectedItemIDs.removeAll()
         selectionAnchorID = nil
         selectedSidebarNode = node
@@ -473,6 +491,7 @@ public final class ExplorerViewModel {
 
     /// Navega a un directorio, registrando opcionalmente el cambio en el historial Atrás/Adelante.
     public func navigate(to destinationURL: URL, recordHistory: Bool = true, fromSidebar: Bool = false) {
+        isShowingClipboardHistory = false
         let standardized = destinationURL.standardizedFileURL
 
         var isDir: ObjCBool = false

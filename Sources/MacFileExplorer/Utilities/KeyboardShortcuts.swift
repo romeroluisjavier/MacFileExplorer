@@ -218,6 +218,20 @@ public struct ExplorerKeyEventMonitorModifier: ViewModifier {
 
         let flags = NSEvent.ModifierFlags(rawValue: rawModifiers)
 
+        if viewModel.isShowingClipboardHistory {
+            if keyCode == 53 {
+                if !ClipboardHistoryManager.shared.searchQuery.isEmpty {
+                    ClipboardHistoryManager.shared.searchQuery = ""
+                    KeyboardShortcuts.resignTextFocus(in: activeResponderWindow)
+                    return true
+                }
+                KeyboardShortcuts.resignTextFocus(in: activeResponderWindow)
+                viewModel.isShowingClipboardHistory = false
+                return true
+            }
+            return false
+        }
+
         // Escape (keyCode 53)
         if keyCode == 53 {
             if viewModel.isQuickLookPresented {

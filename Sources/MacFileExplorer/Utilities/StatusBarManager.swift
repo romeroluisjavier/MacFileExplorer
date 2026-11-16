@@ -172,6 +172,23 @@ public final class StatusBarManager: NSObject, NSMenuDelegate {
             statusMenu.addItem(googleParentItem)
         }
 
+        // 6b. Submenú: Historial del Portapapeles estilo Maccy (si está habilitado)
+        if ClipboardHistoryPreferences.shared.isEnabled {
+            let clipMenu = buildClipboardHistorySubmenu(using: loc)
+            let clipCount = ClipboardHistoryManager.shared.items.count
+            let clipParentItem = NSMenuItem(
+                title: loc.text(
+                    es: "Portapapeles (\(clipCount))",
+                    en: "Clipboard History (\(clipCount))"
+                ),
+                action: nil,
+                keyEquivalent: ""
+            )
+            clipParentItem.image = LocalizationManager.symbolImage(named: "doc.on.clipboard")
+            clipParentItem.submenu = clipMenu
+            statusMenu.addItem(clipParentItem)
+        }
+
         statusMenu.addItem(.separator())
 
         // 7. Cerrar pestaña actual
@@ -329,6 +346,48 @@ public final class StatusBarManager: NSObject, NSMenuDelegate {
         return submenu
     }
 
+    private func buildClipboardHistorySubmenu(using loc: LocalizationManager) -> NSMenu {
+        let submenu = NSMenu(title: loc.text(es: "Portapapeles", en: "Clipboard History"))
+        submenu.autoenablesItems = false
+
+        let openSearchItem = NSMenuItem(
+            title: loc.text(es: "Buscar en todo el historial…", en: "Search Full History…"),
+            action: #selector(handleOpenClipboardHistoryInMainWindow(_:)),
+            keyEquivalent: ""
+        )
+        openSearchItem.target = self
+        openSearchItem.image = LocalizationManager.symbolImage(named: "magnifyingglass")
+        submenu.addItem(openSearchItem)
+
+        let openQuickPopupItem = NSMenuItem(
+            title: loc.text(es: "Buscador flotante rápido (Maccy)", en: "Quick Floating Search (Maccy)"),
+            action: #selector(handleOpenClipboardQuickPopup(_:)),
+            keyEquivalent: "C"
+        )
+        openQuickPopupItem.keyEquivalentModifierMask = [.command, .shift]
+        openQuickPopupItem.target = self
+        openQuickPopupItem.image = LocalizationManager.symbolImage(named: "macwindow.on.rectangle")
+        submenu.addItem(openQuickPopupItem)
+
+        let recentItems = Array(ClipboardHistoryManager.shared.items.prefix(8))
+        if !recentItems.isEmpty {
+            submenu.addItem(.separator())
+            for entry in recentItems {
+                let item = NSMenuItem(
+                    title: entry.displayTitle(using: loc),
+                    action: #selector(handleCopyClipboardEntryFromMenu(_:)),
+                    keyEquivalent: ""
+                )
+                item.target = self
+                item.representedObject = entry.id
+                item.image = LocalizationManager.symbolImage(named: entry.kind.systemImage)
+                submenu.addItem(item)
+            }
+        }
+
+        return submenu
+    }
+
     // MARK: - Acciones del Menú del Tray Icon
 
     @objc public func handleOpenMainWindow(_ sender: Any?) {
@@ -365,6 +424,23 @@ public final class StatusBarManager: NSObject, NSMenuDelegate {
         }
         NSApplication.shared.activate(ignoringOtherApps: true)
         GoogleAccountsManager.shared.openServiceTab(payload.service, for: account)
+    }
+
+    @objc public func handleOpenClipboardHistoryInMainWindow(_ sender: Any?) {
+        GoogleAccountsManager.shared.openOrFocusMainWindow()
+        ExplorerWindowRegistry.shared.activeViewModel?.openClipboardHistorySection()
+    }
+
+    @objc public func handleOpenClipboardQuickPopup(_ sender: Any?) {
+        ClipboardQuickPopupController.shared.showPopup()
+    }
+
+    @objc private func handleCopyClipboardEntryFromMenu(_ sender: NSMenuItem) {
+        guard let entryID = sender.representedObject as? UUID,
+              let entry = ClipboardHistoryManager.shared.items.first(where: { $0.id == entryID }) else {
+            return
+        }
+        ClipboardHistoryManager.shared.copyEntryToPasteboard(entry)
     }
 
     @objc public func handleCloseCurrentTab(_ sender: Any?) {

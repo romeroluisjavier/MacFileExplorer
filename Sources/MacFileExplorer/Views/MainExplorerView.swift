@@ -66,6 +66,7 @@ public struct MainExplorerView: View {
         }
         .onAppear {
             MouseNavigationManager.shared.installIfNeeded()
+            ClipboardHistoryManager.shared.installIfNeeded()
             ExplorerWindowRegistry.shared.lastActiveViewModel = viewModel
         }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
@@ -94,6 +95,15 @@ public struct MainExplorerView: View {
 
     @ViewBuilder
     private var mainContentArea: some View {
+        if viewModel.isShowingClipboardHistory {
+            ClipboardHistoryMainView(viewModel: viewModel)
+        } else {
+            folderExplorerContentArea
+        }
+    }
+
+    @ViewBuilder
+    private var folderExplorerContentArea: some View {
         ZStack {
             switch viewModel.viewMode {
             case .details:

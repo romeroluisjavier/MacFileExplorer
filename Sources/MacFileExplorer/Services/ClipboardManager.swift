@@ -47,6 +47,11 @@ public final class ClipboardManager {
         let newPayload = ClipboardPayload(urls: urls, mode: .copy)
         self.payload = newPayload
         writeToSystemPasteboard(newPayload.urls)
+        ClipboardHistoryManager.shared.recordFileURLs(
+            newPayload.urls,
+            sourceAppName: "MacFileExplorer",
+            sourceAppBundleID: "com.macfileexplorer.app"
+        )
     }
 
     /// Registra una operación de "Cortar" estilo Windows (`Cmd+X`).

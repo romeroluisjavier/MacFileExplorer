@@ -12,6 +12,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             NSApplication.shared.applicationIconImage = icon
         }
         MouseNavigationManager.shared.installIfNeeded()
+        ClipboardHistoryManager.shared.installIfNeeded()
         StatusBarManager.shared.installIfNeeded()
         LocalizationManager.shared.installMenuTrackingObserverIfNeeded()
         LocalizationManager.shared.applyLanguageToMainMenu()
@@ -58,6 +59,7 @@ struct MacFileExplorerApp: App {
     @Bindable private var mousePrefs = MousePreferences.shared
     @Bindable private var sessionPrefs = SessionPreferences.shared
     @Bindable private var trayIconPrefs = TrayIconPreferences.shared
+    @Bindable private var clipboardPrefs = ClipboardHistoryPreferences.shared
     @FocusedValue(\.explorerViewModel) private var focusedExplorerViewModel
 
     var body: some Scene {
@@ -299,6 +301,10 @@ struct MacFileExplorerApp: App {
 
                 Toggle(isOn: $trayIconPrefs.isTrayIconEnabled) {
                     Label(loc.text(es: "Mostrar icono en la barra de menús (Tray Icon)", en: "Show icon in menu bar (Tray Icon)"), systemImage: "menubar.rectangle")
+                }
+
+                Toggle(isOn: $clipboardPrefs.isEnabled) {
+                    Label(loc.text(es: "Mostrar Historial del Portapapeles (Maccy)", en: "Show Clipboard History (Maccy)"), systemImage: "doc.on.clipboard")
                 }
 
                 Toggle(isOn: $slackPrefs.isShareToSlackEnabled) {

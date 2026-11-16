@@ -9,6 +9,7 @@ public struct CommandBarView: View {
     @Bindable private var slackPrefs: SlackPreferences = .shared
     @Bindable private var mousePrefs: MousePreferences = .shared
     @Bindable private var sessionPrefs: SessionPreferences = .shared
+    @Bindable private var clipboardPrefs: ClipboardHistoryPreferences = .shared
     @ViewState private var barWidth: CGFloat = 1160
 
     private var loc: LocalizationManager { LocalizationManager.shared }
@@ -345,6 +346,13 @@ public struct CommandBarView: View {
                 Label(
                     loc.text(es: "Recordar carpetas y pestañas abiertas al iniciar", en: "Remember open folders & tabs on launch"),
                     systemImage: "clock.arrow.circlepath"
+                )
+            }
+
+            Toggle(isOn: $clipboardPrefs.isEnabled) {
+                Label(
+                    loc.text(es: "Mostrar Historial del Portapapeles (Maccy)", en: "Show Clipboard History (Maccy)"),
+                    systemImage: "doc.on.clipboard"
                 )
             }
 

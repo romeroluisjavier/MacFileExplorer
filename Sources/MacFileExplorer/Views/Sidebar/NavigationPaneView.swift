@@ -11,6 +11,8 @@ public struct NavigationPaneView: View {
     @Bindable var sidebarViewModel: SidebarViewModel
     @Bindable var googleManager: GoogleAccountsManager = .shared
     @Bindable var quickAccessPrefs: QuickAccessPreferences = .shared
+    @Bindable var clipboardHistory: ClipboardHistoryManager = .shared
+    @Bindable var clipboardPrefs: ClipboardHistoryPreferences = .shared
 
     @ViewState private var isQuickAccessDropTargeted: Bool = false
 
@@ -161,6 +163,96 @@ public struct NavigationPaneView: View {
                         }
                     }
                     .padding(.leading, 12)
+                }
+
+                // 4. Sección "Historial del Portapapeles" (estilo Maccy, debajo de Google Accounts)
+                if clipboardPrefs.isEnabled {
+                    Divider()
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 2)
+
+                    HStack(spacing: 4) {
+                        SidebarSectionHeader(
+                            title: loc.text(es: "Portapapeles", en: "Clipboard History"),
+                            systemImage: "doc.on.clipboard.fill",
+                            iconColor: .purple,
+                            isExpanded: $clipboardPrefs.isSidebarSectionExpanded
+                        )
+
+                        Button {
+                            viewModel.openClipboardHistorySection()
+                        } label: {
+                            Image(systemName: "magnifyingglass.circle.fill")
+                                .font(.system(size: 13, weight: .semibold))
+                                .symbolRenderingMode(.hierarchical)
+                                .foregroundStyle(Color.purple)
+                                .padding(4)
+                        }
+                        .buttonStyle(.plain)
+                        .help(loc.text(
+                            es: "Abrir buscador y configuración del Historial del Portapapeles",
+                            en: "Open Clipboard History search & settings"
+                        ))
+                    }
+
+                    if clipboardPrefs.isSidebarSectionExpanded {
+                        VStack(alignment: .leading, spacing: 3) {
+                            // Fila principal para abrir el buscador completo del historial
+                            Button {
+                                viewModel.openClipboardHistorySection()
+                            } label: {
+                                HStack(spacing: 7) {
+                                    Image(systemName: "magnifyingglass")
+                                        .font(.system(size: 11.5, weight: .semibold))
+                                        .foregroundStyle(viewModel.isShowingClipboardHistory ? Color.accentColor : Color.purple)
+                                        .frame(width: 16, height: 16)
+
+                                    Text(loc.text(es: "Buscar en el historial…", en: "Search Clipboard History…"))
+                                        .font(.system(size: 12, weight: viewModel.isShowingClipboardHistory ? .semibold : .medium))
+                                        .foregroundStyle(.primary)
+                                        .lineLimit(1)
+
+                                    Spacer(minLength: 4)
+
+                                    Text("\(clipboardHistory.items.count)")
+                                        .font(.system(size: 10, weight: .semibold, design: .rounded))
+                                        .foregroundStyle(.secondary)
+                                        .padding(.horizontal, 5)
+                                        .padding(.vertical, 1)
+                                        .background(Capsule().fill(Color.primary.opacity(0.08)))
+                                }
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 5)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                        .fill(viewModel.isShowingClipboardHistory ? Color.accentColor.opacity(0.16) : Color.primary.opacity(0.04))
+                                )
+                            }
+                            .buttonStyle(.plain)
+
+                            // Últimos elementos copiados / fijados accesibles con un clic desde el panel lateral
+                            let recentItems = Array(clipboardHistory.items.prefix(8))
+                            if recentItems.isEmpty {
+                                Text(loc.text(
+                                    es: "Copia texto o imágenes (⌘C) para verlos aquí",
+                                    en: "Copy text or images (⌘C) to see them here"
+                                ))
+                                .font(.system(size: 11))
+                                .foregroundStyle(.secondary)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 3)
+                            } else {
+                                ForEach(recentItems) { entry in
+                                    SidebarClipboardEntryRowView(
+                                        entry: entry,
+                                        viewModel: viewModel,
+                                        clipboardHistory: clipboardHistory
+                                    )
+                                }
+                            }
+                        }
+                        .padding(.leading, 12)
+                    }
                 }
             }
             .padding(.horizontal, 8)
@@ -787,3 +879,117 @@ private struct SidebarTreeNodeView: View {
         }
     }
 }
+
+// MARK: - Fila Compacta de Entrada del Portapapeles en el Panel Lateral Izquierdo
+
+private struct SidebarClipboardEntryRowView: View {
+    let entry: ClipboardHistoryEntry
+    @Bindable var viewModel: ExplorerViewModel
+    @Bindable var clipboardHistory: ClipboardHistoryManager
+
+    @ViewState private var isHovered: Bool = false
+    private var loc: LocalizationManager { LocalizationManager.shared }
+
+    private var isSelectedInHistory: Bool {
+        viewModel.isShowingClipboardHistory && clipboardHistory.selectedEntryID == entry.id
+    }
+
+    var body: some View {
+        HStack(spacing: 7) {
+            if let thumb = clipboardHistory.image(for: entry) {
+                Image(nsImage: thumb)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 18, height: 18)
+                    .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
+            } else {
+                Image(systemName: entry.kind.systemImage)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(Color.purple)
+                    .frame(width: 18, height: 18)
+            }
+
+            if entry.isPinned {
+                Image(systemName: "pin.fill")
+                    .font(.system(size: 8.5, weight: .bold))
+                    .foregroundStyle(.orange)
+            }
+
+            Text(entry.displayTitle(using: loc))
+                .font(.system(size: 11.5, weight: isSelectedInHistory ? .semibold : .regular))
+                .foregroundStyle(.primary)
+                .lineLimit(1)
+                .truncationMode(.tail)
+
+            Spacer(minLength: 2)
+
+            if clipboardHistory.recentlyCopiedFeedbackEntryID == entry.id {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.green)
+            } else if isHovered {
+                Button {
+                    clipboardHistory.copyEntryToPasteboard(entry)
+                } label: {
+                    Image(systemName: "doc.on.doc")
+                        .font(.system(size: 10.5))
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+                .help(loc.text(es: "Copiar al portapapeles", en: "Copy to clipboard"))
+            }
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(
+            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                .fill(
+                    isSelectedInHistory
+                        ? Color.accentColor.opacity(0.16)
+                        : (isHovered ? Color.primary.opacity(0.06) : Color.clear)
+                )
+        )
+        .contentShape(Rectangle())
+        .onTapGesture {
+            clipboardHistory.selectedEntryID = entry.id
+            clipboardHistory.copyEntryToPasteboard(entry)
+        }
+        .onHover { hovering in
+            isHovered = hovering
+        }
+        .contextMenu {
+            Button {
+                clipboardHistory.copyEntryToPasteboard(entry)
+            } label: {
+                Label(loc.text(es: "Copiar al portapapeles", en: "Copy to Clipboard"), systemImage: "doc.on.doc")
+            }
+
+            Button {
+                clipboardHistory.selectedEntryID = entry.id
+                viewModel.openClipboardHistorySection()
+            } label: {
+                Label(loc.text(es: "Ver detalle en el Historial", en: "Inspect in Clipboard History"), systemImage: "magnifyingglass")
+            }
+
+            Button {
+                clipboardHistory.togglePin(entry.id)
+            } label: {
+                Label(
+                    entry.isPinned
+                        ? loc.text(es: "Desfijar elemento", en: "Unpin Item")
+                        : loc.text(es: "Fijar elemento", en: "Pin Item"),
+                    systemImage: entry.isPinned ? "pin.slash" : "pin"
+                )
+            }
+
+            Divider()
+
+            Button(role: .destructive) {
+                clipboardHistory.deleteEntry(entry.id)
+            } label: {
+                Label(loc.text(es: "Eliminar del historial", en: "Delete from History"), systemImage: "trash")
+            }
+        }
+    }
+}
+

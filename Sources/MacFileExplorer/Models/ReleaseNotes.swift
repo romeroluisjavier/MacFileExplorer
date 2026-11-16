@@ -84,6 +84,14 @@ public enum ReleaseNotesCatalog {
             dateLabelEN: "Nov 16, 2026",
             items: [
                 ReleaseNoteItem(
+                    id: "clipboard-history-maccy",
+                    icon: "doc.on.clipboard.fill",
+                    titleES: "Historial completo del Portapapeles estilo Maccy (texto, enlaces, archivos e imágenes)",
+                    titleEN: "Full Maccy-style Clipboard History (text, links, files & images)",
+                    summaryES: "Se incorporó una nueva sección de Portapapeles en el menú lateral izquierdo (debajo de Cuentas de Google) y en el icono de la barra de menús que guarda automáticamente todo lo que copies, incluyendo capturas de pantalla e imágenes. Cuenta con un buscador completo por texto o categoría, previsualización de imágenes, atajos compatibles con Maccy (⇧⌘C, ⌘1..9, ⌥P para fijar, ⌥⌫ para borrar), configuración del tiempo o cantidad máxima a conservar, y opción para activarlo o desactivarlo desde el menú Ver.",
+                    summaryEN: "Added a new Clipboard History section in the left sidebar (below Google Accounts) and in the menu bar icon that automatically saves everything you copy, including screenshots and images. It features a full search and category filter view, full image previews, Maccy-compatible shortcuts (⇧⌘C, ⌘1..9, ⌥P to pin, ⌥⌫ to delete), configurable retention time and item count limits, and an option to enable or disable it from the View menu."
+                ),
+                ReleaseNoteItem(
                     id: "menu-bar-tray-icon",
                     icon: "menubar.rectangle",
                     titleES: "Icono de acceso rápido en la barra de menús de macOS (Tray Icon)",
