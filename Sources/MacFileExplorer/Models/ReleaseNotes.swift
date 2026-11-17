@@ -77,19 +77,19 @@ public struct ReleaseNoteSection: Identifiable, Sendable {
 public enum ReleaseNotesCatalog {
     public static let sections: [ReleaseNoteSection] = [
         ReleaseNoteSection(
-            id: "v1.4.0-quick-actions-privacy-quicklook",
-            versionLabelES: "Versión 1.4.0 — Quick Actions, Privacy Stripper, Vista Rápida y Fluidez",
-            versionLabelEN: "Version 1.4.0 — Quick Actions, Privacy Stripper, Quick Look & Performance",
-            dateLabelES: "16 nov 2026",
-            dateLabelEN: "Nov 16, 2026",
+            id: "v1.5.0-search-duplicates-transfer-queue",
+            versionLabelES: "Versión 1.5.0 — Búsqueda Avanzada, Duplicados y Cola de Transferencias",
+            versionLabelEN: "Version 1.5.0 — Advanced Search, Duplicates & Transfer Queue",
+            dateLabelES: "17 nov 2026",
+            dateLabelEN: "Nov 17, 2026",
             items: [
                 ReleaseNoteItem(
                     id: "duplicate-finder",
                     icon: "doc.on.doc.fill",
                     titleES: "Buscador de archivos duplicados",
                     titleEN: "Duplicate File Finder",
-                    summaryES: "Desde el menú superior podés buscar archivos duplicados dentro de la carpeta actual (o subcarpetas), pre-marcar automáticamente las copias duplicadas conservando el original y elegir si moverlas a la Papelera, eliminarlas o seleccionarlas.",
-                    summaryEN: "From the top menu you can scan the current folder (or subfolders) for duplicate files, automatically pre-check duplicates while keeping the original, and choose to move them to Trash, delete permanently, or select them."
+                    summaryES: "Desde el menú Archivo → Buscar archivos duplicados… podés escanear la carpeta actual (o subcarpetas) para encontrar archivos repetidos, pre-marcar automáticamente las copias conservando el original y elegir si moverlas a la Papelera, eliminarlas o seleccionarlas.",
+                    summaryEN: "From File → Find Duplicate Files… you can scan the current folder (or subfolders) for duplicate files, automatically pre-check copies while keeping the original, and choose to move them to Trash, delete permanently, or select them."
                 ),
                 ReleaseNoteItem(
                     id: "transfer-queue-1gb",
@@ -107,6 +107,23 @@ public enum ReleaseNotesCatalog {
                     summaryES: "Ahora puedes hacer clic en el icono de filtros a la derecha de la barra de búsqueda para filtrar por tipo de archivo o extensión, tamaño mínimo/máximo, incluir subcarpetas y buscar texto dentro de archivos de texto, PDFs e imágenes.",
                     summaryEN: "Click the filter icon on the right side of the search bar to filter by file type or extension, minimum/maximum file size, include subfolders, and search inside text files, PDFs, and images."
                 ),
+                ReleaseNoteItem(
+                    id: "ui-navigation-delete-modal-polish",
+                    icon: "slider.horizontal.3",
+                    titleES: "Mejoras en columnas, menú contextual y confirmación al eliminar",
+                    titleEN: "Column cursor, context menu & delete confirmation improvements",
+                    summaryES: "Al ajustar el ancho de las columnas en vista Detalles el puntero cambia al cursor de redimensionado, puedes mostrar u ocultar «Modificados hoy (24h)» en Acceso rápido, el menú contextual ordena «Añadir a Gemini» anteúltimo y «Propiedades» siempre último, y el aviso de eliminación permanente luce centrado y más claro.",
+                    summaryEN: "Adjusting column widths in Details view now shows the horizontal resize cursor, «Modified Today (24h)» can be shown or hidden in Quick Access, the context menu consistently places «Add to Gemini» second-to-last and «Properties» last, and the permanent delete confirmation modal is centered and cleaner."
+                )
+            ]
+        ),
+        ReleaseNoteSection(
+            id: "v1.4.0-quick-actions-privacy-quicklook",
+            versionLabelES: "Versión 1.4.0 — Quick Actions, Privacy Stripper, Vista Rápida y Fluidez",
+            versionLabelEN: "Version 1.4.0 — Quick Actions, Privacy Stripper, Quick Look & Performance",
+            dateLabelES: "16 nov 2026",
+            dateLabelEN: "Nov 16, 2026",
+            items: [
                 ReleaseNoteItem(
                     id: "privacy-stripper-quick-action",
                     icon: "shield.lefthalf.filled",
