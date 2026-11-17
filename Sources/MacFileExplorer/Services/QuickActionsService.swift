@@ -1,8 +1,10 @@
 import AppKit
 @preconcurrency import AVFoundation
 import CoreGraphics
+import CoreImage
 import Foundation
 import ImageIO
+import PDFKit
 import UniformTypeIdentifiers
 
 public enum QuickActionImageFormat: String, CaseIterable, Identifiable, Sendable {
@@ -493,6 +495,230 @@ public enum QuickActionsService {
                 NSLocalizedDescriptionKey: "La exportación de video no se completó correctamente."
             ])
         }
+    }
+
+    public static let supportedPDFExtensions: Set<String> = ["pdf"]
+
+    public static func isPDFURL(_ url: URL) -> Bool {
+        supportedPDFExtensions.contains(url.pathExtension.lowercased())
+    }
+
+    public static func supportsPrivacyStripper(_ url: URL) -> Bool {
+        isImageURL(url) || isVideoURL(url) || isPDFURL(url)
+    }
+
+    // MARK: - Limpiador de Metadatos (Privacy Stripper: Imágenes, Videos y PDFs)
+
+    /// Elimina metadatos sensibles (GPS, datos de cámara/lente, autor, software y fechas personales)
+    /// de imágenes, videos o PDFs, generando copias limpias `<nombre>_clean.<ext>` listas para compartir.
+    public static func stripMetadata(
+        from urls: [URL],
+        onFileProcessed: (@Sendable (Int, Int) async -> Void)? = nil
+    ) async throws -> [URL] {
+        var cleanedURLs: [URL] = []
+        cleanedURLs.reserveCapacity(urls.count)
+        let total = urls.count
+
+        for (index, url) in urls.enumerated() {
+            let outputURL: URL
+            if isImageURL(url) {
+                outputURL = try await Task.detached(priority: .userInitiated) {
+                    try stripImageMetadata(at: url)
+                }.value
+            } else if isVideoURL(url) {
+                outputURL = try await stripVideoMetadata(at: url)
+            } else if isPDFURL(url) {
+                outputURL = try await Task.detached(priority: .userInitiated) {
+                    try stripPDFMetadata(at: url)
+                }.value
+            } else {
+                continue
+            }
+            cleanedURLs.append(outputURL)
+            if let onFileProcessed {
+                await onFileProcessed(index + 1, total)
+            }
+        }
+        return cleanedURLs
+    }
+
+    private static func stripImageMetadata(at url: URL) throws -> URL {
+        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
+              let originalImage = CGImageSourceCreateImageAtIndex(source, 0, nil) else {
+            throw NSError(domain: "QuickActionsService", code: 20, userInfo: [
+                NSLocalizedDescriptionKey: "No se pudo leer la imagen \(url.lastPathComponent)."
+            ])
+        }
+
+        // Hornear orientación EXIF en los píxeles para eliminar {TIFF}/{Exif}/{GPS}/{IPTC} sin girar la foto
+        let props = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any]
+        let exifOrientation = (props?[kCGImagePropertyOrientation] as? NSNumber)?.int32Value ?? 1
+        let uprightImage: CGImage
+        if exifOrientation != 1 {
+            let ciImage = CIImage(cgImage: originalImage).oriented(forExifOrientation: exifOrientation)
+            let ciContext = CIContext(options: [.useSoftwareRenderer: false])
+            uprightImage = ciContext.createCGImage(ciImage, from: ciImage.extent) ?? originalImage
+        } else {
+            uprightImage = originalImage
+        }
+
+        let ext = url.pathExtension.lowercased()
+        let (targetUTType, targetExt): (UTType, String) = switch ext {
+        case "png": (.png, "png")
+        case "heic": (.heic, "heic")
+        case "tiff", "tif": (.tiff, "tiff")
+        default: (.jpeg, (ext == "jpg" || ext == "jpeg") ? ext : "jpg")
+        }
+
+        let destURL = uniqueDestinationURL(
+            in: url.deletingLastPathComponent(),
+            baseName: "\(url.deletingPathExtension().lastPathComponent)_clean",
+            extension: targetExt
+        )
+
+        var chosenUTType = targetUTType
+        var chosenURL = destURL
+        var destination = CGImageDestinationCreateWithURL(chosenURL as CFURL, chosenUTType.identifier as CFString, 1, nil)
+        if destination == nil {
+            // Fallback universal a JPEG si el códec destino no soporta escritura directa
+            chosenUTType = .jpeg
+            chosenURL = uniqueDestinationURL(
+                in: url.deletingLastPathComponent(),
+                baseName: "\(url.deletingPathExtension().lastPathComponent)_clean",
+                extension: "jpg"
+            )
+            destination = CGImageDestinationCreateWithURL(chosenURL as CFURL, chosenUTType.identifier as CFString, 1, nil)
+        }
+
+        guard let finalDestination = destination else {
+            throw NSError(domain: "QuickActionsService", code: 21, userInfo: [
+                NSLocalizedDescriptionKey: "No se pudo crear la imagen limpia para \(url.lastPathComponent)."
+            ])
+        }
+
+        var cleanProperties: [CFString: Any] = [
+            kCGImagePropertyOrientation: 1
+        ]
+        if chosenUTType == .jpeg || chosenUTType == .heic {
+            cleanProperties[kCGImageDestinationLossyCompressionQuality] = 0.94
+        }
+
+        CGImageDestinationAddImage(finalDestination, uprightImage, cleanProperties as CFDictionary)
+        guard CGImageDestinationFinalize(finalDestination) else {
+            throw NSError(domain: "QuickActionsService", code: 22, userInfo: [
+                NSLocalizedDescriptionKey: "No se pudo guardar la imagen sin metadatos."
+            ])
+        }
+        return chosenURL
+    }
+
+    private static func stripVideoMetadata(at url: URL) async throws -> URL {
+        let asset = AVURLAsset(url: url)
+        let composition = AVMutableComposition()
+        let duration = try await asset.load(.duration)
+        let fullRange = CMTimeRange(start: .zero, duration: duration)
+
+        var insertedAnyTrack = false
+        for mediaType: AVMediaType in [.video, .audio] {
+            let tracks = try await asset.loadTracks(withMediaType: mediaType)
+            for track in tracks {
+                guard let compTrack = composition.addMutableTrack(
+                    withMediaType: mediaType,
+                    preferredTrackID: kCMPersistentTrackID_Invalid
+                ) else {
+                    continue
+                }
+                let trackRange = try await track.load(.timeRange)
+                let rangeToInsert = trackRange.duration.isValid && trackRange.duration > .zero
+                    ? CMTimeRange(start: .zero, duration: min(duration, trackRange.duration))
+                    : fullRange
+                try compTrack.insertTimeRange(rangeToInsert, of: track, at: .zero)
+                if mediaType == .video {
+                    compTrack.preferredTransform = try await track.load(.preferredTransform)
+                }
+                insertedAnyTrack = true
+            }
+        }
+
+        guard insertedAnyTrack else {
+            throw NSError(domain: "QuickActionsService", code: 23, userInfo: [
+                NSLocalizedDescriptionKey: "No se encontraron pistas multimedia en \(url.lastPathComponent)."
+            ])
+        }
+
+        let ext = url.pathExtension.lowercased() == "mov" ? "mov" : "mp4"
+        let fileType: AVFileType = (ext == "mov") ? .mov : .mp4
+        let destURL = uniqueDestinationURL(
+            in: url.deletingLastPathComponent(),
+            baseName: "\(url.deletingPathExtension().lastPathComponent)_clean",
+            extension: ext
+        )
+
+        // Intentar primero Passthrough (instantáneo, sin pérdida de calidad), fallback a HighestQuality
+        let compatiblePassthrough = await withCheckedContinuation { continuation in
+            AVAssetExportSession.determineCompatibility(
+                ofExportPreset: AVAssetExportPresetPassthrough,
+                with: composition,
+                outputFileType: fileType
+            ) { isCompatible in
+                continuation.resume(returning: isCompatible)
+            }
+        }
+        let chosenPreset = compatiblePassthrough ? AVAssetExportPresetPassthrough : AVAssetExportPresetHighestQuality
+
+        guard let session = AVAssetExportSession(asset: composition, presetName: chosenPreset) ?? AVAssetExportSession(asset: composition, presetName: AVAssetExportPresetHighestQuality) else {
+            throw NSError(domain: "QuickActionsService", code: 24, userInfo: [
+                NSLocalizedDescriptionKey: "No se pudo inicializar el limpiador de video."
+            ])
+        }
+
+        session.outputURL = destURL
+        session.outputFileType = fileType
+        session.shouldOptimizeForNetworkUse = true
+        session.metadata = []
+        session.metadataItemFilter = AVMetadataItemFilter.forSharing()
+        try await runExportSession(session)
+        return destURL
+    }
+
+    private static func stripPDFMetadata(at url: URL) throws -> URL {
+        guard let sourceDoc = PDFDocument(url: url) else {
+            throw NSError(domain: "QuickActionsService", code: 25, userInfo: [
+                NSLocalizedDescriptionKey: "No se pudo abrir el PDF \(url.lastPathComponent)."
+            ])
+        }
+        if sourceDoc.isEncrypted && sourceDoc.isLocked {
+            throw NSError(domain: "QuickActionsService", code: 26, userInfo: [
+                NSLocalizedDescriptionKey: "El PDF está protegido con contraseña y no se pueden limpiar sus metadatos."
+            ])
+        }
+
+        let cleanDoc = PDFDocument()
+        for pageIndex in 0..<sourceDoc.pageCount {
+            if let page = sourceDoc.page(at: pageIndex) {
+                cleanDoc.insert(page, at: cleanDoc.pageCount)
+            }
+        }
+        cleanDoc.documentAttributes = [
+            PDFDocumentAttribute.titleAttribute: "",
+            PDFDocumentAttribute.authorAttribute: "",
+            PDFDocumentAttribute.subjectAttribute: "",
+            PDFDocumentAttribute.creatorAttribute: "",
+            PDFDocumentAttribute.producerAttribute: "",
+            PDFDocumentAttribute.keywordsAttribute: []
+        ]
+
+        let destURL = uniqueDestinationURL(
+            in: url.deletingLastPathComponent(),
+            baseName: "\(url.deletingPathExtension().lastPathComponent)_clean",
+            extension: "pdf"
+        )
+        guard cleanDoc.write(to: destURL) else {
+            throw NSError(domain: "QuickActionsService", code: 27, userInfo: [
+                NSLocalizedDescriptionKey: "No se pudo guardar el PDF sin metadatos."
+            ])
+        }
+        return destURL
     }
 
     private static func uniqueDestinationURL(

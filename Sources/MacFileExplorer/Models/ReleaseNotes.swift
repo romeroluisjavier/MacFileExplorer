@@ -84,6 +84,14 @@ public enum ReleaseNotesCatalog {
             dateLabelEN: "Nov 16, 2026",
             items: [
                 ReleaseNoteItem(
+                    id: "privacy-stripper-quick-action",
+                    icon: "shield.lefthalf.filled",
+                    titleES: "Limpiador de metadatos (Privacy Stripper) en Quick Actions",
+                    titleEN: "Metadata Privacy Stripper in Quick Actions",
+                    summaryES: "Al hacer clic derecho sobre fotos, videos o archivos PDF, ahora puedes elegir Quick Actions → Limpiar metadatos para crear una copia segura sin ubicación GPS, autor, ni datos de cámara o dispositivo antes de compartirla.",
+                    summaryEN: "Right-clicking photos, videos, or PDF files now offers Quick Actions → Strip Metadata to create a clean copy free of GPS location, author, and camera or device details before sharing."
+                ),
+                ReleaseNoteItem(
                     id: "status-bar-linear-progress",
                     icon: "chart.bar.fill",
                     titleES: "Barra de progreso en la barra inferior",

@@ -469,8 +469,9 @@ public struct ExplorerItemContextMenu: View {
 
             let imageURLs = targetURLs.filter { QuickActionsService.isImageURL($0) }
             let videoURLs = targetURLs.filter { QuickActionsService.isVideoURL($0) }
+            let privacyURLs = targetURLs.filter { QuickActionsService.supportsPrivacyStripper($0) }
 
-            if !imageURLs.isEmpty || !videoURLs.isEmpty {
+            if !imageURLs.isEmpty || !videoURLs.isEmpty || !privacyURLs.isEmpty {
                 Divider()
 
                 Menu {
@@ -569,6 +570,27 @@ public struct ExplorerItemContextMenu: View {
                             Label(
                                 loc.text(es: "Eliminar audio (Silenciar)", en: "Remove Audio (Mute)"),
                                 systemImage: "speaker.slash"
+                            )
+                        }
+                    }
+
+                    if !privacyURLs.isEmpty {
+                        if !imageURLs.isEmpty || !videoURLs.isEmpty {
+                            Divider()
+                        }
+
+                        Button {
+                            let urlsToStrip = targetURLsToOpen().filter { QuickActionsService.supportsPrivacyStripper($0) }
+                            Task { @MainActor in
+                                await viewModel.stripMetadataFromItems(urlsToStrip)
+                            }
+                        } label: {
+                            Label(
+                                loc.text(
+                                    es: "Limpiar metadatos (Privacy Stripper)",
+                                    en: "Strip Metadata (Privacy Stripper)"
+                                ),
+                                systemImage: "shield.lefthalf.filled"
                             )
                         }
                     }

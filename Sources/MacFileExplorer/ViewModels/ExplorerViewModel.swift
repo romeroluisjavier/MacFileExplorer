@@ -2249,6 +2249,39 @@ public final class ExplorerViewModel {
         }
     }
 
+    /// Ejecuta el Limpiador de Metadatos (Privacy Stripper) sobre imágenes, videos o PDFs mostrando progreso en la barra inferior.
+    public func stripMetadataFromItems(_ urls: [URL]) async {
+        let supportedURLs = urls.filter { QuickActionsService.supportsPrivacyStripper($0) }
+        guard !supportedURLs.isEmpty else { return }
+
+        let loc = LocalizationManager.shared
+        backgroundTaskMessage = loc.text(
+            es: "Limpiando metadatos (GPS, cámara, autor)…",
+            en: "Stripping metadata (GPS, camera, author)…"
+        )
+        backgroundTaskProgress = supportedURLs.count > 1 ? 0.05 : nil
+
+        defer {
+            backgroundTaskMessage = nil
+            backgroundTaskProgress = nil
+        }
+
+        do {
+            let cleanedURLs = try await QuickActionsService.stripMetadata(from: supportedURLs) { [weak self] done, total in
+                guard total > 1 else { return }
+                let ratio = Double(done) / Double(total)
+                await MainActor.run {
+                    self?.backgroundTaskProgress = ratio
+                }
+            }
+            if !cleanedURLs.isEmpty {
+                await reloadDirectoryAndSelect(cleanedURLs, startRenameOn: nil)
+            }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
     private static func isSameDirectory(_ lhs: URL, _ rhs: URL) -> Bool {
         normalizedDirectoryPath(lhs) == normalizedDirectoryPath(rhs)
     }
