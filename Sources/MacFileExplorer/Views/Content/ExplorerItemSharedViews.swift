@@ -389,23 +389,6 @@ public struct ExplorerItemContextMenu: View {
 
             Divider()
 
-            Button {
-                ensureSelected()
-                viewModel.showProperties(for: item)
-            } label: {
-                Label(loc.text(es: "Propiedades", en: "Properties"), systemImage: "info.circle")
-            }
-
-            AddToGeminiMenuButton(viewModel: viewModel) {
-                targetURLsToOpen()
-            }
-
-            if slackPrefs.isShareToSlackEnabled {
-                AddToSlackMenuButton(viewModel: viewModel) {
-                    targetURLsToOpen()
-                }
-            }
-
             let targetURLs = currentTargetURLs
             let archiveURLs = targetURLs.filter { ArchiveService.isArchiveURL($0) }
 
@@ -597,6 +580,27 @@ public struct ExplorerItemContextMenu: View {
                 } label: {
                     Label("Quick Actions", systemImage: "wand.and.stars")
                 }
+            }
+
+            if slackPrefs.isShareToSlackEnabled {
+                Divider()
+
+                AddToSlackMenuButton(viewModel: viewModel) {
+                    targetURLsToOpen()
+                }
+            }
+
+            AddToGeminiMenuButton(viewModel: viewModel) {
+                targetURLsToOpen()
+            }
+
+            Divider()
+
+            Button {
+                ensureSelected()
+                viewModel.showProperties(for: item)
+            } label: {
+                Label(loc.text(es: "Propiedades", en: "Properties"), systemImage: "info.circle")
             }
         }
     }
