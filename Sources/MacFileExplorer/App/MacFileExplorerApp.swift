@@ -198,6 +198,19 @@ struct MacFileExplorerApp: App {
                 .disabled(activeExplorerViewModel != nil && activeExplorerViewModel?.displayedItems.isEmpty == true && !isTextOrWebResponderActive)
             }
 
+            CommandGroup(after: .newItem) {
+                Divider()
+                Button {
+                    focusedExplorerViewModel?.isDuplicateFinderPresented = true
+                } label: {
+                    Label(
+                        loc.text(es: "Buscar archivos duplicados…", en: "Find Duplicate Files…"),
+                        systemImage: "doc.on.doc"
+                    )
+                }
+                .disabled(focusedExplorerViewModel == nil)
+            }
+
             CommandGroup(after: .toolbar) {
                 Divider()
                 Toggle(isOn: $bookmarksManager.isBookmarksBarVisible) {
@@ -276,18 +289,6 @@ struct MacFileExplorerApp: App {
                 } label: {
                     Label(loc.text(es: "Abrir marcadores web en...", en: "Open web bookmarks in..."), systemImage: "arrow.up.right.square")
                 }
-
-                Button {
-                    focusedExplorerViewModel?.isDuplicateFinderPresented = true
-                } label: {
-                    Label(
-                        loc.text(es: "Buscar archivos duplicados…", en: "Find Duplicate Files…"),
-                        systemImage: "doc.on.doc"
-                    )
-                }
-                .disabled(focusedExplorerViewModel == nil)
-
-                Divider()
 
                 Menu {
                     Toggle(isOn: Binding(
