@@ -322,6 +322,18 @@ public struct CommandBarView: View {
             Divider()
 
             Menu {
+                Toggle(isOn: Binding(
+                    get: { QuickAccessPreferences.shared.showModifiedToday },
+                    set: { QuickAccessPreferences.shared.showModifiedToday = $0 }
+                )) {
+                    Label(
+                        loc.text(es: "Modificados hoy (24h)", en: "Modified Today (24h)"),
+                        systemImage: "clock.arrow.2.circlepath"
+                    )
+                }
+
+                Divider()
+
                 ForEach(QuickAccessFolder.allCases) { folder in
                     Toggle(isOn: QuickAccessPreferences.shared.binding(for: folder)) {
                         Label(folder.localizedTitle(using: loc), systemImage: folder.systemImage)
@@ -335,7 +347,10 @@ public struct CommandBarView: View {
                 } label: {
                     Label(loc.text(es: "Restablecer predeterminadas", en: "Reset to Defaults"), systemImage: "arrow.counterclockwise")
                 }
-                .disabled(QuickAccessPreferences.shared.visibleFolders == QuickAccessFolder.defaultFolders)
+                .disabled(
+                    QuickAccessPreferences.shared.visibleFolders == QuickAccessFolder.defaultFolders
+                        && QuickAccessPreferences.shared.showModifiedToday
+                )
             } label: {
                 Label(loc.text(es: "Carpetas en Acceso rápido", en: "Quick Access Folders"), systemImage: "star")
             }

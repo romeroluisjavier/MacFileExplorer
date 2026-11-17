@@ -555,6 +555,19 @@ public final class ExplorerViewModel {
         }
     }
 
+    /// Cancela cualquier escaneo de "Modificados hoy (24h)" y vuelve a la carpeta actual si estaba activa.
+    public func cancelRecent24HoursIfActive() {
+        recentFilesTask?.cancel()
+        recentFilesTask = nil
+        backgroundTaskMessage = nil
+        backgroundTaskProgress = nil
+        if isShowingRecent24Hours {
+            isShowingRecent24Hours = false
+            isLoading = false
+            navigate(to: currentDirectoryURL, recordHistory: false)
+        }
+    }
+
     /// Navega hacia una carpeta seleccionada desde el árbol lateral izquierdo manteniéndola focalizada.
     public func selectSidebarFolder(_ node: NavigationNode) {
         recentFilesTask?.cancel()

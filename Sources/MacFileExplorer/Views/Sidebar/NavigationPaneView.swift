@@ -37,37 +37,42 @@ public struct NavigationPaneView: View {
 
                     if sidebarViewModel.isQuickAccessExpanded {
                         VStack(alignment: .leading, spacing: 2) {
-                            Button {
-                                viewModel.openRecent24HoursVirtualFolder()
-                            } label: {
-                                HStack(spacing: 7) {
-                                    Image(systemName: "clock.arrow.2.circlepath")
-                                        .font(.system(size: 13, weight: .semibold))
-                                        .foregroundStyle(viewModel.isShowingRecent24Hours ? Color.accentColor : Color.orange)
-                                        .frame(width: 18, height: 18)
+                            if QuickAccessPreferences.shared.showModifiedToday {
+                                Button {
+                                    viewModel.openRecent24HoursVirtualFolder()
+                                } label: {
+                                    HStack(spacing: 4) {
+                                        Spacer()
+                                            .frame(width: 18, height: 20)
 
-                                    Text(loc.text(
-                                        es: "Modificados hoy (24h)",
-                                        en: "Modified Today (24h)"
-                                    ))
-                                    .font(.system(size: 12.5, weight: viewModel.isShowingRecent24Hours ? .semibold : .regular))
-                                    .foregroundStyle(.primary)
-                                    .lineLimit(1)
+                                        Image(systemName: "clock.arrow.2.circlepath")
+                                            .font(.system(size: 13, weight: .semibold))
+                                            .foregroundStyle(viewModel.isShowingRecent24Hours ? Color.accentColor : Color.orange)
+                                            .frame(width: 18, height: 18)
 
-                                    Spacer(minLength: 4)
+                                        Text(loc.text(
+                                            es: "Modificados hoy (24h)",
+                                            en: "Modified Today (24h)"
+                                        ))
+                                        .font(.system(size: 12.5, weight: viewModel.isShowingRecent24Hours ? .semibold : .regular))
+                                        .foregroundStyle(.primary)
+                                        .lineLimit(1)
+
+                                        Spacer(minLength: 4)
+                                    }
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 3)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                            .fill(viewModel.isShowingRecent24Hours ? Color.accentColor.opacity(0.16) : Color.clear)
+                                    )
                                 }
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 6, style: .continuous)
-                                        .fill(viewModel.isShowingRecent24Hours ? Color.accentColor.opacity(0.16) : Color.clear)
-                                )
+                                .buttonStyle(.plain)
+                                .help(loc.text(
+                                    es: "Mostrar todos los archivos modificados, creados o agregados en las últimas 24 horas dentro del árbol actual",
+                                    en: "Show all files modified, created, or added in the last 24 hours inside the current folder tree"
+                                ))
                             }
-                            .buttonStyle(.plain)
-                            .help(loc.text(
-                                es: "Mostrar todos los archivos modificados, creados o agregados en las últimas 24 horas dentro del árbol actual",
-                                en: "Show all files modified, created, or added in the last 24 hours inside the current folder tree"
-                            ))
 
                             if sidebarViewModel.quickAccessNodes.isEmpty {
                                 Text(loc.text(

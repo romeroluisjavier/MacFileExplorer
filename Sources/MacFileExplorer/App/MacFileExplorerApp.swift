@@ -278,6 +278,18 @@ struct MacFileExplorerApp: App {
                 }
 
                 Menu {
+                    Toggle(isOn: Binding(
+                        get: { quickAccessPrefs.showModifiedToday },
+                        set: { quickAccessPrefs.showModifiedToday = $0 }
+                    )) {
+                        Label(
+                            loc.text(es: "Modificados hoy (24h)", en: "Modified Today (24h)"),
+                            systemImage: "clock.arrow.2.circlepath"
+                        )
+                    }
+
+                    Divider()
+
                     ForEach(QuickAccessFolder.allCases) { folder in
                         Toggle(isOn: quickAccessPrefs.binding(for: folder)) {
                             Label(folder.localizedTitle(using: loc), systemImage: folder.systemImage)
@@ -291,7 +303,7 @@ struct MacFileExplorerApp: App {
                     } label: {
                         Label(loc.text(es: "Restablecer predeterminadas", en: "Reset to Defaults"), systemImage: "arrow.counterclockwise")
                     }
-                    .disabled(quickAccessPrefs.visibleFolders == QuickAccessFolder.defaultFolders)
+                    .disabled(quickAccessPrefs.visibleFolders == QuickAccessFolder.defaultFolders && quickAccessPrefs.showModifiedToday)
                 } label: {
                     Label(loc.text(es: "Carpetas en Acceso rápido", en: "Quick Access Folders"), systemImage: "star")
                 }

@@ -467,9 +467,17 @@ public final class QuickAccessPreferences {
         customFolderPaths.map { URL(fileURLWithPath: $0).standardizedFileURL }
     }
 
+    /// Indica si la carpeta virtual "Modificados hoy (24h)" se muestra en Acceso rápido.
+    public var showModifiedToday: Bool {
+        didSet {
+            UserDefaults.standard.set(showModifiedToday, forKey: "MacFileExplorer.quickAccess.showModifiedToday")
+        }
+    }
+
     private init() {
         self.visibleFolders = PersistenceService.shared.loadVisibleQuickAccessFolders()
         self.customFolderPaths = PersistenceService.shared.loadCustomQuickAccessFolderPaths()
+        self.showModifiedToday = UserDefaults.standard.object(forKey: "MacFileExplorer.quickAccess.showModifiedToday") as? Bool ?? true
     }
 
     public func isVisible(_ folder: QuickAccessFolder) -> Bool {
@@ -495,6 +503,7 @@ public final class QuickAccessPreferences {
 
     public func resetToDefaults() {
         visibleFolders = QuickAccessFolder.defaultFolders
+        showModifiedToday = true
     }
 
     /// Agrega una o más carpetas a los favoritos de Acceso rápido evitando duplicados.
