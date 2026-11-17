@@ -96,8 +96,8 @@ public enum ReleaseNotesCatalog {
                     icon: "doc.richtext",
                     titleES: "Vista rápida mejorada para Markdown, JSON y código",
                     titleEN: "Enhanced Quick Look for Markdown, JSON & source code",
-                    summaryES: "Al presionar Espacio sobre archivos .md, .json o código fuente, la vista rápida ahora renderiza el Markdown formateado, muestra el JSON como un árbol colapsable interactivo y resalta la sintaxis del código con números de línea.",
-                    summaryEN: "Pressing Space on .md, .json, or source code files now renders formatted Markdown, displays JSON as an interactive collapsible tree, and highlights code syntax with line numbers."
+                    summaryES: "Al presionar Espacio sobre archivos .md, .json o código fuente, la vista rápida renderiza Markdown completo (incluyendo tablas, listas y metadatos), muestra JSON en árbol colapsable o Texto plano limpio y legible, y resalta código con números de línea.",
+                    summaryEN: "Pressing Space on .md, .json, or source code files now renders full Markdown (including tables, lists, and frontmatter), displays JSON as a collapsible tree or clean Plain Text, and highlights source code with line numbers."
                 ),
                 ReleaseNoteItem(
                     id: "multi-format-archive-tool",
