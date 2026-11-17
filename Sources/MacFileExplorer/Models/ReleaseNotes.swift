@@ -84,6 +84,14 @@ public enum ReleaseNotesCatalog {
             dateLabelEN: "Nov 16, 2026",
             items: [
                 ReleaseNoteItem(
+                    id: "duplicate-finder",
+                    icon: "doc.on.doc.fill",
+                    titleES: "Buscador de archivos duplicados",
+                    titleEN: "Duplicate File Finder",
+                    summaryES: "Desde el menú superior podés buscar archivos duplicados dentro de la carpeta actual (o subcarpetas), pre-marcar automáticamente las copias duplicadas conservando el original y elegir si moverlas a la Papelera, eliminarlas o seleccionarlas.",
+                    summaryEN: "From the top menu you can scan the current folder (or subfolders) for duplicate files, automatically pre-check duplicates while keeping the original, and choose to move them to Trash, delete permanently, or select them."
+                ),
+                ReleaseNoteItem(
                     id: "transfer-queue-1gb",
                     icon: "arrow.up.arrow.down.circle.fill",
                     titleES: "Cola de transferencias con pausa y reanudación (> 1 GB)",

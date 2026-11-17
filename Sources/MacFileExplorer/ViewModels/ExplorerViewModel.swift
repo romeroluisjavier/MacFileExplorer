@@ -82,6 +82,7 @@ public final class ExplorerViewModel {
     public var advancedSearchOptions = AdvancedSearchOptions()
     public private(set) var isAdvancedSearchActive: Bool = false
     private var advancedSearchTask: Task<Void, Never>?
+    public var isDuplicateFinderPresented: Bool = false
 
     /// Ejecuta la búsqueda avanzada (local instantánea o profunda en segundo plano para subcarpetas y contenido).
     public func runAdvancedSearch() {
@@ -2461,6 +2462,14 @@ public final class ExplorerViewModel {
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+
+    public func moveURLsToTrashFromExternal(_ urls: [URL]) {
+        moveURLsToTrash(urls)
+    }
+
+    public func deleteURLsPermanentlyFromExternal(_ urls: [URL]) {
+        requestPermanentDelete(urls: urls, displayNames: urls.map(\.lastPathComponent))
     }
 
     private static func isSameDirectory(_ lhs: URL, _ rhs: URL) -> Bool {

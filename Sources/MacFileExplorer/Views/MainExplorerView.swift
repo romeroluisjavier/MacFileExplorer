@@ -113,6 +113,8 @@ public struct MainExplorerView: View {
                 QuickActionVideoConvertModalView(viewModel: viewModel, targetURLs: urls)
             case .videoTrim(let url):
                 QuickActionVideoTrimModalView(viewModel: viewModel, targetURL: url)
+            case .duplicateFinder:
+                DuplicateFinderModalView(viewModel: viewModel)
             }
         }
         .focusedSceneValue(\.explorerViewModel, viewModel)
@@ -125,6 +127,7 @@ public struct MainExplorerView: View {
         case imageConvert([URL])
         case videoConvert([URL])
         case videoTrim(URL)
+        case duplicateFinder
 
         var id: String {
             switch self {
@@ -134,6 +137,7 @@ public struct MainExplorerView: View {
             case .imageConvert(let urls): return "imageConvert-\(urls.count)"
             case .videoConvert(let urls): return "videoConvert-\(urls.count)"
             case .videoTrim(let url): return "videoTrim-\(url.absoluteString)"
+            case .duplicateFinder: return "duplicateFinder"
             }
         }
     }
@@ -147,6 +151,7 @@ public struct MainExplorerView: View {
                 if let urls = viewModel.quickActionImageConvertURLs { return .imageConvert(urls) }
                 if let urls = viewModel.quickActionVideoConvertURLs { return .videoConvert(urls) }
                 if let url = viewModel.quickActionVideoTrimURL { return .videoTrim(url) }
+                if viewModel.isDuplicateFinderPresented { return .duplicateFinder }
                 return nil
             },
             set: { newValue in
@@ -157,6 +162,7 @@ public struct MainExplorerView: View {
                     viewModel.quickActionImageConvertURLs = nil
                     viewModel.quickActionVideoConvertURLs = nil
                     viewModel.quickActionVideoTrimURL = nil
+                    viewModel.isDuplicateFinderPresented = false
                 }
             }
         )
