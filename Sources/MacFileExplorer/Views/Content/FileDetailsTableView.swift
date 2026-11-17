@@ -270,7 +270,6 @@ private struct DetailsColumnResizeDivider: View {
 
     @ViewState private var isHovered: Bool = false
     @ViewState private var isDragging: Bool = false
-    @ViewState private var didPushCursor: Bool = false
 
     private var isActive: Bool { isHovered || isDragging }
 
@@ -282,10 +281,15 @@ private struct DetailsColumnResizeDivider: View {
             .overlay(alignment: .center) {
                 Color.clear
                     .frame(width: 12, height: 29)
+                    .background(ColumnResizeCursorOverlay())
                     .contentShape(Rectangle())
                     .onHover { hovering in
                         isHovered = hovering
-                        updateCursor(active: hovering || isDragging)
+                        if hovering {
+                            NSCursor.resizeLeftRight.set()
+                        } else if !isDragging {
+                            NSCursor.arrow.set()
+                        }
                     }
                     .onTapGesture(count: 2) {
                         onDoubleClickReset()
@@ -295,30 +299,34 @@ private struct DetailsColumnResizeDivider: View {
                             .onChanged { value in
                                 if !isDragging {
                                     isDragging = true
-                                    updateCursor(active: true)
                                 }
+                                NSCursor.resizeLeftRight.set()
                                 onDragChanged(value.translation.width)
                             }
                             .onEnded { _ in
                                 isDragging = false
-                                updateCursor(active: isHovered)
+                                if !isHovered {
+                                    NSCursor.arrow.set()
+                                }
                                 onDragEnded()
                             }
                     )
             }
-            .onDisappear {
-                updateCursor(active: false)
-            }
+    }
+}
+
+private struct ColumnResizeCursorOverlay: NSViewRepresentable {
+    func makeNSView(context: Context) -> CursorRectNSView {
+        CursorRectNSView()
     }
 
-    @MainActor
-    private func updateCursor(active: Bool) {
-        if active && !didPushCursor {
-            NSCursor.resizeLeftRight.push()
-            didPushCursor = true
-        } else if !active && didPushCursor {
-            NSCursor.pop()
-            didPushCursor = false
+    func updateNSView(_ nsView: CursorRectNSView, context: Context) {
+        nsView.window?.invalidateCursorRects(for: nsView)
+    }
+
+    final class CursorRectNSView: NSView {
+        override func resetCursorRects() {
+            addCursorRect(bounds, cursor: .resizeLeftRight)
         }
     }
 }
