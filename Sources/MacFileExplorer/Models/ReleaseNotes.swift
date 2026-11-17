@@ -77,9 +77,9 @@ public struct ReleaseNoteSection: Identifiable, Sendable {
 public enum ReleaseNotesCatalog {
     public static let sections: [ReleaseNoteSection] = [
         ReleaseNoteSection(
-            id: "v1.3-clipboard-tray-quicklook-sessions",
-            versionLabelES: "Versión 1.3 — Portapapeles Maccy, Tray Icon, Vista Rápida y Sesiones",
-            versionLabelEN: "Version 1.3 — Maccy Clipboard, Tray Icon, Quick Look & Sessions",
+            id: "v1.4.0-quick-actions-privacy-quicklook",
+            versionLabelES: "Versión 1.4.0 — Quick Actions, Privacy Stripper, Vista Rápida y Fluidez",
+            versionLabelEN: "Version 1.4.0 — Quick Actions, Privacy Stripper, Quick Look & Performance",
             dateLabelES: "16 nov 2026",
             dateLabelEN: "Nov 16, 2026",
             items: [
@@ -146,7 +146,16 @@ public enum ReleaseNotesCatalog {
                     titleEN: "Bulk Rename with Regex, sequential numbering & EXIF dates",
                     summaryES: "Al seleccionar varios archivos o carpetas y presionar Enter (o F2 / Renombrar), se abre el nuevo panel de Renombrado masivo. Puedes cambiar cientos de nombres a la vez usando expresiones regulares, numeración secuencial o la fecha de metadatos EXIF de tus fotos, con vista previa en tiempo real, detección de conflictos y soporte para deshacer con ⌘Z.",
                     summaryEN: "Selecting multiple files or folders and pressing Enter (or F2 / Rename) opens the new Bulk Rename panel. You can rename hundreds of files at once using regular expressions, sequential numbering, or photo EXIF metadata dates, complete with live preview, conflict detection, and ⌘Z undo support."
-                ),
+                )
+            ]
+        ),
+        ReleaseNoteSection(
+            id: "v1.3-clipboard-tray-quicklook-sessions",
+            versionLabelES: "Versión 1.3 — Portapapeles Maccy, Tray Icon, Vista Rápida y Sesiones",
+            versionLabelEN: "Version 1.3 — Maccy Clipboard, Tray Icon, Quick Look & Sessions",
+            dateLabelES: "16 nov 2026",
+            dateLabelEN: "Nov 16, 2026",
+            items: [
                 ReleaseNoteItem(
                     id: "clipboard-history-maccy",
                     icon: "doc.on.clipboard.fill",
