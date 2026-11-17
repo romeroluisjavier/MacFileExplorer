@@ -217,7 +217,7 @@ public final class StatusBarManager: NSObject, NSMenuDelegate {
 
         statusMenu.addItem(.separator())
 
-        // 9. Acerca de MacFileExplorer
+        // 9. Acerca de MacFileExplorer y Buscar actualizaciones
         let aboutItem = NSMenuItem(
             title: loc.text(es: "Acerca de MacFileExplorer", en: "About MacFileExplorer"),
             action: #selector(handleShowAbout(_:)),
@@ -226,6 +226,15 @@ public final class StatusBarManager: NSObject, NSMenuDelegate {
         aboutItem.target = self
         aboutItem.image = LocalizationManager.symbolImage(named: "info.circle")
         statusMenu.addItem(aboutItem)
+
+        let checkUpgradesItem = NSMenuItem(
+            title: loc.text(es: "Buscar actualizaciones…", en: "Check Upgrades…"),
+            action: #selector(handleCheckUpgrades(_:)),
+            keyEquivalent: ""
+        )
+        checkUpgradesItem.target = self
+        checkUpgradesItem.image = LocalizationManager.symbolImage(named: "arrow.down.circle")
+        statusMenu.addItem(checkUpgradesItem)
 
         statusMenu.addItem(.separator())
 
@@ -474,6 +483,11 @@ public final class StatusBarManager: NSObject, NSMenuDelegate {
     @objc public func handleShowAbout(_ sender: Any?) {
         NSApplication.shared.activate(ignoringOtherApps: true)
         AboutWindowController.shared.show()
+    }
+
+    @objc public func handleCheckUpgrades(_ sender: Any?) {
+        NSApplication.shared.activate(ignoringOtherApps: true)
+        UpdateWindowController.shared.showAndCheck()
     }
 
     @objc public func handleQuitApp(_ sender: Any?) {

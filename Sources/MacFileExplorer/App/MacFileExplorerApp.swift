@@ -85,6 +85,12 @@ struct MacFileExplorerApp: App {
             }
 
             CommandGroup(after: .appInfo) {
+                Button {
+                    UpdateWindowController.shared.showAndCheck()
+                } label: {
+                    Label(loc.text(es: "Buscar actualizaciones…", en: "Check Upgrades…"), systemImage: "arrow.down.circle")
+                }
+
                 Divider()
                 Menu {
                     languageSelectionPicker

@@ -56,6 +56,7 @@ public struct AboutAppView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
     @Bindable private var loc = LocalizationManager.shared
+    @Bindable private var updateManager = AppUpdateManager.shared
 
     private let onClose: (() -> Void)?
 
@@ -89,9 +90,7 @@ public struct AboutAppView: View {
     }
 
     private var versionLabel: String {
-        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.5.0"
-        let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "7"
-        return "\(version) (Build \(build) • Swift 6)"
+        "\(AppVersionInfo.currentVersion) (Build \(AppVersionInfo.currentBuild) • Swift 6)"
     }
 
     private var headerSection: some View {
@@ -111,7 +110,7 @@ public struct AboutAppView: View {
                 }
             }
 
-            VStack(spacing: 3) {
+            VStack(spacing: 5) {
                 Text("MacFileExplorer")
                     .font(.system(size: 19, weight: .bold))
                     .foregroundStyle(.primary)
@@ -122,6 +121,9 @@ public struct AboutAppView: View {
                 ))
                 .font(.system(size: 11.5, weight: .medium))
                 .foregroundStyle(.secondary)
+
+                checkUpgradesControl
+                    .padding(.top, 2)
             }
 
             VStack(spacing: 2) {
@@ -253,6 +255,59 @@ public struct AboutAppView: View {
 
     private var totalFeatureCount: Int {
         ReleaseNotesCatalog.sections.reduce(0) { $0 + $1.items.count }
+    }
+
+    @ViewBuilder
+    private var checkUpgradesControl: some View {
+        HStack(spacing: 8) {
+            Button {
+                UpdateWindowController.shared.showAndCheck()
+            } label: {
+                HStack(spacing: 5) {
+                    switch updateManager.state {
+                    case .checking:
+                        ProgressView()
+                            .controlSize(.mini)
+                        Text(loc.text(es: "Comprobando…", en: "Checking…"))
+                    case .downloading(let info, _, _, let progress):
+                        Image(systemName: "arrow.down.circle.fill")
+                            .foregroundStyle(Color.accentColor)
+                        if let progress {
+                            Text(loc.text(
+                                es: "Descargando v\(info.versionString) (\(Int((progress * 100).rounded()))%)…",
+                                en: "Downloading v\(info.versionString) (\(Int((progress * 100).rounded()))%)…"
+                            ))
+                        } else {
+                            Text(loc.text(
+                                es: "Descargando v\(info.versionString)…",
+                                en: "Downloading v\(info.versionString)…"
+                            ))
+                        }
+                    case .downloaded(let info, _, _):
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(.green)
+                        Text(loc.text(
+                            es: "Actualización v\(info.versionString) lista",
+                            en: "Upgrade v\(info.versionString) Ready"
+                        ))
+                    default:
+                        Image(systemName: "arrow.down.circle")
+                        Text(loc.text(es: "Buscar actualizaciones", en: "Check Upgrades"))
+                    }
+                }
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+
+            if case .upToDate = updateManager.state {
+                Label(
+                    loc.text(es: "Estás al día", en: "Up to date"),
+                    systemImage: "checkmark.circle.fill"
+                )
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(.green)
+            }
+        }
     }
 
     private func closeWindow() {

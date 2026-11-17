@@ -84,6 +84,14 @@ public enum ReleaseNotesCatalog {
             dateLabelEN: "Nov 17, 2026",
             items: [
                 ReleaseNoteItem(
+                    id: "check-upgrades-github",
+                    icon: "arrow.down.circle.fill",
+                    titleES: "Buscar actualizaciones directamente desde GitHub",
+                    titleEN: "Check Upgrades directly from GitHub",
+                    summaryES: "Agregamos el botón «Buscar actualizaciones» (en Acerca de MacFileExplorer, menú superior e icono de la barra de menús) para consultar directamente el repositorio en GitHub y descargar automáticamente el nuevo instalador en tu carpeta Descargas cuando haya una versión más reciente.",
+                    summaryEN: "Added a «Check Upgrades» button (in About MacFileExplorer, the top menu, and the menu bar tray icon) to check GitHub directly and automatically download the new installer to your Downloads folder whenever a newer version is available."
+                ),
+                ReleaseNoteItem(
                     id: "duplicate-finder",
                     icon: "doc.on.doc.fill",
                     titleES: "Buscador de archivos duplicados",

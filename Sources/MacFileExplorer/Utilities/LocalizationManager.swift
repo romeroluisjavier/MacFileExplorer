@@ -331,6 +331,8 @@ public final class LocalizationManager: NSObject, NSMenuDelegate {
 
         let exactPairs: [(es: String, en: String)] = [
             ("Acerca de MacFileExplorer", "About MacFileExplorer"),
+            ("Buscar actualizaciones…", "Check Upgrades…"),
+            ("Buscar actualizaciones", "Check Upgrades"),
             ("Ajustes…", "Settings…"),
             ("Preferencias…", "Preferences…"),
             ("Servicios", "Services"),
@@ -562,6 +564,8 @@ public final class LocalizationManager: NSObject, NSMenuDelegate {
         // App
         case "acerca de macfileexplorer", "about macfileexplorer":
             return "info.circle"
+        case "buscar actualizaciones…", "buscar actualizaciones", "check upgrades…", "check upgrades":
+            return "arrow.down.circle"
         case "ajustes…", "preferencias…", "settings…", "preferences…":
             return "gearshape"
         case "servicios", "services":

@@ -384,6 +384,26 @@ public struct CommandBarView: View {
                     systemImage: "computermouse"
                 )
             }
+
+            Divider()
+
+            Button {
+                UpdateWindowController.shared.showAndCheck()
+            } label: {
+                Label(
+                    loc.text(es: "Buscar actualizaciones…", en: "Check Upgrades…"),
+                    systemImage: "arrow.down.circle"
+                )
+            }
+
+            Button {
+                AboutWindowController.shared.show()
+            } label: {
+                Label(
+                    loc.text(es: "Acerca de MacFileExplorer", en: "About MacFileExplorer"),
+                    systemImage: "info.circle"
+                )
+            }
         } label: {
             HStack(spacing: 5) {
                 Image(systemName: viewModel.viewMode.systemImage)
