@@ -507,9 +507,9 @@ public struct QuickActionVideoTrimModalView: View {
                                 fadeInSeconds: fIn,
                                 fadeOutSeconds: fOut
                             )
-                            await viewModel.reloadDirectoryAndSelect([created], startRenameOn: nil)
                             isProcessing = false
                             dismiss()
+                            await viewModel.reloadDirectoryAndSelect([created], startRenameOn: nil)
                         } catch {
                             viewModel.errorMessage = error.localizedDescription
                             isProcessing = false

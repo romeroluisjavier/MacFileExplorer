@@ -544,14 +544,10 @@ private struct FileDetailsRowView: View {
             viewModel: viewModel,
             isTargeted: $isDropTargeted
         )
-        .onTapGesture(count: 2) {
-            guard !isRenaming else { return }
-            viewModel.openItem(item)
-        }
-        .onTapGesture(count: 1) {
+        .onTapGesture {
             guard !isRenaming else { return }
             let modifiers = KeyboardShortcuts.currentEventModifiers
-            viewModel.handleSelection(of: item, modifiers: modifiers)
+            viewModel.handlePrimaryClick(on: item, modifiers: modifiers)
         }
         .onHover { hovering in
             isHovered = hovering
