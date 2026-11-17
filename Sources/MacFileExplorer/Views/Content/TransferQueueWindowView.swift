@@ -109,6 +109,7 @@ private struct TransferJobRowView: View {
                 } label: {
                     Image(systemName: "xmark")
                         .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(.red)
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.small)
