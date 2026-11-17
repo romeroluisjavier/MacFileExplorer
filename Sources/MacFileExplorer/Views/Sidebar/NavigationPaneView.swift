@@ -41,7 +41,7 @@ public struct NavigationPaneView: View {
                                 Button {
                                     viewModel.openRecent24HoursVirtualFolder()
                                 } label: {
-                                    HStack(spacing: 4) {
+                                    HStack(spacing: 2) {
                                         Spacer()
                                             .frame(width: 18, height: 20)
 
