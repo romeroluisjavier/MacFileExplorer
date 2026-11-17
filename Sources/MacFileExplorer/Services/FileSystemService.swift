@@ -290,7 +290,10 @@ public final class FileSystemService: Sendable {
                 copySuffix: false
             )
             try fm.createDirectory(at: targetURL, withIntermediateDirectories: false)
-            return targetURL.standardizedFileURL
+            return URL(
+                fileURLWithPath: targetURL.path(percentEncoded: false),
+                isDirectory: true
+            ).standardizedFileURL
         }
     }
 

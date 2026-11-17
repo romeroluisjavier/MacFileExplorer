@@ -488,8 +488,7 @@ public final class DragCanvasNSView: NSView, NSDraggingSource {
               hostWindow.attachedSheet == nil,
               hostWindow.tabGroup?.selectedWindow == nil || hostWindow.tabGroup?.selectedWindow === hostWindow,
               !isHiddenOrHasHiddenAncestor,
-              let viewModel,
-              viewModel.renamingItemID == nil else {
+              let viewModel else {
             return nil
         }
 
@@ -518,6 +517,14 @@ public final class DragCanvasNSView: NSView, NSDraggingSource {
         return (localPoint, nil, nil)
     }
 
+    private func commitActiveRenameIfNeeded(viewModel: ExplorerViewModel, hostWindow: NSWindow?) {
+        guard viewModel.renamingItemID != nil else { return }
+        KeyboardShortcuts.resignTextFocus(in: hostWindow)
+        if viewModel.renamingItemID != nil {
+            viewModel.commitRename()
+        }
+    }
+
     private func processMouseEvent(_ event: NSEvent) -> Bool {
         switch event.type {
         case .rightMouseDown:
@@ -528,6 +535,7 @@ public final class DragCanvasNSView: NSView, NSDraggingSource {
             guard let viewModel, let hit = resolveCanvasHit(for: event) else {
                 return false
             }
+            commitActiveRenameIfNeeded(viewModel: viewModel, hostWindow: window)
             if !viewModel.isEditingAddressBar, let hostWindow = window {
                 KeyboardShortcuts.resignTextFocus(in: hostWindow)
             }
@@ -549,6 +557,7 @@ public final class DragCanvasNSView: NSView, NSDraggingSource {
                 return false
             }
 
+            commitActiveRenameIfNeeded(viewModel: viewModel, hostWindow: window)
             if !viewModel.isEditingAddressBar, let hostWindow = window {
                 KeyboardShortcuts.resignTextFocus(in: hostWindow)
             }

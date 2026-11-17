@@ -2235,14 +2235,26 @@ public final class ExplorerViewModel {
                 await DirectoryIndexCacheService.shared.saveSnapshot(fetchedItems, for: targetURL)
             }
 
-            let standardizedSet = Set(urlsToSelect.map(\.standardizedFileURL))
-            self.selectedItemIDs = standardizedSet
-            self.selectionAnchorID = standardizedSet.first
+            let selectPaths = Set(urlsToSelect.map { Self.normalizedDirectoryPath($0) })
+            let matchedIDs = Set(
+                sorted.compactMap { selectPaths.contains(Self.normalizedDirectoryPath($0.url)) ? $0.id : nil }
+            )
+            let resolvedIDs = matchedIDs.isEmpty ? Set(urlsToSelect.map(\.standardizedFileURL)) : matchedIDs
+            self.selectedItemIDs = resolvedIDs
+            self.selectionAnchorID = resolvedIDs.first
+            self.selectionFocusID = resolvedIDs.first
 
             if let renameURL {
-                let stdRename = renameURL.standardizedFileURL
-                self.renamingItemID = stdRename
-                self.renamingDraftName = stdRename.lastPathComponent
+                let renamePath = Self.normalizedDirectoryPath(renameURL)
+                let matchedRenameItem = sorted.first { Self.normalizedDirectoryPath($0.url) == renamePath }
+                let resolvedRenameID = matchedRenameItem?.id ?? renameURL.standardizedFileURL
+                self.renamingItemID = resolvedRenameID
+                self.renamingDraftName = matchedRenameItem?.name ?? renameURL.lastPathComponent
+                self.keyboardScrollTargetID = resolvedRenameID
+                self.keyboardScrollToken &+= 1
+            } else if let scrollTarget = resolvedIDs.first {
+                self.keyboardScrollTargetID = scrollTarget
+                self.keyboardScrollToken &+= 1
             }
         } catch {
             self.errorMessage = error.localizedDescription
