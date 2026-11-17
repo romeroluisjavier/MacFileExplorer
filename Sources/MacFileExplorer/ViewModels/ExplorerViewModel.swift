@@ -495,8 +495,12 @@ public final class ExplorerViewModel {
 
     // MARK: - Acciones de Navegación
 
+    private var recentFilesTask: Task<Void, Never>?
+
     /// Abre la vista principal del Historial del Portapapeles estilo Maccy en el área de contenidos.
     public func openClipboardHistorySection() {
+        recentFilesTask?.cancel()
+        recentFilesTask = nil
         cancelRename()
         isQuickLookPresented = false
         selectedItemIDs.removeAll()
@@ -510,8 +514,9 @@ public final class ExplorerViewModel {
         }
     }
 
-    /// Abre la carpeta virtual "Archivos Recientes / Modificados hoy (24h)" escaneando recursivamente el árbol actual.
+    /// Abre la carpeta virtual "Archivos Recientes / Modificados o creados hoy (24h)" escaneando en paralelo el árbol actual.
     public func openRecent24HoursVirtualFolder() {
+        recentFilesTask?.cancel()
         cancelRename()
         isQuickLookPresented = false
         selectedItemIDs.removeAll()
@@ -522,23 +527,38 @@ public final class ExplorerViewModel {
         isShowingRecent24Hours = true
         isLoading = true
 
+        let loc = LocalizationManager.shared
+        backgroundTaskMessage = loc.text(
+            es: "Buscando modificados y creados hoy…",
+            en: "Scanning files modified or created today…"
+        )
+        backgroundTaskProgress = nil
+
         let rootURL = currentDirectoryURL
         let includeHidden = showHiddenFiles
-        Task { @MainActor [weak self] in
+        recentFilesTask = Task { @MainActor [weak self] in
             guard let self else { return }
+            defer {
+                if self.isShowingRecent24Hours {
+                    self.isLoading = false
+                }
+                self.backgroundTaskMessage = nil
+                self.backgroundTaskProgress = nil
+            }
             let recentItems = await self.fileSystemService.fetchRecentModifiedFiles(
                 in: rootURL,
                 hours: 24.0,
                 includeHidden: includeHidden
             )
-            guard self.isShowingRecent24Hours else { return }
+            guard !Task.isCancelled, self.isShowingRecent24Hours else { return }
             self.setAllItems(recentItems, precomputedDisplayed: recentItems)
-            self.isLoading = false
         }
     }
 
     /// Navega hacia una carpeta seleccionada desde el árbol lateral izquierdo manteniéndola focalizada.
     public func selectSidebarFolder(_ node: NavigationNode) {
+        recentFilesTask?.cancel()
+        recentFilesTask = nil
         isShowingClipboardHistory = false
         isShowingRecent24Hours = false
         selectedItemIDs.removeAll()
@@ -549,6 +569,8 @@ public final class ExplorerViewModel {
 
     /// Navega a un directorio, registrando opcionalmente el cambio en el historial Atrás/Adelante.
     public func navigate(to destinationURL: URL, recordHistory: Bool = true, fromSidebar: Bool = false) {
+        recentFilesTask?.cancel()
+        recentFilesTask = nil
         isShowingClipboardHistory = false
         isShowingRecent24Hours = false
         let standardized = destinationURL.standardizedFileURL

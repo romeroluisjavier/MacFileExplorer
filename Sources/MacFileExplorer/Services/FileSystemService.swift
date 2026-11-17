@@ -694,70 +694,198 @@ public final class FileSystemService: Sendable {
         }
     }
 
-    /// Recorre recursivamente el árbol de carpetas a partir de `rootURL` y devuelve todos los archivos
-    /// modificados en las últimas `hours` horas (por defecto 24h), ordenados del más reciente al más antiguo.
+    /// Recorre en paralelo el árbol de carpetas a partir de `rootURL` y devuelve los archivos
+    /// modificados, creados o agregados en las últimas `hours` horas (por defecto 24h),
+    /// ordenados del más reciente al más antiguo.
     public func fetchRecentModifiedFiles(
         in rootURL: URL,
         hours: Double = 24.0,
         includeHidden: Bool = false
     ) async -> [FileItem] {
         await Task.detached(priority: .userInitiated) {
-            let fm = FileManager.default
+            let standardizedRoot = rootURL.standardizedFileURL
             let cutoffDate = Date().addingTimeInterval(-hours * 3600.0)
-            let keys: [URLResourceKey] = [
+            let homeLibraryPath = FileManager.default.homeDirectoryForCurrentUser
+                .appendingPathComponent("Library", isDirectory: true)
+                .standardizedFileURL
+                .path(percentEncoded: false)
+            let rootPath = standardizedRoot.path(percentEncoded: false)
+            let skipHomeLibrary = !rootPath.hasPrefix(homeLibraryPath)
+
+            // Carpetas pesadas de dependencias, cachés o compilación que no aportan documentos recientes del usuario
+            let skipDirectoryNames: Set<String> = [
+                "node_modules", ".git", ".hg", ".svn", ".build", ".swiftpm",
+                "DerivedData", "Pods", "Caches", "Cache", ".Trash",
+                "CoreSimulator", "Containers", "Group Containers",
+                "Saved Application State", "Logs", ".venv", "venv",
+                "__pycache__", ".mypy_cache", ".pytest_cache", ".ruff_cache",
+                ".next", ".nuxt", ".turbo", "target", "dist", "build"
+            ]
+
+            let fastKeys: [URLResourceKey] = [
                 .isDirectoryKey,
                 .isPackageKey,
-                .isHiddenKey,
                 .isSymbolicLinkKey,
                 .contentModificationDateKey,
+                .creationDateKey,
+                .addedToDirectoryDateKey
+            ]
+            let detailKeys: Set<URLResourceKey> = [
+                .isHiddenKey,
+                .isSymbolicLinkKey,
                 .fileSizeKey,
+                .fileAllocatedSizeKey,
+                .totalFileAllocatedSizeKey,
                 .contentTypeKey,
                 .localizedTypeDescriptionKey
             ]
-            let options: FileManager.DirectoryEnumerationOptions = includeHidden
-                ? [.skipsPackageDescendants]
-                : [.skipsHiddenFiles, .skipsPackageDescendants]
 
-            guard let enumerator = fm.enumerator(
-                at: rootURL.standardizedFileURL,
-                includingPropertiesForKeys: keys,
-                options: options
-            ) else {
-                return []
+            let shouldSkipSubdirectory: @Sendable (URL) -> Bool = { dirURL in
+                let name = dirURL.lastPathComponent
+                if skipDirectoryNames.contains(name) {
+                    return true
+                }
+                if skipHomeLibrary, dirURL.standardizedFileURL.path(percentEncoded: false) == homeLibraryPath {
+                    return true
+                }
+                return false
             }
 
-            var results: [FileItem] = []
-            while let fileURL = enumerator.nextObject() as? URL {
-                if Task.isCancelled { break }
-                guard let values = try? fileURL.resourceValues(forKeys: Set(keys)) else { continue }
-                let isDir = values.isDirectory ?? false
-                let isPkg = values.isPackage ?? false
-                if isDir && !isPkg { continue }
+            let makeRecentFileItemIfMatch: @Sendable (URL, URLResourceValues) -> FileItem? = { fileURL, fastValues in
+                let modDate = fastValues.contentModificationDate ?? .distantPast
+                let creationDate = fastValues.creationDate ?? .distantPast
+                let addedDate = fastValues.addedToDirectoryDate ?? .distantPast
+                let effectiveDate = max(modDate, max(creationDate, addedDate))
+                guard effectiveDate >= cutoffDate else { return nil }
 
-                let modDate = values.contentModificationDate ?? .distantPast
-                guard modDate >= cutoffDate else { continue }
+                let isDir = fastValues.isDirectory ?? false
+                let isPkg = fastValues.isPackage ?? false
+                let details = try? fileURL.resourceValues(forKeys: detailKeys)
+                let sizeValue: Int64? = {
+                    if let s = details?.fileSize { return Int64(s) }
+                    if let s = details?.totalFileAllocatedSize { return Int64(s) }
+                    if let s = details?.fileAllocatedSize { return Int64(s) }
+                    return nil
+                }()
 
-                let item = FileItem(
+                return FileItem(
                     url: fileURL.standardizedFileURL,
                     name: fileURL.lastPathComponent,
                     fileExtension: fileURL.pathExtension,
                     isDirectory: isDir,
                     isPackage: isPkg,
-                    isHidden: values.isHidden ?? false,
-                    isSymbolicLink: values.isSymbolicLink ?? false,
-                    modificationDate: modDate,
-                    size: values.fileSize.map { Int64($0) },
-                    contentType: values.contentType,
-                    kindDescription: values.localizedTypeDescription ?? "Archivo"
+                    isHidden: details?.isHidden ?? false,
+                    isSymbolicLink: details?.isSymbolicLink ?? (fastValues.isSymbolicLink ?? false),
+                    modificationDate: effectiveDate,
+                    size: sizeValue,
+                    contentType: details?.contentType,
+                    kindDescription: details?.localizedTypeDescription ?? "Archivo"
                 )
-                results.append(item)
-                if results.count >= 2500 {
-                    break
+            }
+
+            let fm = FileManager.default
+            let dirOptions: FileManager.DirectoryEnumerationOptions = includeHidden
+                ? [.skipsPackageDescendants]
+                : [.skipsHiddenFiles, .skipsPackageDescendants]
+
+            guard let levelOneURLs = try? fm.contentsOfDirectory(
+                at: standardizedRoot,
+                includingPropertiesForKeys: fastKeys,
+                options: includeHidden ? [] : [.skipsHiddenFiles]
+            ) else {
+                return []
+            }
+
+            var immediateItems: [FileItem] = []
+            var subtreesToScan: [URL] = []
+
+            for url in levelOneURLs {
+                if Task.isCancelled { return [] }
+                guard let values = try? url.resourceValues(forKeys: Set(fastKeys)) else { continue }
+                let isDir = values.isDirectory ?? false
+                let isPkg = values.isPackage ?? false
+                let isSymlink = values.isSymbolicLink ?? false
+
+                if isDir && !isPkg {
+                    if !isSymlink && !shouldSkipSubdirectory(url) {
+                        subtreesToScan.append(url)
+                    }
+                } else if let item = makeRecentFileItemIfMatch(url, values) {
+                    immediateItems.append(item)
                 }
             }
 
-            results.sort { $0.modificationDate > $1.modificationDate }
-            return results
+            let scanSubtree: @Sendable (URL) -> [FileItem] = { subtreeRoot in
+                let localFM = FileManager()
+                guard let enumerator = localFM.enumerator(
+                    at: subtreeRoot,
+                    includingPropertiesForKeys: fastKeys,
+                    options: dirOptions
+                ) else {
+                    return []
+                }
+
+                var matched: [FileItem] = []
+                let fastKeySet = Set(fastKeys)
+                while let nextURL = enumerator.nextObject() as? URL {
+                    if Task.isCancelled { break }
+                    guard let values = try? nextURL.resourceValues(forKeys: fastKeySet) else { continue }
+                    let isDir = values.isDirectory ?? false
+                    let isPkg = values.isPackage ?? false
+                    let isSymlink = values.isSymbolicLink ?? false
+
+                    if isDir && !isPkg {
+                        if isSymlink || shouldSkipSubdirectory(nextURL) {
+                            enumerator.skipDescendants()
+                        }
+                        continue
+                    }
+
+                    if let item = makeRecentFileItemIfMatch(nextURL, values) {
+                        matched.append(item)
+                        if matched.count >= 600 {
+                            break
+                        }
+                    }
+                }
+                return matched
+            }
+
+            var allResults = immediateItems
+            if !subtreesToScan.isEmpty && !Task.isCancelled {
+                let maxConcurrent = min(8, ProcessInfo.processInfo.activeProcessorCount)
+                await withTaskGroup(of: [FileItem].self) { group in
+                    var nextIndex = 0
+                    for _ in 0..<min(maxConcurrent, subtreesToScan.count) {
+                        let dirURL = subtreesToScan[nextIndex]
+                        nextIndex += 1
+                        group.addTask {
+                            scanSubtree(dirURL)
+                        }
+                    }
+
+                    for await partial in group {
+                        allResults.append(contentsOf: partial)
+                        if allResults.count >= 1500 {
+                            group.cancelAll()
+                            break
+                        }
+                        if nextIndex < subtreesToScan.count && !Task.isCancelled {
+                            let dirURL = subtreesToScan[nextIndex]
+                            nextIndex += 1
+                            group.addTask {
+                                scanSubtree(dirURL)
+                            }
+                        }
+                    }
+                }
+            }
+
+            if allResults.count > 1500 {
+                allResults = Array(allResults.prefix(1500))
+            }
+            allResults.sort { $0.modificationDate > $1.modificationDate }
+            return allResults
         }.value
     }
 }

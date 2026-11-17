@@ -65,8 +65,8 @@ public struct NavigationPaneView: View {
                             }
                             .buttonStyle(.plain)
                             .help(loc.text(
-                                es: "Mostrar todos los archivos modificados en las últimas 24 horas dentro de la carpeta actual",
-                                en: "Show all files modified in the last 24 hours inside the current folder tree"
+                                es: "Mostrar todos los archivos modificados, creados o agregados en las últimas 24 horas dentro del árbol actual",
+                                en: "Show all files modified, created, or added in the last 24 hours inside the current folder tree"
                             ))
 
                             if sidebarViewModel.quickAccessNodes.isEmpty {
