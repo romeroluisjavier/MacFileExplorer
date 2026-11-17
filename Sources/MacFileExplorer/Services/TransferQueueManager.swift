@@ -120,7 +120,11 @@ public final class TransferQueueManager {
         }.value
     }
 
-    /// Encola una transferencia pesada, abre la ventana flotante unificada y comienza su ejecución.
+    public var primaryActiveJob: TransferJob? {
+        jobs.first(where: { $0.status == .running || $0.status == .paused }) ?? jobs.first
+    }
+
+    /// Encola una transferencia pesada y comienza su ejecución mostrándola en la barra de progreso inferior.
     @discardableResult
     public func enqueue(
         kind: TransferOperationKind,
@@ -139,7 +143,6 @@ public final class TransferQueueManager {
         if let onComplete {
             completionHandlers[job.id] = onComplete
         }
-        TransferQueueWindowController.shared.showWindow()
         startNextIfIdle()
         return job
     }
@@ -155,11 +158,15 @@ public final class TransferQueueManager {
     }
 
     public func cancel(_ job: TransferJob) {
-        guard !job.status.isTerminal else { return }
+        guard !job.status.isTerminal else {
+            jobs.removeAll { $0.id == job.id }
+            return
+        }
         job.status = .cancelled
         activeTasks[job.id]?.cancel()
         activeTasks.removeValue(forKey: job.id)
         completionHandlers.removeValue(forKey: job.id)
+        jobs.removeAll { $0.id == job.id }
         startNextIfIdle()
     }
 
@@ -170,7 +177,6 @@ public final class TransferQueueManager {
     private func startNextIfIdle() {
         let hasRunning = jobs.contains { $0.status == .running || $0.status == .paused }
         guard !hasRunning else { return }
-        // Tomar el trabajo en cola más antiguo (al final del arreglo)
         guard let nextJob = jobs.last(where: { $0.status == .queued }) else { return }
         run(job: nextJob)
     }
@@ -191,9 +197,7 @@ public final class TransferQueueManager {
                     sources: sources,
                     destinationDirectory: destDir
                 )
-                if job.status == .cancelled || Task.isCancelled {
-                    job.status = .cancelled
-                } else {
+                if job.status != .cancelled && !Task.isCancelled {
                     job.resultingURLs = created
                     job.transferredBytes = max(job.transferredBytes, job.totalBytes)
                     job.status = .completed
@@ -202,14 +206,10 @@ public final class TransferQueueManager {
                     }
                 }
             } catch {
-                if job.status == .cancelled || Task.isCancelled {
-                    job.status = .cancelled
-                } else {
-                    job.status = .failed(error.localizedDescription)
-                }
                 self.completionHandlers.removeValue(forKey: jobID)
             }
             self.activeTasks.removeValue(forKey: jobID)
+            self.jobs.removeAll { $0.id == jobID }
             self.startNextIfIdle()
         }
         activeTasks[jobID] = task

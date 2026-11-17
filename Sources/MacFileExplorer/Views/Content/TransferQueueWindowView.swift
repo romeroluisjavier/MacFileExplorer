@@ -1,44 +1,9 @@
 import AppKit
 import SwiftUI
 
-/// Controlador singleton de la ventana flotante unificada de Cola de Transferencias (> 1 GB).
-@MainActor
-public final class TransferQueueWindowController {
-    public static let shared = TransferQueueWindowController()
-
-    private var window: NSWindow?
-
-    private init() {}
-
-    public func showWindow() {
-        let loc = LocalizationManager.shared
-        if let existing = window {
-            existing.title = loc.text(es: "Cola de transferencias", en: "Transfer Queue")
-            existing.makeKeyAndOrderFront(nil)
-            return
-        }
-
-        let contentView = TransferQueueWindowView()
-        let hostingController = NSHostingController(rootView: contentView)
-
-        let win = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 470, height: 340),
-            styleMask: [.titled, .closable, .miniaturizable, .resizable],
-            backing: .buffered,
-            defer: false
-        )
-        win.title = loc.text(es: "Cola de transferencias", en: "Transfer Queue")
-        win.isReleasedWhenClosed = false
-        win.level = .floating
-        win.minSize = NSSize(width: 400, height: 220)
-        win.contentViewController = hostingController
-        win.center()
-        win.makeKeyAndOrderFront(nil)
-        self.window = win
-    }
-}
-
-public struct TransferQueueWindowView: View {
+/// Panel desplegable (popover) anclado a la barra de progreso inferior para controlar
+/// la cola de transferencias (> 1 GB) con Pausar, Reanudar y Cancelar sin ventanas flotantes huérfanas.
+public struct TransferQueuePopoverView: View {
     @Bindable private var manager = TransferQueueManager.shared
 
     private var loc: LocalizationManager { LocalizationManager.shared }
@@ -52,47 +17,34 @@ public struct TransferQueueWindowView: View {
                     loc.text(es: "Cola de transferencias", en: "Transfer Queue"),
                     systemImage: "arrow.up.arrow.down.circle.fill"
                 )
-                .font(.system(size: 13.5, weight: .semibold))
+                .font(.system(size: 13, weight: .semibold))
 
                 Spacer()
 
-                if manager.jobs.contains(where: { $0.status.isTerminal }) {
-                    Button(loc.text(es: "Limpiar finalizados", en: "Clear Finished")) {
-                        manager.clearFinished()
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
-                }
+                Text("\(manager.jobs.count)")
+                    .font(.system(size: 11, weight: .semibold).monospacedDigit())
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 2)
+                    .background(Capsule().fill(Color.primary.opacity(0.08)))
             }
-            .padding(.horizontal, 16)
+            .padding(.horizontal, 14)
             .padding(.vertical, 10)
             .background(.bar)
 
             Divider()
 
-            if manager.jobs.isEmpty {
-                VStack(spacing: 8) {
-                    Image(systemName: "checkmark.circle")
-                        .font(.system(size: 28))
-                        .foregroundStyle(.secondary)
-                    Text(loc.text(es: "No hay transferencias activas.", en: "No active transfers."))
-                        .font(.system(size: 12.5))
-                        .foregroundStyle(.secondary)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
-                ScrollView(.vertical) {
-                    LazyVStack(spacing: 10) {
-                        ForEach(manager.jobs) { job in
-                            TransferJobRowView(job: job, manager: manager)
-                        }
+            ScrollView(.vertical) {
+                LazyVStack(spacing: 8) {
+                    ForEach(manager.jobs) { job in
+                        TransferJobRowView(job: job, manager: manager)
                     }
-                    .padding(14)
                 }
+                .padding(12)
             }
+            .frame(maxHeight: 280)
         }
-        .frame(minWidth: 400, minHeight: 220)
-        .background(Color(nsColor: .windowBackgroundColor))
+        .frame(width: 400)
     }
 }
 
@@ -152,24 +104,20 @@ private struct TransferJobRowView: View {
                     .help(loc.text(es: "Reanudar", en: "Resume"))
                 }
 
-                if !job.status.isTerminal {
-                    Button {
-                        manager.cancel(job)
-                    } label: {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 11, weight: .semibold))
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
-                    .help(loc.text(es: "Cancelar", en: "Cancel"))
+                Button {
+                    manager.cancel(job)
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 11, weight: .semibold))
                 }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .help(loc.text(es: "Cancelar", en: "Cancel"))
             }
 
-            if !job.status.isTerminal {
-                ProgressView(value: job.progress, total: 1.0)
-                    .progressViewStyle(.linear)
-                    .tint(job.status == .paused ? .orange : Color.accentColor)
-            }
+            ProgressView(value: job.progress, total: 1.0)
+                .progressViewStyle(.linear)
+                .tint(job.status == .paused ? .orange : Color.accentColor)
         }
         .padding(10)
         .background(

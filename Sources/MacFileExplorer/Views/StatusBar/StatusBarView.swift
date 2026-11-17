@@ -5,6 +5,8 @@ import SwiftUI
 /// la suma combinada de sus tamaños y conmutadores rápidos de modo de vista a la derecha.
 public struct StatusBarView: View {
     @Bindable var viewModel: ExplorerViewModel
+    @Bindable private var transferQueue = TransferQueueManager.shared
+    @ViewState private var isTransferQueuePopoverPresented: Bool = false
 
     private var loc: LocalizationManager { LocalizationManager.shared }
 
@@ -65,10 +67,43 @@ public struct StatusBarView: View {
                 }
             }
 
-            Spacer()
+            Spacer(minLength: 8)
 
-            // 4. Barra de progreso lineal unificada para procesos largos o carga de carpeta
-            if let archiveMsg = viewModel.archiveProgressMessage {
+            // 4. Barra de progreso lineal centrada (Cola de transferencias clicable o tareas en segundo plano)
+            if let activeJob = transferQueue.primaryActiveJob {
+                let extraCount = max(0, transferQueue.jobs.count - 1)
+                let label = extraCount > 0
+                    ? "\(activeJob.title) (+\(extraCount))"
+                    : activeJob.title
+                Button {
+                    isTransferQueuePopoverPresented.toggle()
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: activeJob.status == .paused ? "pause.circle.fill" : "arrow.up.arrow.down.circle.fill")
+                            .font(.system(size: 11))
+                            .foregroundStyle(activeJob.status == .paused ? .orange : Color.accentColor)
+
+                        statusProgressIndicator(
+                            message: label,
+                            progress: activeJob.progress,
+                            tint: activeJob.status == .paused ? .orange : Color.accentColor
+                        )
+                    }
+                }
+                .buttonStyle(.plain)
+                .help(loc.text(
+                    es: "Haz clic para ver la cola de transferencias (Pausar / Reanudar / Cancelar)",
+                    en: "Click to manage transfer queue (Pause / Resume / Cancel)"
+                ))
+                .popover(isPresented: $isTransferQueuePopoverPresented, arrowEdge: .top) {
+                    TransferQueuePopoverView()
+                }
+                .onChange(of: transferQueue.jobs.isEmpty) { _, isEmpty in
+                    if isEmpty {
+                        isTransferQueuePopoverPresented = false
+                    }
+                }
+            } else if let archiveMsg = viewModel.archiveProgressMessage {
                 statusProgressIndicator(
                     message: archiveMsg,
                     progress: viewModel.archiveProgressValue
@@ -84,6 +119,8 @@ public struct StatusBarView: View {
                     progress: nil
                 )
             }
+
+            Spacer(minLength: 8)
 
             // Slider de tamaño de icono estilo Finder (visible en Large icons)
             if viewModel.viewMode == .largeIcons {
@@ -181,7 +218,11 @@ public struct StatusBarView: View {
     }
 
     @ViewBuilder
-    private func statusProgressIndicator(message: String, progress: Double?) -> some View {
+    private func statusProgressIndicator(
+        message: String,
+        progress: Double?,
+        tint: Color = Color.accentColor
+    ) -> some View {
         HStack(spacing: 7) {
             Text(message)
                 .font(.system(size: 11, weight: .medium))
@@ -193,17 +234,17 @@ public struct StatusBarView: View {
                 ProgressView(value: min(max(progress, 0.0), 1.0), total: 1.0)
                     .progressViewStyle(.linear)
                     .controlSize(.small)
-                    .tint(Color.accentColor)
+                    .tint(tint)
                     .frame(width: 110)
 
                 Text("\(Int((min(max(progress, 0.0), 1.0) * 100).rounded()))%")
                     .font(.system(size: 10.5, weight: .semibold).monospacedDigit())
-                    .foregroundStyle(Color.accentColor)
+                    .foregroundStyle(tint)
             } else {
                 ProgressView()
                     .progressViewStyle(.linear)
                     .controlSize(.small)
-                    .tint(Color.accentColor)
+                    .tint(tint)
                     .frame(width: 110)
             }
         }
@@ -211,7 +252,7 @@ public struct StatusBarView: View {
         .padding(.vertical, 2)
         .background(
             Capsule(style: .continuous)
-                .fill(Color.accentColor.opacity(0.08))
+                .fill(tint.opacity(0.08))
         )
     }
 }

@@ -96,8 +96,8 @@ public enum ReleaseNotesCatalog {
                     icon: "arrow.up.arrow.down.circle.fill",
                     titleES: "Cola de transferencias con pausa y reanudación (> 1 GB)",
                     titleEN: "Transfer Queue with Pause & Resume (> 1 GB)",
-                    summaryES: "Al copiar, cortar o mover archivos o carpetas cuyo tamaño total supere 1 GB, se abre automáticamente una ventana flotante unificada donde podés ver el progreso en tiempo real, pausar, reanudar o cancelar cada transferencia.",
-                    summaryEN: "When copying, cutting, or moving files or folders totaling over 1 GB, a unified floating window opens automatically where you can monitor live progress, pause, resume, or cancel each transfer."
+                    summaryES: "Al copiar, cortar o mover archivos o carpetas de más de 1 GB, el progreso aparece centrado directamente en la barra inferior. Al hacer clic sobre la barra podés abrir el subpanel para pausar, reanudar o cancelar, y se limpia y cierra automáticamente al finalizar.",
+                    summaryEN: "When copying, cutting, or moving files or folders over 1 GB, progress appears centered in the bottom status bar. Clicking it opens the queue popover to pause, resume, or cancel transfers, and it closes and clears automatically when done."
                 ),
                 ReleaseNoteItem(
                     id: "advanced-search-popover",
