@@ -1635,8 +1635,13 @@ public final class ExplorerViewModel {
 
     public func confirmPendingPermanentDelete() {
         guard let request = pendingPermanentDelete else { return }
+        executePermanentDelete(urls: request.urls)
+    }
+
+    public func executePermanentDelete(urls: [URL]) {
         pendingPermanentDelete = nil
-        let targets = request.urls
+        let targets = urls.map(\.standardizedFileURL)
+        guard !targets.isEmpty else { return }
         Task { @MainActor [weak self] in
             await self?.permanentlyDeleteItems(targets)
         }

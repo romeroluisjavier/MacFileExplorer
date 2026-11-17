@@ -445,8 +445,9 @@ private struct PermanentDeleteConfirmModalView: View {
 
             VStack(spacing: 8) {
                 Button {
+                    let targets = request.urls
                     dismiss()
-                    viewModel.confirmPendingPermanentDelete()
+                    viewModel.executePermanentDelete(urls: targets)
                 } label: {
                     Text(loc.text(es: "Eliminar permanentemente", en: "Delete Permanently"))
                         .font(.system(size: 13, weight: .medium))
