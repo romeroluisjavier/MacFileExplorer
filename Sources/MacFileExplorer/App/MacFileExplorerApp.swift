@@ -20,6 +20,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         DispatchQueue.main.async {
             LocalizationManager.shared.applyLanguageToMainMenu()
         }
+        AdvancedSearchService.prewarmOCRInBackground()
         NSApplication.shared.activate(ignoringOtherApps: true)
     }
 

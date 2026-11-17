@@ -84,6 +84,14 @@ public enum ReleaseNotesCatalog {
             dateLabelEN: "Nov 17, 2026",
             items: [
                 ReleaseNoteItem(
+                    id: "improved-ocr-image-search",
+                    icon: "text.viewfinder",
+                    titleES: "Búsqueda de texto en imágenes más precisa (OCR mejorado)",
+                    titleEN: "More accurate text search inside images (Enhanced OCR)",
+                    summaryES: "Se mejoró la búsqueda dentro de imágenes del buscador avanzado para reconocer textos pequeños o sobre fondos complejos (como capturas de videollamadas o pantallas), ignorando mayúsculas y tildes, y acelerando búsquedas repetidas.",
+                    summaryEN: "Improved image text search in Advanced Search to recognize small or low-contrast captions (such as video call or UI screenshots), ignoring case and accents, with faster scanning and caching."
+                ),
+                ReleaseNoteItem(
                     id: "check-upgrades-github",
                     icon: "arrow.down.circle.fill",
                     titleES: "Buscar actualizaciones directamente desde GitHub",

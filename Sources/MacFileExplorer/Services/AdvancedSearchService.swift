@@ -1,4 +1,6 @@
+import CoreGraphics
 import Foundation
+import ImageIO
 import PDFKit
 import UniformTypeIdentifiers
 import Vision
@@ -134,6 +136,52 @@ public struct AdvancedSearchOptions: Equatable, Sendable {
     }
 }
 
+/// Caché en memoria acotado de texto OCR reconocido por imagen (`path + size + mtime`).
+private final class OCRTextCache: @unchecked Sendable {
+    struct Key: Hashable {
+        let path: String
+        let size: Int64
+        let modifiedTime: TimeInterval
+    }
+
+    static let shared = OCRTextCache()
+
+    private let lock = NSLock()
+    private var entries: [Key: String] = [:]
+    private var insertionOrder: [Key] = []
+    private let maxEntries = 500
+    private var didPrewarm = false
+
+    private init() {}
+
+    func get(_ key: Key) -> String? {
+        lock.lock()
+        defer { lock.unlock() }
+        return entries[key]
+    }
+
+    func set(_ text: String, for key: Key) {
+        lock.lock()
+        defer { lock.unlock() }
+        if entries[key] == nil {
+            insertionOrder.append(key)
+            if insertionOrder.count > maxEntries {
+                let oldest = insertionOrder.removeFirst()
+                entries.removeValue(forKey: oldest)
+            }
+        }
+        entries[key] = text
+    }
+
+    func claimPrewarmSlot() -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        if didPrewarm { return false }
+        didPrewarm = true
+        return true
+    }
+}
+
 /// Servicio de búsqueda avanzada en segundo plano:
 /// filtra por tipo, extensión, tamaño, subcarpetas y contenido interno (texto, PDF e imágenes mediante OCR Vision).
 public enum AdvancedSearchService {
@@ -151,14 +199,74 @@ public enum AdvancedSearchService {
         "__pycache__", ".next", ".nuxt", "target", "dist"
     ]
 
+    private struct CandidateMetadata: Sendable {
+        let url: URL
+        let ext: String
+        let isDir: Bool
+        let isPkg: Bool
+        let isHidden: Bool
+        let isSymlink: Bool
+        let modificationDate: Date
+        let fileSize: Int64?
+        let contentType: UTType?
+        let kindDescription: String
+
+        func makeFileItem() -> FileItem {
+            FileItem(
+                url: url.standardizedFileURL,
+                name: url.lastPathComponent,
+                fileExtension: url.pathExtension,
+                isDirectory: isDir,
+                isPackage: isPkg,
+                isHidden: isHidden,
+                isSymbolicLink: isSymlink,
+                modificationDate: modificationDate,
+                size: fileSize,
+                contentType: contentType,
+                kindDescription: kindDescription
+            )
+        }
+    }
+
+    /// Precalienta el motor OCR `.accurate` de Vision en segundo plano tras iniciar la app
+    /// para que la primera búsqueda dentro de imágenes responda en milisegundos.
+    public static func prewarmOCRInBackground() {
+        guard OCRTextCache.shared.claimPrewarmSlot() else { return }
+        Task.detached(priority: .utility) {
+            try? await Task.sleep(for: .seconds(2))
+            if Task.isCancelled { return }
+            autoreleasepool {
+                let width = 96
+                let height = 32
+                guard let ctx = CGContext(
+                    data: nil,
+                    width: width,
+                    height: height,
+                    bitsPerComponent: 8,
+                    bytesPerRow: width * 4,
+                    space: CGColorSpaceCreateDeviceRGB(),
+                    bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+                ),
+                let cgImage = ctx.makeImage() else {
+                    return
+                }
+                let request = makeAccurateOCRRequest()
+                let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
+                try? handler.perform([request])
+            }
+        }
+    }
+
     public static func performSearch(
         query: String,
         options: AdvancedSearchOptions,
         in rootURL: URL,
-        includeHidden: Bool
+        includeHidden: Bool,
+        onProgress: (@Sendable (Int, Int) -> Void)? = nil
     ) async -> [FileItem] {
         let trimmedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        return await Task.detached(priority: .userInitiated) {
+
+        let scanPlan = await Task.detached(priority: .userInitiated) { () -> (directMatches: [FileItem], contentQueue: [CandidateMetadata]) in
             let fm = FileManager.default
             let standardizedRoot = rootURL.standardizedFileURL
             let keys: [URLResourceKey] = [
@@ -185,11 +293,11 @@ public enum AdvancedSearchService {
                     includingPropertiesForKeys: keys,
                     options: enumOptions
                 ) else {
-                    return []
+                    return ([], [])
                 }
                 var collected: [URL] = []
                 while let nextURL = enumerator.nextObject() as? URL {
-                    if Task.isCancelled { return [] }
+                    if Task.isCancelled { return ([], []) }
                     if skipSubtreeNames.contains(nextURL.lastPathComponent) {
                         enumerator.skipDescendants()
                         continue
@@ -207,9 +315,11 @@ public enum AdvancedSearchService {
                 )) ?? []
             }
 
-            var results: [FileItem] = []
+            var directMatches: [FileItem] = []
+            var contentQueue: [CandidateMetadata] = []
+
             for rawURL in candidateURLs {
-                if Task.isCancelled { return [] }
+                if Task.isCancelled { return ([], []) }
                 guard let values = try? rawURL.resourceValues(forKeys: keySet) else { continue }
                 let isDir = values.isDirectory ?? false
                 let isPkg = values.isPackage ?? false
@@ -236,102 +346,251 @@ public enum AdvancedSearchService {
                     }
                 }
 
-                // 3. Filtro por nombre y/o contenido (texto, PDF, OCR de imagen)
-                if !trimmedQuery.isEmpty {
-                    let nameMatches = rawURL.lastPathComponent.localizedCaseInsensitiveContains(trimmedQuery)
-                    if !nameMatches {
-                        guard options.searchInsideContent, !isDir else { continue }
-                        let contentMatches = matchesContent(
-                            url: rawURL,
-                            ext: ext,
-                            query: trimmedQuery,
-                            fileSize: fileSize
-                        )
-                        guard contentMatches else { continue }
-                    }
-                }
-
-                let item = FileItem(
-                    url: rawURL.standardizedFileURL,
-                    name: rawURL.lastPathComponent,
-                    fileExtension: rawURL.pathExtension,
-                    isDirectory: isDir,
-                    isPackage: isPkg,
+                let meta = CandidateMetadata(
+                    url: rawURL,
+                    ext: ext,
+                    isDir: isDir,
+                    isPkg: isPkg,
                     isHidden: values.isHidden ?? false,
-                    isSymbolicLink: values.isSymbolicLink ?? false,
+                    isSymlink: values.isSymbolicLink ?? false,
                     modificationDate: values.contentModificationDate ?? .distantPast,
-                    size: fileSize,
+                    fileSize: fileSize,
                     contentType: values.contentType,
                     kindDescription: values.localizedTypeDescription ?? (isDir ? "Carpeta" : "Archivo")
                 )
-                results.append(item)
-                if results.count >= 1500 {
-                    break
+
+                // 3. Filtro por nombre y/o contenido
+                if trimmedQuery.isEmpty {
+                    directMatches.append(meta.makeFileItem())
+                    if directMatches.count >= 1500 { break }
+                } else if containsQuery(rawURL.lastPathComponent, query: trimmedQuery) {
+                    directMatches.append(meta.makeFileItem())
+                    if directMatches.count >= 1500 { break }
+                } else if options.searchInsideContent,
+                          !isDir,
+                          isSupportedContentCandidate(url: rawURL, ext: ext, contentType: values.contentType) {
+                    contentQueue.append(meta)
                 }
             }
 
-            return results
+            return (directMatches, contentQueue)
         }.value
+
+        if Task.isCancelled { return [] }
+
+        var results = scanPlan.directMatches
+        let queue = scanPlan.contentQueue
+        guard !trimmedQuery.isEmpty, !queue.isEmpty, results.count < 1500 else {
+            return results
+        }
+
+        let totalCount = queue.count
+        onProgress?(0, totalCount)
+
+        let maxConcurrency = 4
+        var nextIndex = 0
+        var completedCount = 0
+
+        await withTaskGroup(of: FileItem?.self) { group in
+            let initialBatch = min(maxConcurrency, queue.count)
+            for _ in 0..<initialBatch {
+                let candidate = queue[nextIndex]
+                nextIndex += 1
+                group.addTask(priority: .userInitiated) {
+                    if Task.isCancelled { return nil }
+                    let matched = matchesContent(
+                        candidate: candidate,
+                        query: trimmedQuery
+                    )
+                    return matched ? candidate.makeFileItem() : nil
+                }
+            }
+
+            while let maybeItem = await group.next() {
+                if Task.isCancelled {
+                    group.cancelAll()
+                    break
+                }
+
+                completedCount += 1
+                if completedCount == totalCount || completedCount % 2 == 0 {
+                    onProgress?(completedCount, totalCount)
+                }
+
+                if let item = maybeItem {
+                    results.append(item)
+                    if results.count >= 1500 {
+                        group.cancelAll()
+                        break
+                    }
+                }
+
+                if nextIndex < queue.count {
+                    let candidate = queue[nextIndex]
+                    nextIndex += 1
+                    group.addTask(priority: .userInitiated) {
+                        if Task.isCancelled { return nil }
+                        let matched = matchesContent(
+                            candidate: candidate,
+                            query: trimmedQuery
+                        )
+                        return matched ? candidate.makeFileItem() : nil
+                    }
+                }
+            }
+        }
+
+        return Task.isCancelled ? [] : results
+    }
+
+    private static func isSupportedContentCandidate(url: URL, ext: String, contentType: UTType?) -> Bool {
+        if plainTextExtensions.contains(ext) || ext == "pdf" || QuickActionsService.isImageURL(url) {
+            return true
+        }
+        return contentType?.conforms(to: .image) == true || contentType?.conforms(to: .plainText) == true
+    }
+
+    private static func containsQuery(_ text: String, query: String) -> Bool {
+        text.range(of: query, options: [.caseInsensitive, .diacriticInsensitive]) != nil
     }
 
     private static func matchesContent(
-        url: URL,
-        ext: String,
-        query: String,
-        fileSize: Int64?
+        candidate: CandidateMetadata,
+        query: String
     ) -> Bool {
+        let url = candidate.url
+        let ext = candidate.ext
+        let fileSize = candidate.fileSize
+
         // Texto plano / código
-        if plainTextExtensions.contains(ext) {
+        if plainTextExtensions.contains(ext) || candidate.contentType?.conforms(to: .plainText) == true {
             if let fileSize, fileSize > 8_000_000 { return false }
             guard let data = try? Data(contentsOf: url, options: [.mappedIfSafe]) else { return false }
             let slice = data.count > 4_000_000 ? data.prefix(4_000_000) : data[...]
             if let text = String(data: slice, encoding: .utf8) ?? String(data: slice, encoding: .isoLatin1) {
-                return text.localizedCaseInsensitiveContains(query)
+                return containsQuery(text, query: query)
             }
             return false
         }
 
         // PDF (PDFKit)
         if ext == "pdf" {
-            guard let doc = PDFDocument(url: url) else { return false }
-            let maxPages = min(doc.pageCount, 120)
-            for pageIndex in 0..<maxPages {
-                if Task.isCancelled { return false }
-                if let pageText = doc.page(at: pageIndex)?.string,
-                   pageText.localizedCaseInsensitiveContains(query) {
-                    return true
+            return autoreleasepool {
+                guard let doc = PDFDocument(url: url) else { return false }
+                let maxPages = min(doc.pageCount, 120)
+                for pageIndex in 0..<maxPages {
+                    if Task.isCancelled { return false }
+                    if let pageText = doc.page(at: pageIndex)?.string,
+                       containsQuery(pageText, query: query) {
+                        return true
+                    }
                 }
+                return false
             }
-            return false
         }
 
-        // Imágenes (OCR nativo con Vision)
-        if QuickActionsService.isImageURL(url) {
-            if let fileSize, fileSize > 25_000_000 { return false }
-            return imageContainsTextViaOCR(url: url, query: query)
+        // Imágenes (OCR nativo preciso con Vision + caché en memoria)
+        if QuickActionsService.isImageURL(url) || candidate.contentType?.conforms(to: .image) == true {
+            if let fileSize, fileSize > 50_000_000 { return false }
+            return imageContainsTextViaOCR(
+                url: url,
+                fileSize: fileSize,
+                modificationDate: candidate.modificationDate,
+                query: query
+            )
         }
 
         return false
     }
 
-    private static func imageContainsTextViaOCR(url: URL, query: String) -> Bool {
+    private static func makeAccurateOCRRequest() -> VNRecognizeTextRequest {
         let request = VNRecognizeTextRequest()
-        request.recognitionLevel = .fast
-        request.usesLanguageCorrection = false
+        request.recognitionLevel = .accurate
+        request.usesLanguageCorrection = true
+        request.recognitionLanguages = ["es-ES", "en-US"]
+        request.minimumTextHeight = 0.008
+        return request
+    }
 
-        let handler = VNImageRequestHandler(url: url, options: [:])
-        do {
-            try handler.perform([request])
-            guard let observations = request.results else { return false }
-            for observation in observations {
-                if let candidate = observation.topCandidates(1).first,
-                   candidate.string.localizedCaseInsensitiveContains(query) {
-                    return true
+    private static func imageContainsTextViaOCR(
+        url: URL,
+        fileSize: Int64?,
+        modificationDate: Date,
+        query: String
+    ) -> Bool {
+        let cacheKey = OCRTextCache.Key(
+            path: url.path,
+            size: fileSize ?? -1,
+            modifiedTime: modificationDate.timeIntervalSince1970
+        )
+
+        if let cachedTranscript = OCRTextCache.shared.get(cacheKey) {
+            return containsQuery(cachedTranscript, query: query)
+        }
+
+        let transcript = extractTranscriptFromImage(url: url)
+        OCRTextCache.shared.set(transcript, for: cacheKey)
+        return containsQuery(transcript, query: query)
+    }
+
+    private static func extractTranscriptFromImage(url: URL) -> String {
+        autoreleasepool {
+            let source = CGImageSourceCreateWithURL(url as CFURL, nil)
+            let orientation = readImageOrientation(from: source)
+
+            let primaryRequest = makeAccurateOCRRequest()
+            let urlHandler = VNImageRequestHandler(url: url, orientation: orientation, options: [:])
+            if (try? urlHandler.perform([primaryRequest])) != nil,
+               let observations = primaryRequest.results,
+               !observations.isEmpty {
+                return buildTranscript(from: observations)
+            }
+
+            // Respaldo vía CGImage para formatos PNG/WebP/P3 que fallen leyendo directamente por URL
+            if let source,
+               let cgImage = CGImageSourceCreateImageAtIndex(source, 0, nil) {
+                let fallbackRequest = makeAccurateOCRRequest()
+                let cgHandler = VNImageRequestHandler(cgImage: cgImage, orientation: orientation, options: [:])
+                if (try? cgHandler.perform([fallbackRequest])) != nil,
+                   let observations = fallbackRequest.results,
+                   !observations.isEmpty {
+                    return buildTranscript(from: observations)
                 }
             }
-        } catch {
-            return false
+
+            return ""
         }
-        return false
+    }
+
+    private static func readImageOrientation(from source: CGImageSource?) -> CGImagePropertyOrientation {
+        guard let source,
+              let props = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
+              let rawValue = props[kCGImagePropertyOrientation] as? UInt32,
+              let orientation = CGImagePropertyOrientation(rawValue: rawValue) else {
+            return .up
+        }
+        return orientation
+    }
+
+    private static func buildTranscript(from observations: [VNRecognizedTextObservation]) -> String {
+        var topLines: [String] = []
+        var extraCandidates: [String] = []
+        topLines.reserveCapacity(observations.count)
+
+        for observation in observations {
+            let candidates = observation.topCandidates(3)
+            if let first = candidates.first?.string, !first.isEmpty {
+                topLines.append(first)
+            }
+            for alt in candidates.dropFirst() where !alt.string.isEmpty {
+                extraCandidates.append(alt.string)
+            }
+        }
+
+        let joinedTop = topLines.joined(separator: " ")
+        if extraCandidates.isEmpty {
+            return joinedTop
+        }
+        return ([joinedTop] + extraCandidates).joined(separator: "\n")
     }
 }

@@ -218,6 +218,10 @@ public struct NavigationBarView: View {
                         text: $viewModel.searchQuery
                     )
                     .textFieldStyle(.roundedBorder)
+                    .onSubmit {
+                        isAdvancedSearchPresented = false
+                        viewModel.runAdvancedSearch()
+                    }
                 }
 
                 HStack {
@@ -243,6 +247,10 @@ public struct NavigationBarView: View {
                         text: $viewModel.advancedSearchOptions.customExtension
                     )
                     .textFieldStyle(.roundedBorder)
+                    .onSubmit {
+                        isAdvancedSearchPresented = false
+                        viewModel.runAdvancedSearch()
+                    }
                 }
 
                 HStack {

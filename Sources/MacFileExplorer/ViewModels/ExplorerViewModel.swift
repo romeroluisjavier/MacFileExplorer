@@ -71,8 +71,18 @@ public final class ExplorerViewModel {
     public var searchQuery: String = "" {
         didSet {
             guard searchQuery != oldValue else { return }
+            searchDebounceTask?.cancel()
+            searchDebounceTask = nil
             if isAdvancedSearchActive {
-                runAdvancedSearch()
+                if advancedSearchOptions.requiresDeepScan {
+                    searchDebounceTask = Task { @MainActor [weak self] in
+                        try? await Task.sleep(for: .milliseconds(250))
+                        guard let self, !Task.isCancelled else { return }
+                        self.runAdvancedSearch()
+                    }
+                } else {
+                    runAdvancedSearch()
+                }
             } else {
                 rebuildDisplayedItems()
             }
@@ -82,10 +92,13 @@ public final class ExplorerViewModel {
     public var advancedSearchOptions = AdvancedSearchOptions()
     public private(set) var isAdvancedSearchActive: Bool = false
     private var advancedSearchTask: Task<Void, Never>?
+    private var searchDebounceTask: Task<Void, Never>?
     public var isDuplicateFinderPresented: Bool = false
 
     /// Ejecuta la búsqueda avanzada (local instantánea o profunda en segundo plano para subcarpetas y contenido).
     public func runAdvancedSearch() {
+        searchDebounceTask?.cancel()
+        searchDebounceTask = nil
         advancedSearchTask?.cancel()
         advancedSearchTask = nil
 
@@ -135,11 +148,12 @@ public final class ExplorerViewModel {
 
         let targetDir = currentDirectoryURL
         let loc = LocalizationManager.shared
-        isLoading = true
-        backgroundTaskMessage = loc.text(
+        let baseMessage = loc.text(
             es: opts.searchInsideContent ? "Buscando dentro de archivos…" : "Buscando en subcarpetas…",
             en: opts.searchInsideContent ? "Searching inside files…" : "Searching subfolders…"
         )
+        isLoading = true
+        backgroundTaskMessage = baseMessage
         backgroundTaskProgress = nil
 
         advancedSearchTask = Task { @MainActor [weak self] in
@@ -153,7 +167,14 @@ public final class ExplorerViewModel {
                 query: query,
                 options: opts,
                 in: targetDir,
-                includeHidden: includeHidden
+                includeHidden: includeHidden,
+                onProgress: { [weak self] done, total in
+                    Task { @MainActor [weak self] in
+                        guard let self, self.isAdvancedSearchActive, total > 0 else { return }
+                        self.backgroundTaskProgress = Double(done) / Double(total)
+                        self.backgroundTaskMessage = "\(baseMessage) (\(done)/\(total))"
+                    }
+                }
             )
             guard !Task.isCancelled, self.isAdvancedSearchActive else { return }
             self.displayedItems = Self.computeDisplayedItems(
@@ -168,6 +189,8 @@ public final class ExplorerViewModel {
 
     /// Limpia los filtros de búsqueda avanzada y restaura la vista normal de la carpeta.
     public func clearAdvancedSearch() {
+        searchDebounceTask?.cancel()
+        searchDebounceTask = nil
         advancedSearchTask?.cancel()
         advancedSearchTask = nil
         advancedSearchOptions = AdvancedSearchOptions()
