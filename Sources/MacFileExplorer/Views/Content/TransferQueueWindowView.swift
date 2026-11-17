@@ -108,10 +108,11 @@ private struct TransferJobRowView: View {
                     manager.cancel(job)
                 } label: {
                     Image(systemName: "xmark")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(.red)
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(.white)
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(.borderedProminent)
+                .tint(.red)
                 .controlSize(.small)
                 .help(loc.text(es: "Cancelar", en: "Cancel"))
             }

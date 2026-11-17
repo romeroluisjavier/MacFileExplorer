@@ -1658,6 +1658,9 @@ public final class ExplorerViewModel {
         )
         cancelButton.keyEquivalent = "\u{1b}"
 
+        alert.layout()
+        Self.centerIcon(in: alert)
+
         let standardizedURLs = urls.map(\.standardizedFileURL)
 
         let targetWindow = NSApp.keyWindow?.tabGroup?.selectedWindow
@@ -2487,5 +2490,36 @@ public final class ExplorerViewModel {
     private static func directoryModificationTimestamp(for url: URL) -> TimeInterval? {
         let values = try? url.standardizedFileURL.resourceValues(forKeys: [.contentModificationDateKey])
         return values?.contentModificationDate?.timeIntervalSince1970
+    }
+
+    private static func centerIcon(in alert: NSAlert) {
+        guard let contentView = alert.window.contentView,
+              let imageView = findImageView(in: contentView),
+              let superview = imageView.superview else {
+            return
+        }
+        for constraint in superview.constraints where
+            (constraint.firstItem as AnyObject) === imageView || (constraint.secondItem as AnyObject) === imageView {
+            if constraint.firstAttribute == .leading || constraint.secondAttribute == .leading
+                || constraint.firstAttribute == .left || constraint.secondAttribute == .left {
+                constraint.isActive = false
+            }
+        }
+        imageView.centerXAnchor.constraint(equalTo: superview.centerXAnchor).isActive = true
+        var frame = imageView.frame
+        frame.origin.x = (superview.bounds.width - frame.width) / 2.0
+        imageView.frame = frame
+    }
+
+    private static func findImageView(in view: NSView) -> NSImageView? {
+        if let iv = view as? NSImageView {
+            return iv
+        }
+        for subview in view.subviews {
+            if let found = findImageView(in: subview) {
+                return found
+            }
+        }
+        return nil
     }
 }
