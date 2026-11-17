@@ -876,12 +876,20 @@ public final class ExplorerViewModel {
         return nil
     }
 
+    private static var cachedGeminiMenuIcon: NSImage?
+    private static var didResolveGeminiMenuIcon = false
+
     /// Devuelve el ícono de `Gemini.app` redimensionado a 16×16 para el menú contextual.
     public func geminiMenuIcon() -> NSImage? {
+        if Self.didResolveGeminiMenuIcon {
+            return Self.cachedGeminiMenuIcon
+        }
+        Self.didResolveGeminiMenuIcon = true
         guard let geminiURL = geminiApplicationURL() else { return nil }
         let rawIcon = NSWorkspace.shared.icon(forFile: geminiURL.path(percentEncoded: false))
         let sized = (rawIcon.copy() as? NSImage) ?? rawIcon
         sized.size = NSSize(width: 16, height: 16)
+        Self.cachedGeminiMenuIcon = sized
         return sized
     }
 
@@ -964,12 +972,20 @@ public final class ExplorerViewModel {
         return nil
     }
 
+    private static var cachedSlackMenuIcon: NSImage?
+    private static var didResolveSlackMenuIcon = false
+
     /// Devuelve el ícono de `Slack.app` redimensionado a 16×16 para el menú contextual.
     public func slackMenuIcon() -> NSImage? {
+        if Self.didResolveSlackMenuIcon {
+            return Self.cachedSlackMenuIcon
+        }
+        Self.didResolveSlackMenuIcon = true
         guard let slackURL = slackApplicationURL() else { return nil }
         let rawIcon = NSWorkspace.shared.icon(forFile: slackURL.path(percentEncoded: false))
         let sized = (rawIcon.copy() as? NSImage) ?? rawIcon
         sized.size = NSSize(width: 16, height: 16)
+        Self.cachedSlackMenuIcon = sized
         return sized
     }
 

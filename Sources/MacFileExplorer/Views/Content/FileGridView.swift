@@ -301,19 +301,15 @@ private struct FileGridTileView: View {
             viewModel: viewModel,
             isTargeted: $isDropTargeted
         )
-        .simultaneousGesture(
-            TapGesture(count: 2).onEnded {
-                guard !isRenaming else { return }
-                viewModel.openItem(item)
-            }
-        )
-        .simultaneousGesture(
-            TapGesture(count: 1).onEnded {
-                guard !isRenaming else { return }
-                let modifiers = KeyboardShortcuts.currentEventModifiers
-                viewModel.handleSelection(of: item, modifiers: modifiers)
-            }
-        )
+        .onTapGesture(count: 2) {
+            guard !isRenaming else { return }
+            viewModel.openItem(item)
+        }
+        .onTapGesture(count: 1) {
+            guard !isRenaming else { return }
+            let modifiers = KeyboardShortcuts.currentEventModifiers
+            viewModel.handleSelection(of: item, modifiers: modifiers)
+        }
         .onHover { hovering in
             isHovered = hovering
         }
