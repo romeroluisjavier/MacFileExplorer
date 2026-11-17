@@ -99,46 +99,67 @@ public struct MainExplorerView: View {
                 viewModel.checkCurrentDirectoryForExternalChanges()
             }
         }
-        .sheet(item: $viewModel.propertiesTargetItem) { targetItem in
-            ItemPropertiesModalView(item: targetItem)
-        }
-        .sheet(isPresented: $viewModel.isShareToSlackPresented) {
-            ShareToSlackModalView(viewModel: viewModel)
-        }
-        .sheet(isPresented: $viewModel.isBulkRenamePresented) {
-            BulkRenameModalView(viewModel: viewModel)
-        }
-        .sheet(
-            isPresented: Binding(
-                get: { viewModel.quickActionImageConvertURLs != nil },
-                set: { if !$0 { viewModel.quickActionImageConvertURLs = nil } }
-            )
-        ) {
-            if let urls = viewModel.quickActionImageConvertURLs {
+        .sheet(item: activeSheetBinding) { sheet in
+            switch sheet {
+            case .properties(let targetItem):
+                ItemPropertiesModalView(item: targetItem)
+            case .shareToSlack:
+                ShareToSlackModalView(viewModel: viewModel)
+            case .bulkRename:
+                BulkRenameModalView(viewModel: viewModel)
+            case .imageConvert(let urls):
                 QuickActionImageConvertModalView(viewModel: viewModel, targetURLs: urls)
-            }
-        }
-        .sheet(
-            isPresented: Binding(
-                get: { viewModel.quickActionVideoConvertURLs != nil },
-                set: { if !$0 { viewModel.quickActionVideoConvertURLs = nil } }
-            )
-        ) {
-            if let urls = viewModel.quickActionVideoConvertURLs {
+            case .videoConvert(let urls):
                 QuickActionVideoConvertModalView(viewModel: viewModel, targetURLs: urls)
-            }
-        }
-        .sheet(
-            isPresented: Binding(
-                get: { viewModel.quickActionVideoTrimURL != nil },
-                set: { if !$0 { viewModel.quickActionVideoTrimURL = nil } }
-            )
-        ) {
-            if let url = viewModel.quickActionVideoTrimURL {
+            case .videoTrim(let url):
                 QuickActionVideoTrimModalView(viewModel: viewModel, targetURL: url)
             }
         }
         .focusedSceneValue(\.explorerViewModel, viewModel)
+    }
+
+    private enum ActiveExplorerSheet: Identifiable {
+        case properties(FileItem)
+        case shareToSlack
+        case bulkRename
+        case imageConvert([URL])
+        case videoConvert([URL])
+        case videoTrim(URL)
+
+        var id: String {
+            switch self {
+            case .properties(let item): return "properties-\(item.id.absoluteString)"
+            case .shareToSlack: return "shareToSlack"
+            case .bulkRename: return "bulkRename"
+            case .imageConvert(let urls): return "imageConvert-\(urls.count)"
+            case .videoConvert(let urls): return "videoConvert-\(urls.count)"
+            case .videoTrim(let url): return "videoTrim-\(url.absoluteString)"
+            }
+        }
+    }
+
+    private var activeSheetBinding: Binding<ActiveExplorerSheet?> {
+        Binding(
+            get: {
+                if let item = viewModel.propertiesTargetItem { return .properties(item) }
+                if viewModel.isShareToSlackPresented { return .shareToSlack }
+                if viewModel.isBulkRenamePresented { return .bulkRename }
+                if let urls = viewModel.quickActionImageConvertURLs { return .imageConvert(urls) }
+                if let urls = viewModel.quickActionVideoConvertURLs { return .videoConvert(urls) }
+                if let url = viewModel.quickActionVideoTrimURL { return .videoTrim(url) }
+                return nil
+            },
+            set: { newValue in
+                if newValue == nil {
+                    viewModel.propertiesTargetItem = nil
+                    viewModel.isShareToSlackPresented = false
+                    viewModel.isBulkRenamePresented = false
+                    viewModel.quickActionImageConvertURLs = nil
+                    viewModel.quickActionVideoConvertURLs = nil
+                    viewModel.quickActionVideoTrimURL = nil
+                }
+            }
+        )
     }
 
     // MARK: - Área Principal de Contenidos
