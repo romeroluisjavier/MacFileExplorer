@@ -5,6 +5,7 @@ import SwiftUI
 public struct NavigationBarView: View {
     @Bindable var viewModel: ExplorerViewModel
     @FocusState private var isSearchFocused: Bool
+    @ViewState private var isAdvancedSearchPresented: Bool = false
 
     private var loc: LocalizationManager { LocalizationManager.shared }
 
@@ -139,8 +140,10 @@ public struct NavigationBarView: View {
             if !viewModel.searchQuery.isEmpty {
                 Button {
                     viewModel.searchQuery = ""
-                    isSearchFocused = false
-                    KeyboardShortcuts.resignTextFocus()
+                    if !viewModel.isAdvancedSearchActive {
+                        isSearchFocused = false
+                        KeyboardShortcuts.resignTextFocus()
+                    }
                 } label: {
                     Image(systemName: "xmark.circle.fill")
                         .font(.system(size: 12))
@@ -149,9 +152,26 @@ public struct NavigationBarView: View {
                 .buttonStyle(.plain)
                 .help(loc.text(es: "Limpiar búsqueda", en: "Clear search"))
             }
+
+            Button {
+                isAdvancedSearchPresented.toggle()
+            } label: {
+                Image(
+                    systemName: viewModel.isAdvancedSearchActive
+                        ? "line.3.horizontal.decrease.circle.fill"
+                        : "line.3.horizontal.decrease.circle"
+                )
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(viewModel.isAdvancedSearchActive ? Color.accentColor : Color.secondary)
+            }
+            .buttonStyle(.plain)
+            .help(loc.text(es: "Buscador avanzado", en: "Advanced Search"))
+            .popover(isPresented: $isAdvancedSearchPresented, arrowEdge: .bottom) {
+                advancedSearchPopover
+            }
         }
         .padding(.horizontal, 10)
-        .frame(width: 230, height: 30)
+        .frame(width: 245, height: 30)
         .background(
             RoundedRectangle(cornerRadius: 7, style: .continuous)
                 .fill(Color(nsColor: .controlBackgroundColor))
@@ -159,12 +179,140 @@ public struct NavigationBarView: View {
         .overlay(
             RoundedRectangle(cornerRadius: 7, style: .continuous)
                 .strokeBorder(
-                    !viewModel.searchQuery.isEmpty
+                    (!viewModel.searchQuery.isEmpty || viewModel.isAdvancedSearchActive)
                         ? Color.accentColor.opacity(0.75)
                         : Color.primary.opacity(0.14),
                     lineWidth: 0.8
                 )
         )
+    }
+
+    private var advancedSearchPopover: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Label(
+                    loc.text(es: "Buscador avanzado", en: "Advanced Search"),
+                    systemImage: "magnifyingglass.circle.fill"
+                )
+                .font(.system(size: 13, weight: .semibold))
+                Spacer()
+                if viewModel.isAdvancedSearchActive || viewModel.advancedSearchOptions.hasActiveFilters {
+                    Button(loc.text(es: "Limpiar", en: "Reset")) {
+                        viewModel.clearAdvancedSearch()
+                    }
+                    .buttonStyle(.link)
+                    .font(.system(size: 11.5))
+                }
+            }
+
+            Divider()
+
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text(loc.text(es: "Texto:", en: "Query:"))
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 90, alignment: .leading)
+                    TextField(
+                        loc.text(es: "Nombre o contenido…", en: "Name or content…"),
+                        text: $viewModel.searchQuery
+                    )
+                    .textFieldStyle(.roundedBorder)
+                }
+
+                HStack {
+                    Text(loc.text(es: "Tipo:", en: "File type:"))
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 90, alignment: .leading)
+                    Picker("", selection: $viewModel.advancedSearchOptions.fileType) {
+                        ForEach(AdvancedSearchFileType.allCases) { type in
+                            Text(type.localizedTitle(using: loc)).tag(type)
+                        }
+                    }
+                    .labelsHidden()
+                }
+
+                HStack {
+                    Text(loc.text(es: "Extensión:", en: "Extension:"))
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 90, alignment: .leading)
+                    TextField(
+                        loc.text(es: "Ej: pdf, jpg, swift", en: "e.g. pdf, jpg, swift"),
+                        text: $viewModel.advancedSearchOptions.customExtension
+                    )
+                    .textFieldStyle(.roundedBorder)
+                }
+
+                HStack {
+                    Text(loc.text(es: "Tamaño:", en: "File size:"))
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 90, alignment: .leading)
+                    Picker("", selection: $viewModel.advancedSearchOptions.sizeComparison) {
+                        ForEach(AdvancedSearchSizeComparison.allCases) { cmp in
+                            Text(cmp.localizedTitle(using: loc)).tag(cmp)
+                        }
+                    }
+                    .labelsHidden()
+                    .frame(width: 118)
+
+                    if viewModel.advancedSearchOptions.sizeComparison != .any {
+                        TextField("10", text: $viewModel.advancedSearchOptions.sizeValueText)
+                            .textFieldStyle(.roundedBorder)
+                            .frame(width: 56)
+
+                        Picker("", selection: $viewModel.advancedSearchOptions.sizeUnit) {
+                            ForEach(AdvancedSearchSizeUnit.allCases) { unit in
+                                Text(unit.rawValue).tag(unit)
+                            }
+                        }
+                        .labelsHidden()
+                        .frame(width: 62)
+                    }
+                }
+            }
+
+            Divider()
+
+            VStack(alignment: .leading, spacing: 6) {
+                Toggle(
+                    loc.text(
+                        es: "Incluir subcarpetas",
+                        en: "Include subfolders"
+                    ),
+                    isOn: $viewModel.advancedSearchOptions.includeSubfolders
+                )
+                .font(.system(size: 12))
+
+                Toggle(
+                    loc.text(
+                        es: "Buscar dentro de archivos (Texto, PDF e Imágenes OCR)",
+                        en: "Search inside files (Text, PDF & Image OCR)"
+                    ),
+                    isOn: $viewModel.advancedSearchOptions.searchInsideContent
+                )
+                .font(.system(size: 12))
+            }
+
+            HStack {
+                Spacer()
+                Button(loc.text(es: "Cancelar", en: "Cancel")) {
+                    isAdvancedSearchPresented = false
+                }
+                .buttonStyle(.bordered)
+
+                Button(loc.text(es: "Buscar", en: "Search")) {
+                    isAdvancedSearchPresented = false
+                    viewModel.runAdvancedSearch()
+                }
+                .buttonStyle(.borderedProminent)
+                .keyboardShortcut(.defaultAction)
+            }
+        }
+        .padding(14)
+        .frame(width: 365)
     }
 }
 

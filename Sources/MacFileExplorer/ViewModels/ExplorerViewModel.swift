@@ -71,6 +71,112 @@ public final class ExplorerViewModel {
     public var searchQuery: String = "" {
         didSet {
             guard searchQuery != oldValue else { return }
+            if isAdvancedSearchActive {
+                runAdvancedSearch()
+            } else {
+                rebuildDisplayedItems()
+            }
+        }
+    }
+
+    public var advancedSearchOptions = AdvancedSearchOptions()
+    public private(set) var isAdvancedSearchActive: Bool = false
+    private var advancedSearchTask: Task<Void, Never>?
+
+    /// Ejecuta la búsqueda avanzada (local instantánea o profunda en segundo plano para subcarpetas y contenido).
+    public func runAdvancedSearch() {
+        advancedSearchTask?.cancel()
+        advancedSearchTask = nil
+
+        guard advancedSearchOptions.hasActiveFilters else {
+            isAdvancedSearchActive = false
+            rebuildDisplayedItems()
+            return
+        }
+
+        isAdvancedSearchActive = true
+        let opts = advancedSearchOptions
+        let query = searchQuery
+        let includeHidden = showHiddenFiles
+
+        if !opts.requiresDeepScan {
+            let trimmedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
+            let customExts = opts.customExtensionsSet
+            let threshold = opts.targetByteThreshold
+
+            let matched = allItems.filter { item in
+                if !includeHidden && item.isHidden { return false }
+                if !customExts.isEmpty {
+                    guard !item.isDirectory, customExts.contains(item.fileExtension.lowercased()) else { return false }
+                } else if !opts.fileType.matches(url: item.url, isDirectory: item.isDirectory, isPackage: item.isPackage) {
+                    return false
+                }
+                if let threshold {
+                    guard !item.isDirectory, let bytes = item.size else { return false }
+                    if opts.sizeComparison == .greaterThan && bytes < threshold { return false }
+                    if opts.sizeComparison == .lessThan && bytes > threshold { return false }
+                }
+                if !trimmedQuery.isEmpty {
+                    return item.name.localizedCaseInsensitiveContains(trimmedQuery)
+                        || item.kindDescription.localizedCaseInsensitiveContains(trimmedQuery)
+                }
+                return true
+            }
+            displayedItems = Self.computeDisplayedItems(
+                from: matched,
+                showHiddenFiles: includeHidden,
+                searchQuery: "",
+                sortField: sortField,
+                sortAscending: sortAscending
+            )
+            return
+        }
+
+        let targetDir = currentDirectoryURL
+        let loc = LocalizationManager.shared
+        isLoading = true
+        backgroundTaskMessage = loc.text(
+            es: opts.searchInsideContent ? "Buscando dentro de archivos…" : "Buscando en subcarpetas…",
+            en: opts.searchInsideContent ? "Searching inside files…" : "Searching subfolders…"
+        )
+        backgroundTaskProgress = nil
+
+        advancedSearchTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            defer {
+                self.isLoading = false
+                self.backgroundTaskMessage = nil
+                self.backgroundTaskProgress = nil
+            }
+            let found = await AdvancedSearchService.performSearch(
+                query: query,
+                options: opts,
+                in: targetDir,
+                includeHidden: includeHidden
+            )
+            guard !Task.isCancelled, self.isAdvancedSearchActive else { return }
+            self.displayedItems = Self.computeDisplayedItems(
+                from: found,
+                showHiddenFiles: includeHidden,
+                searchQuery: "",
+                sortField: self.sortField,
+                sortAscending: self.sortAscending
+            )
+        }
+    }
+
+    /// Limpia los filtros de búsqueda avanzada y restaura la vista normal de la carpeta.
+    public func clearAdvancedSearch() {
+        advancedSearchTask?.cancel()
+        advancedSearchTask = nil
+        advancedSearchOptions = AdvancedSearchOptions()
+        isAdvancedSearchActive = false
+        backgroundTaskMessage = nil
+        backgroundTaskProgress = nil
+        isLoading = false
+        if !searchQuery.isEmpty {
+            searchQuery = ""
+        } else {
             rebuildDisplayedItems()
         }
     }

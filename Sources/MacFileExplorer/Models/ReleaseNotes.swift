@@ -84,6 +84,14 @@ public enum ReleaseNotesCatalog {
             dateLabelEN: "Nov 16, 2026",
             items: [
                 ReleaseNoteItem(
+                    id: "advanced-search-popover",
+                    icon: "line.3.horizontal.decrease.circle",
+                    titleES: "Buscador avanzado en la barra de búsqueda",
+                    titleEN: "Advanced Search in the search bar",
+                    summaryES: "Ahora puedes hacer clic en el icono de filtros a la derecha de la barra de búsqueda para filtrar por tipo de archivo o extensión, tamaño mínimo/máximo, incluir subcarpetas y buscar texto dentro de archivos de texto, PDFs e imágenes.",
+                    summaryEN: "Click the filter icon on the right side of the search bar to filter by file type or extension, minimum/maximum file size, include subfolders, and search inside text files, PDFs, and images."
+                ),
+                ReleaseNoteItem(
                     id: "privacy-stripper-quick-action",
                     icon: "shield.lefthalf.filled",
                     titleES: "Limpiador de metadatos (Privacy Stripper) en Quick Actions",
