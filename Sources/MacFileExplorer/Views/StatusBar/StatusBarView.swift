@@ -67,16 +67,22 @@ public struct StatusBarView: View {
 
             Spacer()
 
-            // 4. Estado de carga + Conmutadores rápidos de vista (Esquina inferior derecha Windows 11)
-            if viewModel.isLoading {
-                HStack(spacing: 5) {
-                    ProgressView()
-                        .controlSize(.mini)
-                        .scaleEffect(0.7)
-                    Text(loc.text(es: "Cargando...", en: "Loading..."))
-                        .font(.system(size: 11))
-                        .foregroundStyle(.secondary)
-                }
+            // 4. Barra de progreso lineal unificada para procesos largos o carga de carpeta
+            if let archiveMsg = viewModel.archiveProgressMessage {
+                statusProgressIndicator(
+                    message: archiveMsg,
+                    progress: viewModel.archiveProgressValue
+                )
+            } else if let taskMsg = viewModel.backgroundTaskMessage {
+                statusProgressIndicator(
+                    message: taskMsg,
+                    progress: viewModel.backgroundTaskProgress
+                )
+            } else if viewModel.isLoading {
+                statusProgressIndicator(
+                    message: loc.text(es: "Cargando...", en: "Loading..."),
+                    progress: nil
+                )
             }
 
             // Slider de tamaño de icono estilo Finder (visible en Large icons)
@@ -171,6 +177,41 @@ public struct StatusBarView: View {
         return loc.text(
             es: "\(count) \(count == 1 ? "elemento seleccionado" : "elementos seleccionados")",
             en: "\(count) \(count == 1 ? "item selected" : "items selected")"
+        )
+    }
+
+    @ViewBuilder
+    private func statusProgressIndicator(message: String, progress: Double?) -> some View {
+        HStack(spacing: 7) {
+            Text(message)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .truncationMode(.tail)
+
+            if let progress {
+                ProgressView(value: min(max(progress, 0.0), 1.0), total: 1.0)
+                    .progressViewStyle(.linear)
+                    .controlSize(.small)
+                    .tint(Color.accentColor)
+                    .frame(width: 110)
+
+                Text("\(Int((min(max(progress, 0.0), 1.0) * 100).rounded()))%")
+                    .font(.system(size: 10.5, weight: .semibold).monospacedDigit())
+                    .foregroundStyle(Color.accentColor)
+            } else {
+                ProgressView()
+                    .progressViewStyle(.linear)
+                    .controlSize(.small)
+                    .tint(Color.accentColor)
+                    .frame(width: 110)
+            }
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 2)
+        .background(
+            Capsule(style: .continuous)
+                .fill(Color.accentColor.opacity(0.08))
         )
     }
 }

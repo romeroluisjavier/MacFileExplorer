@@ -84,6 +84,14 @@ public enum ReleaseNotesCatalog {
             dateLabelEN: "Nov 16, 2026",
             items: [
                 ReleaseNoteItem(
+                    id: "status-bar-linear-progress",
+                    icon: "chart.bar.fill",
+                    titleES: "Barra de progreso en la barra inferior",
+                    titleEN: "Progress bar in the bottom status bar",
+                    summaryES: "Cuando copiás, movés, eliminás, comprimís o cargás carpetas pesadas, ahora ves una barra de progreso integrada directamente en la barra inferior junto al conteo y tamaño de archivos.",
+                    summaryEN: "When copying, moving, deleting, compressing, or loading large folders, a progress bar now appears directly in the bottom status bar next to the item count and size."
+                ),
+                ReleaseNoteItem(
                     id: "rich-quicklook-markdown-json-code",
                     icon: "doc.richtext",
                     titleES: "Vista rápida mejorada para Markdown, JSON y código",

@@ -172,6 +172,10 @@ public final class ExplorerViewModel {
     public var archiveProgressMessage: String? = nil
     public var archiveProgressValue: Double? = nil
 
+    /// Estado de progreso para tareas largas en segundo plano (copiar, mover, eliminar, renombrar, etc.).
+    public var backgroundTaskMessage: String? = nil
+    public var backgroundTaskProgress: Double? = nil
+
     // MARK: - Historial de Deshacer / Rehacer (`Cmd+Z` / `Cmd+Shift+Z`)
 
     public private(set) var undoStack: [ExplorerUndoEntry] = []
@@ -1247,9 +1251,23 @@ public final class ExplorerViewModel {
     public func pasteItems() {
         guard clipboardManager.hasItemsToPaste else { return }
         let targetDir = currentDirectoryURL
-        let previousCutParents = Set(clipboardManager.payload?.urls.map { $0.deletingLastPathComponent().standardizedFileURL } ?? [])
+        let payload = clipboardManager.payload
+        let previousCutParents = Set(payload?.urls.map { $0.deletingLastPathComponent().standardizedFileURL } ?? [])
+        let isCut = payload?.mode == .cut
+        let itemCount = payload?.urls.count ?? 0
+        let loc = LocalizationManager.shared
+        let taskMsg = isCut
+            ? loc.text(es: "Moviendo \(itemCount) elemento(s)…", en: "Moving \(itemCount) item(s)…")
+            : loc.text(es: "Copiando \(itemCount) elemento(s)…", en: "Copying \(itemCount) item(s)…")
+
+        backgroundTaskMessage = taskMsg
+        backgroundTaskProgress = nil
 
         Task {
+            defer {
+                backgroundTaskMessage = nil
+                backgroundTaskProgress = nil
+            }
             do {
                 let result = try await clipboardManager.pasteWithResult(
                     into: targetDir,
@@ -1381,7 +1399,19 @@ public final class ExplorerViewModel {
         guard !urlsToDelete.isEmpty else { return }
         cancelRename()
 
+        let loc = LocalizationManager.shared
+        let count = urlsToDelete.count
+        backgroundTaskMessage = loc.text(
+            es: "Moviendo \(count) elemento(s) a la Papelera…",
+            en: "Moving \(count) item(s) to Trash…"
+        )
+        backgroundTaskProgress = nil
+
         Task {
+            defer {
+                backgroundTaskMessage = nil
+                backgroundTaskProgress = nil
+            }
             do {
                 let trashedPairs = try await fileSystemService.moveItemsToTrashWithPairs(urlsToDelete)
                 if !trashedPairs.isEmpty {
