@@ -63,13 +63,14 @@ public struct ItemPropertiesModalView: View {
             Divider()
 
             ItemPropertiesContentView(item: item)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             Divider()
 
             // Pie del modal con botón Aceptar / Cerrar
             footerBar
         }
-        .frame(width: 440, height: item.isDirectory ? 545 : 515)
+        .frame(width: 440, height: item.isDirectory ? 560 : 560)
         .background(Color(nsColor: .windowBackgroundColor))
     }
 
@@ -154,7 +155,7 @@ public struct ItemPropertiesContentView: View {
     }
 
     public var body: some View {
-        ScrollView(.vertical, showsIndicators: false) {
+        ScrollView(.vertical, showsIndicators: true) {
             VStack(alignment: .leading, spacing: 14) {
                 // 1. Identidad del archivo o carpeta (Icono/Miniatura + Nombre)
                 identitySection
