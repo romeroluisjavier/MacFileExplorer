@@ -42,9 +42,6 @@ public struct FileGridView: View {
                                 minHeight: outerGeo.size.height
                             )
                             .contentShape(Rectangle())
-                            .onTapGesture {
-                                viewModel.clearSelection()
-                            }
 
                         LazyVGrid(columns: columns, alignment: .leading, spacing: 14) {
                             ForEach(viewModel.displayedItems) { item in
@@ -66,7 +63,7 @@ public struct FileGridView: View {
                         RubberBandSelectionOverlay(rect: currentDragRect)
                     }
                     .background(
-                        NativeFileDragCanvas(viewModel: viewModel, itemFrames: itemFrames)
+                        NativeFileDragCanvas(viewModel: viewModel, itemFrames: itemFrames, isGridMode: true)
                     )
                     .coordinateSpace(name: coordinateSpaceName)
                     .onPreferenceChange(ItemFramePreferenceKey.self) { frames in
@@ -234,26 +231,13 @@ private struct FileGridTileView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.top, 4)
 
-                // Casilla de selección rápida en la esquina superior izquierda (Estilo Windows 11 Explorer)
+                // Casilla de selección rápida en la esquina superior izquierda (clic manejado por DragCanvasNSView)
                 if isSelected || isHovered {
-                    Button {
-                        if isSelected {
-                            viewModel.selectedItemIDs.remove(item.id)
-                        } else {
-                            viewModel.selectedItemIDs.insert(item.id)
-                            viewModel.selectionAnchorID = item.id
-                        }
-                    } label: {
-                        Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                            .font(.system(size: max(iconSize * 0.2, 12), weight: .semibold))
-                            .foregroundStyle(isSelected ? Color.accentColor : Color.secondary.opacity(0.65))
-                            .padding(3)
-                    }
-                    .buttonStyle(.plain)
-                    .help(isSelected
-                        ? LocalizationManager.shared.text(es: "Quitar de la selección", en: "Remove from selection")
-                        : LocalizationManager.shared.text(es: "Añadir a la selección", en: "Add to selection")
-                    )
+                    Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                        .font(.system(size: max(iconSize * 0.2, 12), weight: .semibold))
+                        .foregroundStyle(isSelected ? Color.accentColor : Color.secondary.opacity(0.65))
+                        .padding(3)
+                        .allowsHitTesting(false)
                 }
             }
 
@@ -301,11 +285,6 @@ private struct FileGridTileView: View {
             viewModel: viewModel,
             isTargeted: $isDropTargeted
         )
-        .onTapGesture {
-            guard !isRenaming else { return }
-            let modifiers = KeyboardShortcuts.currentEventModifiers
-            viewModel.handlePrimaryClick(on: item, modifiers: modifiers)
-        }
         .onHover { hovering in
             isHovered = hovering
         }

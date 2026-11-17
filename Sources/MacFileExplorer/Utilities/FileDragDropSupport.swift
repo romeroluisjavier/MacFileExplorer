@@ -380,22 +380,26 @@ public struct QuickAccessPinDropDelegate: DropDelegate {
 public struct NativeFileDragCanvas: NSViewRepresentable {
     public let viewModel: ExplorerViewModel
     public let itemFrames: [FileItem.ID: CGRect]
+    public let isGridMode: Bool
 
-    public init(viewModel: ExplorerViewModel, itemFrames: [FileItem.ID: CGRect]) {
+    public init(viewModel: ExplorerViewModel, itemFrames: [FileItem.ID: CGRect], isGridMode: Bool = false) {
         self.viewModel = viewModel
         self.itemFrames = itemFrames
+        self.isGridMode = isGridMode
     }
 
     public func makeNSView(context: Context) -> DragCanvasNSView {
         let view = DragCanvasNSView()
         view.viewModel = viewModel
         view.itemFrames = itemFrames
+        view.isGridMode = isGridMode
         return view
     }
 
     public func updateNSView(_ nsView: DragCanvasNSView, context: Context) {
         nsView.viewModel = viewModel
         nsView.itemFrames = itemFrames
+        nsView.isGridMode = isGridMode
     }
 
     public static func dismantleNSView(_ nsView: DragCanvasNSView, coordinator: ()) {
@@ -407,6 +411,7 @@ public struct NativeFileDragCanvas: NSViewRepresentable {
 public final class DragCanvasNSView: NSView, NSDraggingSource {
     weak var viewModel: ExplorerViewModel?
     var itemFrames: [FileItem.ID: CGRect] = [:]
+    var isGridMode: Bool = false
 
     private struct PendingDrag {
         let item: FileItem
@@ -416,13 +421,15 @@ public final class DragCanvasNSView: NSView, NSDraggingSource {
 
     private var mouseMonitor: Any?
     private var pendingDrag: PendingDrag?
+    private var pendingDeselectOthersItem: FileItem?
+    private var mouseDownEmptySpacePoint: NSPoint?
     private var isDraggingSessionActive: Bool = false
     private var activeDraggedURLs: [URL] = []
 
     public override var isFlipped: Bool { true }
 
     public override func hitTest(_ point: NSPoint) -> NSView? {
-        // Transparente a clics, hovers, menú contextual y botones de casilla de SwiftUI
+        // Transparente a clics, hovers, menú contextual y botones de SwiftUI
         return nil
     }
 
@@ -449,7 +456,7 @@ public final class DragCanvasNSView: NSView, NSDraggingSource {
     private func installMonitorIfNeeded() {
         guard mouseMonitor == nil else { return }
         mouseMonitor = NSEvent.addLocalMonitorForEvents(
-            matching: [.leftMouseDown, .leftMouseDragged, .leftMouseUp]
+            matching: [.leftMouseDown, .leftMouseDragged, .leftMouseUp, .rightMouseDown]
         ) { [weak self] event in
             guard Thread.isMainThread else { return event }
             let box = MainThreadEventBox(event: event)
@@ -466,51 +473,153 @@ public final class DragCanvasNSView: NSView, NSDraggingSource {
             mouseMonitor = nil
         }
         pendingDrag = nil
+        pendingDeselectOthersItem = nil
+        mouseDownEmptySpacePoint = nil
+    }
+
+    private func resolveCanvasHit(
+        for event: NSEvent
+    ) -> (localPoint: NSPoint, matchedItem: FileItem?, matchedFrame: CGRect?)? {
+        guard !isDraggingSessionActive,
+              RunLoop.current.currentMode != .eventTracking,
+              NSApp.modalWindow == nil,
+              let hostWindow = window,
+              event.window === hostWindow,
+              hostWindow.attachedSheet == nil,
+              hostWindow.tabGroup?.selectedWindow == nil || hostWindow.tabGroup?.selectedWindow === hostWindow,
+              !isHiddenOrHasHiddenAncestor,
+              let viewModel,
+              viewModel.renamingItemID == nil else {
+            return nil
+        }
+
+        let locationInWindow = event.locationInWindow
+        if let hit = hostWindow.contentView?.hitTest(locationInWindow),
+           hit is NSScroller || hit is NSTextView || hit is NSText || hit is NSControl {
+            return nil
+        }
+
+        if let scrollView = enclosingScrollView {
+            let clipPoint = scrollView.contentView.convert(locationInWindow, from: nil)
+            guard scrollView.contentView.bounds.contains(clipPoint) else {
+                return nil
+            }
+        }
+
+        let localPoint = convert(locationInWindow, from: nil)
+        guard bounds.contains(localPoint), visibleRect.contains(localPoint) else {
+            return nil
+        }
+
+        if let matched = itemFrames.first(where: { $0.value.contains(localPoint) }),
+           let item = viewModel.displayedItems.first(where: { $0.id == matched.key }) {
+            return (localPoint, item, matched.value)
+        }
+        return (localPoint, nil, nil)
     }
 
     private func processMouseEvent(_ event: NSEvent) -> Bool {
         switch event.type {
+        case .rightMouseDown:
+            pendingDrag = nil
+            pendingDeselectOthersItem = nil
+            mouseDownEmptySpacePoint = nil
+
+            guard let viewModel, let hit = resolveCanvasHit(for: event) else {
+                return false
+            }
+            if !viewModel.isEditingAddressBar, let hostWindow = window {
+                KeyboardShortcuts.resignTextFocus(in: hostWindow)
+            }
+            if let item = hit.matchedItem, !viewModel.selectedItemIDs.contains(item.id) {
+                viewModel.selectedItemIDs = [item.id]
+                viewModel.selectionAnchorID = item.id
+                viewModel.selectionFocusID = item.id
+            }
+            return false
+
         case .leftMouseDown:
             pendingDrag = nil
-            guard !isDraggingSessionActive,
-                  event.clickCount == 1,
-                  let hostWindow = window,
-                  event.window === hostWindow,
-                  hostWindow.tabGroup?.selectedWindow == nil || hostWindow.tabGroup?.selectedWindow === hostWindow,
-                  !isHiddenOrHasHiddenAncestor,
+            pendingDeselectOthersItem = nil
+            mouseDownEmptySpacePoint = nil
+
+            guard !event.modifierFlags.contains(.control),
                   let viewModel,
-                  viewModel.renamingItemID == nil else {
+                  let hit = resolveCanvasHit(for: event) else {
                 return false
             }
 
-            let locationInWindow = event.locationInWindow
-            if let hit = hostWindow.contentView?.hitTest(locationInWindow),
-               hit is NSScroller || hit is NSTextView {
-                return false
-            }
-
-            let localPoint = convert(locationInWindow, from: nil)
-            guard bounds.contains(localPoint), visibleRect.contains(localPoint) else {
-                return false
-            }
-
-            if !viewModel.isEditingAddressBar {
+            if !viewModel.isEditingAddressBar, let hostWindow = window {
                 KeyboardShortcuts.resignTextFocus(in: hostWindow)
             }
 
-            guard let matched = itemFrames.first(where: { $0.value.contains(localPoint) }),
-                  let item = viewModel.displayedItems.first(where: { $0.id == matched.key }) else {
+            guard let item = hit.matchedItem, let frame = hit.matchedFrame else {
+                if event.clickCount == 1 {
+                    mouseDownEmptySpacePoint = hit.localPoint
+                }
                 return false
+            }
+
+            let modifiers = KeyboardShortcuts.eventModifiers(from: event.modifierFlags)
+
+            // Casilla de selección rápida (esquina superior izquierda en vista Grilla)
+            if isGridMode,
+               event.clickCount == 1,
+               !modifiers.contains(.command),
+               !modifiers.contains(.shift),
+               !viewModel.selectedItemIDs.isEmpty,
+               (hit.localPoint.x - frame.minX) <= 30,
+               (hit.localPoint.y - frame.minY) <= 30 {
+                if viewModel.selectedItemIDs.contains(item.id) {
+                    viewModel.selectedItemIDs.remove(item.id)
+                } else {
+                    viewModel.selectedItemIDs.insert(item.id)
+                    viewModel.selectionAnchorID = item.id
+                    viewModel.selectionFocusID = item.id
+                }
+                return false
+            }
+
+            // Doble clic: abrir inmediatamente
+            if event.clickCount >= 2,
+               !modifiers.contains(.command),
+               !modifiers.contains(.shift) {
+                if !viewModel.selectedItemIDs.contains(item.id) {
+                    viewModel.handleSelection(of: item, modifiers: [])
+                }
+                viewModel.openItem(item)
+                return false
+            }
+
+            // Clic simple: seleccionar instantáneamente (0 ms) salvo clic sobre selección múltiple para permitir arrastrar
+            if modifiers.contains(.command) || modifiers.contains(.shift) {
+                viewModel.handleSelection(of: item, modifiers: modifiers)
+            } else if viewModel.selectedItemIDs.contains(item.id) {
+                if viewModel.selectedItemIDs.count > 1 {
+                    pendingDeselectOthersItem = item
+                } else {
+                    viewModel.selectionAnchorID = item.id
+                    viewModel.selectionFocusID = item.id
+                }
+            } else {
+                viewModel.handleSelection(of: item, modifiers: [])
             }
 
             pendingDrag = PendingDrag(
                 item: item,
-                startWindowPoint: locationInWindow,
+                startWindowPoint: event.locationInWindow,
                 mouseDownEvent: event
             )
             return false
 
         case .leftMouseDragged:
+            if let emptyPoint = mouseDownEmptySpacePoint {
+                let localPoint = convert(event.locationInWindow, from: nil)
+                if hypot(localPoint.x - emptyPoint.x, localPoint.y - emptyPoint.y) >= 5.0 {
+                    mouseDownEmptySpacePoint = nil
+                }
+            }
+
             guard let pending = pendingDrag,
                   !isDraggingSessionActive,
                   let hostWindow = window,
@@ -527,11 +636,27 @@ public final class DragCanvasNSView: NSView, NSDraggingSource {
             }
 
             pendingDrag = nil
+            pendingDeselectOthersItem = nil
             startDraggingSession(for: pending.item, triggerEvent: event, viewModel: viewModel)
             return true
 
         case .leftMouseUp:
+            let hadPendingDrag = (pendingDrag != nil)
             pendingDrag = nil
+
+            if !isDraggingSessionActive {
+                if let itemToSelectOnly = pendingDeselectOthersItem, hadPendingDrag {
+                    viewModel?.handleSelection(of: itemToSelectOnly, modifiers: [])
+                } else if let emptyPoint = mouseDownEmptySpacePoint {
+                    let localPoint = convert(event.locationInWindow, from: nil)
+                    if hypot(localPoint.x - emptyPoint.x, localPoint.y - emptyPoint.y) < 5.0 {
+                        viewModel?.clearSelection()
+                    }
+                }
+            }
+
+            pendingDeselectOthersItem = nil
+            mouseDownEmptySpacePoint = nil
             return false
 
         default:

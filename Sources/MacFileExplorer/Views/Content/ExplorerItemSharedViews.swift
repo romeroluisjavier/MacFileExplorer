@@ -406,7 +406,7 @@ public struct ExplorerItemContextMenu: View {
                 }
             }
 
-            let targetURLs = targetURLsToOpen()
+            let targetURLs = currentTargetURLs
             let archiveURLs = targetURLs.filter { ArchiveService.isArchiveURL($0) }
 
             Menu {
@@ -626,18 +626,43 @@ public struct ExplorerItemContextMenu: View {
         }
     }
 
-    private func defaultApplicationURL() -> URL? {
-        NSWorkspace.shared.urlForApplication(toOpen: item.url)?.standardizedFileURL
+    @MainActor
+    private enum OpenWithCache {
+        struct CompatibleAppsEntry {
+            let fetchedAt: Date
+            let defaultApp: URL?
+            let otherApps: [URL]
+        }
+
+        static var appNames: [URL: String] = [:]
+        static var appIcons: [URL: NSImage] = [:]
+        static var compatibleAppsByKey: [String: CompatibleAppsEntry] = [:]
+        static let ttl: TimeInterval = 30
     }
 
-    private func otherCompatibleApplicationURLs(excluding defaultAppURL: URL?) -> [URL] {
+    private func cacheKeyForOpenWith() -> String? {
+        if item.isNavigableFolder { return "__folder__" }
+        let ext = item.url.pathExtension.lowercased()
+        return ext.isEmpty ? nil : "ext:\(ext)"
+    }
+
+    private func compatibleAppsPair() -> (defaultApp: URL?, otherApps: [URL]) {
+        let now = Date()
+        if let key = cacheKeyForOpenWith(),
+           let cached = OpenWithCache.compatibleAppsByKey[key],
+           now.timeIntervalSince(cached.fetchedAt) < OpenWithCache.ttl {
+            return (cached.defaultApp, cached.otherApps)
+        }
+
+        let defaultApp = NSWorkspace.shared.urlForApplication(toOpen: item.url)?.standardizedFileURL
         let rawApps = NSWorkspace.shared.urlsForApplications(toOpen: item.url)
         var seen: Set<URL> = []
-        if let defaultAppURL {
-            seen.insert(defaultAppURL.standardizedFileURL)
+        if let defaultApp {
+            seen.insert(defaultApp)
         }
 
         var uniqueApps: [URL] = []
+        uniqueApps.reserveCapacity(min(rawApps.count, 16))
         for url in rawApps {
             let std = url.standardizedFileURL
             guard !seen.contains(std) else { continue }
@@ -648,23 +673,62 @@ public struct ExplorerItemContextMenu: View {
         uniqueApps.sort {
             appDisplayName(for: $0).localizedStandardCompare(appDisplayName(for: $1)) == .orderedAscending
         }
-        return uniqueApps
+
+        if let key = cacheKeyForOpenWith() {
+            OpenWithCache.compatibleAppsByKey[key] = OpenWithCache.CompatibleAppsEntry(
+                fetchedAt: now,
+                defaultApp: defaultApp,
+                otherApps: uniqueApps
+            )
+        }
+        return (defaultApp, uniqueApps)
+    }
+
+    private func defaultApplicationURL() -> URL? {
+        compatibleAppsPair().defaultApp
+    }
+
+    private func otherCompatibleApplicationURLs(excluding defaultAppURL: URL?) -> [URL] {
+        let allOther = compatibleAppsPair().otherApps
+        guard let defaultAppURL else { return allOther }
+        return allOther.filter { $0 != defaultAppURL }
     }
 
     private func appDisplayName(for appURL: URL) -> String {
-        let rawName = FileManager.default.displayName(atPath: appURL.path(percentEncoded: false))
-        if rawName.lowercased().hasSuffix(".app") {
-            return String(rawName.dropLast(4))
+        if let cached = OpenWithCache.appNames[appURL] {
+            return cached
         }
-        let stem = appURL.deletingPathExtension().lastPathComponent
-        return stem.isEmpty ? rawName : stem
+        let rawName = FileManager.default.displayName(atPath: appURL.path(percentEncoded: false))
+        let result: String
+        if rawName.lowercased().hasSuffix(".app") {
+            result = String(rawName.dropLast(4))
+        } else {
+            let stem = appURL.deletingPathExtension().lastPathComponent
+            result = stem.isEmpty ? rawName : stem
+        }
+        OpenWithCache.appNames[appURL] = result
+        return result
     }
 
     private func appMenuIcon(for appURL: URL) -> NSImage {
+        if let cached = OpenWithCache.appIcons[appURL] {
+            return cached
+        }
         let rawIcon = NSWorkspace.shared.icon(forFile: appURL.path(percentEncoded: false))
         let sized = (rawIcon.copy() as? NSImage) ?? rawIcon
         sized.size = NSSize(width: 16, height: 16)
+        OpenWithCache.appIcons[appURL] = sized
         return sized
+    }
+
+    private var currentTargetURLs: [URL] {
+        if viewModel.selectedItemIDs.contains(item.id) {
+            let selectedURLs = viewModel.selectedItems.map(\.url)
+            if !selectedURLs.isEmpty {
+                return selectedURLs
+            }
+        }
+        return [item.url]
     }
 
     private func targetURLsToOpen() -> [URL] {

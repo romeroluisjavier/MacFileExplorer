@@ -47,9 +47,6 @@ public struct FileDetailsTableView: View {
                                     minHeight: max(outerGeo.size.height, CGFloat(viewModel.displayedItems.count) * 30 + 60)
                                 )
                                 .contentShape(Rectangle())
-                                .onTapGesture {
-                                    viewModel.clearSelection()
-                                }
 
                             LazyVStack(spacing: 1) {
                                 ForEach(viewModel.displayedItems) { item in
@@ -544,11 +541,6 @@ private struct FileDetailsRowView: View {
             viewModel: viewModel,
             isTargeted: $isDropTargeted
         )
-        .onTapGesture {
-            guard !isRenaming else { return }
-            let modifiers = KeyboardShortcuts.currentEventModifiers
-            viewModel.handlePrimaryClick(on: item, modifiers: modifiers)
-        }
         .onHover { hovering in
             isHovered = hovering
         }

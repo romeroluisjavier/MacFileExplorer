@@ -1153,25 +1153,6 @@ public final class ExplorerViewModel {
     // MARK: - Selección Múltiple (Clic, Cmd+Clic, Shift+Clic, Cuadro de Arrastre)
 
     /// Gestiona la selección de un ítem respetando los modificadores nativos (`Shift` para rango, `Cmd` para alternar).
-    private var lastClickedItemID: URL?
-    private var lastClickDate: Date = .distantPast
-
-    /// Maneja clic primario con selección instantánea (0 ms de espera) y detección de doble clic.
-    public func handlePrimaryClick(on item: FileItem, modifiers: EventModifiers) {
-        let now = Date()
-        if modifiers.isEmpty,
-           lastClickedItemID == item.id,
-           now.timeIntervalSince(lastClickDate) <= NSEvent.doubleClickInterval {
-            lastClickedItemID = nil
-            lastClickDate = .distantPast
-            openItem(item)
-            return
-        }
-        lastClickedItemID = item.id
-        lastClickDate = now
-        handleSelection(of: item, modifiers: modifiers)
-    }
-
     public func handleSelection(of item: FileItem, modifiers: EventModifiers) {
         if renamingItemID == nil && !isEditingAddressBar {
             KeyboardShortcuts.resignTextFocus()

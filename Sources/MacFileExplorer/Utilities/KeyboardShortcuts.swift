@@ -8,7 +8,11 @@ public enum KeyboardShortcuts {
 
     /// Obtiene los `EventModifiers` de SwiftUI correspondientes al evento actual de `NSEvent`.
     public static var currentEventModifiers: EventModifiers {
-        let flags = NSEvent.modifierFlags
+        eventModifiers(from: NSEvent.modifierFlags)
+    }
+
+    /// Convierte `NSEvent.ModifierFlags` en `EventModifiers` de SwiftUI.
+    public static func eventModifiers(from flags: NSEvent.ModifierFlags) -> EventModifiers {
         var modifiers: EventModifiers = []
         if flags.contains(.shift) {
             modifiers.insert(.shift)
