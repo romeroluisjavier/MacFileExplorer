@@ -2455,6 +2455,39 @@ public final class ExplorerViewModel {
         }
     }
 
+    /// Elimina el fondo de las imágenes seleccionadas y guarda copias nuevas en formato PNG con fondo transparente.
+    public func removeBackgroundFromImages(_ urls: [URL]) async {
+        let imageURLs = urls.filter { QuickActionsService.isImageURL($0) }
+        guard !imageURLs.isEmpty else { return }
+
+        let loc = LocalizationManager.shared
+        backgroundTaskMessage = loc.text(
+            es: "Eliminando fondo y guardando PNG transparente…",
+            en: "Removing background & saving transparent PNG…"
+        )
+        backgroundTaskProgress = imageURLs.count > 1 ? 0.05 : nil
+
+        defer {
+            backgroundTaskMessage = nil
+            backgroundTaskProgress = nil
+        }
+
+        do {
+            let outputURLs = try await QuickActionsService.removeBackgroundFromImages(imageURLs) { [weak self] done, total in
+                guard total > 1 else { return }
+                let ratio = Double(done) / Double(total)
+                await MainActor.run {
+                    self?.backgroundTaskProgress = ratio
+                }
+            }
+            if !outputURLs.isEmpty {
+                await reloadDirectoryAndSelect(outputURLs, startRenameOn: nil)
+            }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
     public func moveURLsToTrashFromExternal(_ urls: [URL]) {
         moveURLsToTrash(urls)
     }

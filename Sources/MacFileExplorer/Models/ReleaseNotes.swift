@@ -84,6 +84,14 @@ public enum ReleaseNotesCatalog {
             dateLabelEN: "Nov 17, 2026",
             items: [
                 ReleaseNoteItem(
+                    id: "quick-actions-remove-background",
+                    icon: "person.and.background.dotted",
+                    titleES: "Eliminar fondo de imágenes en Quick Actions",
+                    titleEN: "Remove Image Background in Quick Actions",
+                    summaryES: "Al hacer clic derecho sobre una o varias imágenes (JPG, PNG, HEIC, etc.) y elegir Quick Actions → Eliminar fondo (PNG transparente), se separa automáticamente el sujeto u objeto principal y se guarda una imagen nueva en PNG con fondo transparente sin modificar la original.",
+                    summaryEN: "Right-clicking one or more images (JPG, PNG, HEIC, etc.) and selecting Quick Actions → Remove Background (Transparent PNG) automatically isolates the main subject and saves a new PNG with a transparent background without overwriting the original."
+                ),
+                ReleaseNoteItem(
                     id: "improved-ocr-image-search",
                     icon: "text.viewfinder",
                     titleES: "Búsqueda de texto en imágenes más precisa (OCR mejorado)",

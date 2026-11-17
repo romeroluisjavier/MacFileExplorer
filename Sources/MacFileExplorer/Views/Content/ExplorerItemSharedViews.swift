@@ -460,6 +460,18 @@ public struct ExplorerItemContextMenu: View {
                 Menu {
                     if !imageURLs.isEmpty {
                         Button {
+                            let urlsToProcess = targetURLsToOpen().filter { QuickActionsService.isImageURL($0) }
+                            Task { @MainActor in
+                                await viewModel.removeBackgroundFromImages(urlsToProcess)
+                            }
+                        } label: {
+                            Label(
+                                loc.text(es: "Eliminar fondo (PNG transparente)", en: "Remove Background (Transparent PNG)"),
+                                systemImage: "person.and.background.dotted"
+                            )
+                        }
+
+                        Button {
                             ensureSelected()
                             viewModel.quickActionImageConvertURLs = imageURLs
                         } label: {

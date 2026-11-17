@@ -6,6 +6,7 @@ import Foundation
 import ImageIO
 import PDFKit
 import UniformTypeIdentifiers
+import Vision
 
 public enum QuickActionImageFormat: String, CaseIterable, Identifiable, Sendable {
     case jpg
@@ -331,6 +332,96 @@ public enum QuickActionsService {
         let data = try encodeImage(rotatedImage, format: format, quality: 0.92, dpi: 72)
         try data.write(to: url, options: .atomic)
         return url
+    }
+
+    // MARK: - Imágenes: Eliminar Fondo (PNG con Transparencia)
+
+    /// Elimina el fondo de las imágenes indicadas utilizando Vision (`VNGenerateForegroundInstanceMaskRequest`)
+    /// y guarda cada resultado como un archivo nuevo en formato PNG con fondo transparente (`<nombre>_no_bg.png`).
+    public static func removeBackgroundFromImages(
+        _ urls: [URL],
+        onFileProcessed: (@Sendable (Int, Int) async -> Void)? = nil
+    ) async throws -> [URL] {
+        let imageURLs = urls.filter { isImageURL($0) }
+        var createdURLs: [URL] = []
+        createdURLs.reserveCapacity(imageURLs.count)
+        let total = imageURLs.count
+
+        for (index, url) in imageURLs.enumerated() {
+            let outputURL = try await Task.detached(priority: .userInitiated) {
+                try removeBackgroundFromSingleImage(at: url)
+            }.value
+            createdURLs.append(outputURL)
+            if let onFileProcessed {
+                await onFileProcessed(index + 1, total)
+            }
+        }
+        return createdURLs
+    }
+
+    private static func removeBackgroundFromSingleImage(at url: URL) throws -> URL {
+        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
+              let originalCGImage = CGImageSourceCreateImageAtIndex(source, 0, nil) else {
+            throw NSError(domain: "QuickActionsService", code: 30, userInfo: [
+                NSLocalizedDescriptionKey: "No se pudo leer la imagen \(url.lastPathComponent)."
+            ])
+        }
+
+        let props = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any]
+        let exifOrientation = (props?[kCGImagePropertyOrientation] as? NSNumber)?.int32Value ?? 1
+        let dpiValue = (props?[kCGImagePropertyDPIWidth] as? NSNumber)?.doubleValue ?? 72.0
+        let resolvedDPI = max(1, Int(dpiValue.rounded()))
+
+        var workingCIImage = CIImage(cgImage: originalCGImage)
+        if exifOrientation != 1 {
+            workingCIImage = workingCIImage.oriented(forExifOrientation: exifOrientation)
+        }
+
+        let handler = VNImageRequestHandler(ciImage: workingCIImage, options: [:])
+        let request = VNGenerateForegroundInstanceMaskRequest()
+        try handler.perform([request])
+
+        guard let observation = request.results?.first,
+              !observation.allInstances.isEmpty else {
+            throw NSError(domain: "QuickActionsService", code: 31, userInfo: [
+                NSLocalizedDescriptionKey: "No se detectó un objeto o persona principal para separar del fondo en \(url.lastPathComponent)."
+            ])
+        }
+
+        let maskedPixelBuffer = try observation.generateMaskedImage(
+            ofInstances: observation.allInstances,
+            from: handler,
+            croppedToInstancesExtent: false
+        )
+
+        let maskedCIImage = CIImage(cvPixelBuffer: maskedPixelBuffer)
+        let targetColorSpace: CGColorSpace
+        if let cgCS = originalCGImage.colorSpace, cgCS.model == .rgb {
+            targetColorSpace = cgCS
+        } else {
+            targetColorSpace = CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB()
+        }
+
+        let ciContext = CIContext(options: [.useSoftwareRenderer: false])
+        guard let outputCGImage = ciContext.createCGImage(
+            maskedCIImage,
+            from: maskedCIImage.extent,
+            format: .RGBA8,
+            colorSpace: targetColorSpace
+        ) else {
+            throw NSError(domain: "QuickActionsService", code: 32, userInfo: [
+                NSLocalizedDescriptionKey: "No se pudo generar el PNG con transparencia para \(url.lastPathComponent)."
+            ])
+        }
+
+        let pngData = try encodeImage(outputCGImage, format: .png, quality: 1.0, dpi: resolvedDPI)
+        let destURL = uniqueDestinationURL(
+            in: url.deletingLastPathComponent(),
+            baseName: "\(url.deletingPathExtension().lastPathComponent)_no_bg",
+            extension: "png"
+        )
+        try pngData.write(to: destURL, options: .atomic)
+        return destURL
     }
 
     // MARK: - Videos: Convertir MOV -> MP4, Trim y Eliminar Audio
