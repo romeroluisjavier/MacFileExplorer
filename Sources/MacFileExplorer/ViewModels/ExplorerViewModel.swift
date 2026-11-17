@@ -1617,68 +1617,28 @@ public final class ExplorerViewModel {
         )
     }
 
+    public struct PendingPermanentDeleteRequest: Equatable {
+        public let urls: [URL]
+        public let displayNames: [String]
+    }
+
+    public var pendingPermanentDelete: PendingPermanentDeleteRequest? = nil
+
     private func requestPermanentDelete(urls: [URL], displayNames: [String]) {
         guard !urls.isEmpty else { return }
-
         cancelRename()
-
-        let loc = LocalizationManager.shared
-        let alert = NSAlert()
-        alert.alertStyle = .warning
-        if let trashSlashIcon = NSImage(systemSymbolName: "trash.slash.fill", accessibilityDescription: nil) {
-            let config = NSImage.SymbolConfiguration(pointSize: 36, weight: .regular)
-                .applying(NSImage.SymbolConfiguration(paletteColors: [.systemRed]))
-            alert.icon = trashSlashIcon.withSymbolConfiguration(config) ?? trashSlashIcon
-        }
-
-        if urls.count == 1, let singleName = displayNames.first ?? urls.first?.lastPathComponent {
-            alert.messageText = loc.text(
-                es: "¿Eliminar \"\(singleName)\" de forma permanente?",
-                en: "Permanently delete \"\(singleName)\"?"
-            )
-        } else {
-            alert.messageText = loc.text(
-                es: "¿Eliminar \(urls.count) elementos de forma permanente?",
-                en: "Permanently delete \(urls.count) items?"
-            )
-        }
-
-        alert.informativeText = loc.text(
-            es: "Se borrará directamente del disco sin pasar por la Papelera. Esta acción no se puede deshacer.",
-            en: "Items will be deleted directly from disk without moving to the Trash. This action cannot be undone."
+        pendingPermanentDelete = PendingPermanentDeleteRequest(
+            urls: urls.map(\.standardizedFileURL),
+            displayNames: displayNames
         )
+    }
 
-        let confirmButton = alert.addButton(
-            withTitle: loc.text(es: "Eliminar permanentemente", en: "Delete Permanently")
-        )
-        confirmButton.bezelColor = .systemRed
-        confirmButton.keyEquivalent = "\r"
-        let cancelButton = alert.addButton(
-            withTitle: loc.text(es: "Cancelar", en: "Cancel")
-        )
-        cancelButton.keyEquivalent = "\u{1b}"
-
-        alert.layout()
-        Self.centerIcon(in: alert)
-
-        let standardizedURLs = urls.map(\.standardizedFileURL)
-
-        let targetWindow = NSApp.keyWindow?.tabGroup?.selectedWindow
-            ?? NSApp.keyWindow
-            ?? NSApp.mainWindow?.tabGroup?.selectedWindow
-            ?? NSApp.mainWindow
-
-        if let hostWindow = targetWindow {
-            alert.beginSheetModal(for: hostWindow) { [weak self] response in
-                guard response == .alertFirstButtonReturn else { return }
-                Task { @MainActor [weak self] in
-                    await self?.permanentlyDeleteItems(standardizedURLs)
-                }
-            }
-        } else if alert.runModal() == .alertFirstButtonReturn {
-            Task { @MainActor [weak self] in
-                await self?.permanentlyDeleteItems(standardizedURLs)
-            }
+    public func confirmPendingPermanentDelete() {
+        guard let request = pendingPermanentDelete else { return }
+        pendingPermanentDelete = nil
+        let targets = request.urls
+        Task { @MainActor [weak self] in
+            await self?.permanentlyDeleteItems(targets)
         }
     }
 
@@ -2490,36 +2450,5 @@ public final class ExplorerViewModel {
     private static func directoryModificationTimestamp(for url: URL) -> TimeInterval? {
         let values = try? url.standardizedFileURL.resourceValues(forKeys: [.contentModificationDateKey])
         return values?.contentModificationDate?.timeIntervalSince1970
-    }
-
-    private static func centerIcon(in alert: NSAlert) {
-        guard let contentView = alert.window.contentView,
-              let imageView = findImageView(in: contentView),
-              let superview = imageView.superview else {
-            return
-        }
-        for constraint in superview.constraints where
-            (constraint.firstItem as AnyObject) === imageView || (constraint.secondItem as AnyObject) === imageView {
-            if constraint.firstAttribute == .leading || constraint.secondAttribute == .leading
-                || constraint.firstAttribute == .left || constraint.secondAttribute == .left {
-                constraint.isActive = false
-            }
-        }
-        imageView.centerXAnchor.constraint(equalTo: superview.centerXAnchor).isActive = true
-        var frame = imageView.frame
-        frame.origin.x = (superview.bounds.width - frame.width) / 2.0
-        imageView.frame = frame
-    }
-
-    private static func findImageView(in view: NSView) -> NSImageView? {
-        if let iv = view as? NSImageView {
-            return iv
-        }
-        for subview in view.subviews {
-            if let found = findImageView(in: subview) {
-                return found
-            }
-        }
-        return nil
     }
 }

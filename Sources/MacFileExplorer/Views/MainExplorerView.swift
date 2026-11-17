@@ -115,6 +115,8 @@ public struct MainExplorerView: View {
                 QuickActionVideoTrimModalView(viewModel: viewModel, targetURL: url)
             case .duplicateFinder:
                 DuplicateFinderModalView(viewModel: viewModel)
+            case .permanentDelete(let req):
+                PermanentDeleteConfirmModalView(viewModel: viewModel, request: req)
             }
         }
         .focusedSceneValue(\.explorerViewModel, viewModel)
@@ -128,6 +130,7 @@ public struct MainExplorerView: View {
         case videoConvert([URL])
         case videoTrim(URL)
         case duplicateFinder
+        case permanentDelete(ExplorerViewModel.PendingPermanentDeleteRequest)
 
         var id: String {
             switch self {
@@ -138,6 +141,7 @@ public struct MainExplorerView: View {
             case .videoConvert(let urls): return "videoConvert-\(urls.count)"
             case .videoTrim(let url): return "videoTrim-\(url.absoluteString)"
             case .duplicateFinder: return "duplicateFinder"
+            case .permanentDelete(let req): return "permanentDelete-\(req.urls.count)"
             }
         }
     }
@@ -152,6 +156,7 @@ public struct MainExplorerView: View {
                 if let urls = viewModel.quickActionVideoConvertURLs { return .videoConvert(urls) }
                 if let url = viewModel.quickActionVideoTrimURL { return .videoTrim(url) }
                 if viewModel.isDuplicateFinderPresented { return .duplicateFinder }
+                if let req = viewModel.pendingPermanentDelete { return .permanentDelete(req) }
                 return nil
             },
             set: { newValue in
@@ -163,6 +168,7 @@ public struct MainExplorerView: View {
                     viewModel.quickActionVideoConvertURLs = nil
                     viewModel.quickActionVideoTrimURL = nil
                     viewModel.isDuplicateFinderPresented = false
+                    viewModel.pendingPermanentDelete = nil
                 }
             }
         )
@@ -390,5 +396,81 @@ public extension FocusedValues {
     var explorerViewModel: ExplorerViewModel? {
         get { self[ExplorerViewModelFocusedValueKey.self] }
         set { self[ExplorerViewModelFocusedValueKey.self] = newValue }
+    }
+}
+
+private struct PermanentDeleteConfirmModalView: View {
+    let viewModel: ExplorerViewModel
+    let request: ExplorerViewModel.PendingPermanentDeleteRequest
+    @Environment(\.dismiss) private var dismiss
+
+    private var loc: LocalizationManager { LocalizationManager.shared }
+
+    private var titleText: String {
+        if request.urls.count == 1, let singleName = request.displayNames.first ?? request.urls.first?.lastPathComponent {
+            return loc.text(
+                es: "¿Eliminar \"\(singleName)\" de forma permanente?",
+                en: "Permanently delete \"\(singleName)\"?"
+            )
+        }
+        return loc.text(
+            es: "¿Eliminar \(request.urls.count) elementos de forma permanente?",
+            en: "Permanently delete \(request.urls.count) items?"
+        )
+    }
+
+    var body: some View {
+        VStack(spacing: 14) {
+            Image(systemName: "trash.slash.fill")
+                .font(.system(size: 40, weight: .regular))
+                .foregroundStyle(.red)
+                .frame(maxWidth: .infinity, alignment: .center)
+                .padding(.top, 4)
+
+            VStack(spacing: 6) {
+                Text(titleText)
+                    .font(.system(size: 13.5, weight: .bold))
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Text(loc.text(
+                    es: "Se borrará directamente del disco sin pasar por la Papelera. Esta acción no se puede deshacer.",
+                    en: "Items will be deleted directly from disk without moving to the Trash. This action cannot be undone."
+                ))
+                .font(.system(size: 12))
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+            }
+
+            VStack(spacing: 8) {
+                Button {
+                    dismiss()
+                    viewModel.confirmPendingPermanentDelete()
+                } label: {
+                    Text(loc.text(es: "Eliminar permanentemente", en: "Delete Permanently"))
+                        .font(.system(size: 13, weight: .medium))
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.red)
+                .controlSize(.large)
+                .keyboardShortcut(.defaultAction)
+
+                Button {
+                    dismiss()
+                } label: {
+                    Text(loc.text(es: "Cancelar", en: "Cancel"))
+                        .font(.system(size: 13))
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.large)
+                .keyboardShortcut(.cancelAction)
+            }
+            .padding(.top, 2)
+        }
+        .padding(20)
+        .frame(width: 280)
     }
 }
