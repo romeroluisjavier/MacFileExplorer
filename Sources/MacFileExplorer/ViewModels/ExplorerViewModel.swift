@@ -1404,7 +1404,35 @@ public final class ExplorerViewModel {
         backgroundTaskMessage = taskMsg
         backgroundTaskProgress = nil
 
+        let sourceURLs = payload?.urls ?? []
         Task {
+            let totalBytes = await TransferQueueManager.calculateTotalBytes(of: sourceURLs)
+            if totalBytes > TransferQueueManager.queueThresholdBytes {
+                backgroundTaskMessage = nil
+                backgroundTaskProgress = nil
+                if isCut {
+                    clipboardManager.clear()
+                }
+                TransferQueueManager.shared.enqueue(
+                    kind: isCut ? .move : .copy,
+                    sourceURLs: sourceURLs,
+                    destinationDirectory: targetDir,
+                    totalBytes: totalBytes
+                ) { [weak self] createdURLs in
+                    guard let self else { return }
+                    Task { @MainActor in
+                        if !createdURLs.isEmpty && Self.isSameDirectory(self.currentDirectoryURL, targetDir) {
+                            await self.reloadDirectoryAndSelect(createdURLs, startRenameOn: nil)
+                        }
+                        self.sidebarViewModel.refreshSubdirectoriesIfNeeded(at: targetDir, includeHidden: self.showHiddenFiles)
+                        for parent in previousCutParents {
+                            self.sidebarViewModel.refreshSubdirectoriesIfNeeded(at: parent, includeHidden: self.showHiddenFiles)
+                        }
+                    }
+                }
+                return
+            }
+
             defer {
                 backgroundTaskMessage = nil
                 backgroundTaskProgress = nil
@@ -1967,6 +1995,28 @@ public final class ExplorerViewModel {
         }
 
         let sourceParents = Set(validSources.map { $0.deletingLastPathComponent().standardizedFileURL })
+        let totalBytes = await TransferQueueManager.calculateTotalBytes(of: validSources)
+        if totalBytes > TransferQueueManager.queueThresholdBytes {
+            TransferQueueManager.shared.enqueue(
+                kind: shouldCopy ? .copy : .move,
+                sourceURLs: validSources,
+                destinationDirectory: destDir,
+                totalBytes: totalBytes
+            ) { [weak self] createdURLs in
+                guard let self else { return }
+                Task { @MainActor in
+                    if !createdURLs.isEmpty && Self.isSameDirectory(self.currentDirectoryURL, destDir) {
+                        await self.reloadDirectoryAndSelect(createdURLs, startRenameOn: nil)
+                    }
+                    self.sidebarViewModel.refreshSubdirectoriesIfNeeded(at: destDir, includeHidden: self.showHiddenFiles)
+                    for parent in sourceParents {
+                        self.sidebarViewModel.refreshSubdirectoriesIfNeeded(at: parent, includeHidden: self.showHiddenFiles)
+                    }
+                }
+            }
+            return
+        }
+
         do {
             let resultingURLs: [URL]
             if shouldCopy {
