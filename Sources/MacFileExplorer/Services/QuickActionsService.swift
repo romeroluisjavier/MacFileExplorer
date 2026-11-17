@@ -365,7 +365,9 @@ public enum QuickActionsService {
     public static func trimVideo(
         _ url: URL,
         startSeconds: Double,
-        endSeconds: Double
+        endSeconds: Double,
+        fadeInSeconds: Double = 0.0,
+        fadeOutSeconds: Double = 0.0
     ) async throws -> URL {
         let asset = AVURLAsset(url: url)
         let ext = url.pathExtension.lowercased() == "mov" ? "mov" : "mp4"
@@ -381,12 +383,56 @@ public enum QuickActionsService {
                 NSLocalizedDescriptionKey: "No se pudo inicializar el recorte de video."
             ])
         }
-        let start = CMTime(seconds: max(0, startSeconds), preferredTimescale: 600)
-        let end = CMTime(seconds: max(startSeconds + 0.1, endSeconds), preferredTimescale: 600)
-        session.timeRange = CMTimeRange(start: start, end: end)
+        let start = CMTime(seconds: max(0, startSeconds), preferredTimescale: 1000)
+        let end = CMTime(seconds: max(startSeconds + 0.05, endSeconds), preferredTimescale: 1000)
+        let trimRange = CMTimeRange(start: start, end: end)
+        session.timeRange = trimRange
         session.outputURL = destURL
         session.outputFileType = fileType
         session.shouldOptimizeForNetworkUse = true
+
+        if (fadeInSeconds > 0 || fadeOutSeconds > 0),
+           let videoTrack = try? await asset.loadTracks(withMediaType: .video).first {
+            let naturalSize = (try? await videoTrack.load(.naturalSize)) ?? CGSize(width: 1920, height: 1080)
+            let transform = (try? await videoTrack.load(.preferredTransform)) ?? .identity
+            let transformedSize = naturalSize.applying(transform)
+            let renderSize = CGSize(width: abs(transformedSize.width), height: abs(transformedSize.height))
+
+            let videoComposition = AVMutableVideoComposition()
+            videoComposition.renderSize = renderSize.width > 0 && renderSize.height > 0 ? renderSize : CGSize(width: 1920, height: 1080)
+            videoComposition.frameDuration = CMTime(value: 1, timescale: 30)
+
+            let instruction = AVMutableVideoCompositionInstruction()
+            instruction.timeRange = trimRange
+
+            let layerInstruction = AVMutableVideoCompositionLayerInstruction(assetTrack: videoTrack)
+            layerInstruction.setTransform(transform, at: start)
+
+            let clipDuration = CMTimeGetSeconds(trimRange.duration)
+            if fadeInSeconds > 0 {
+                let actualFadeIn = min(fadeInSeconds, clipDuration * 0.45)
+                let fadeInEnd = CMTimeAdd(start, CMTime(seconds: actualFadeIn, preferredTimescale: 1000))
+                layerInstruction.setOpacityRamp(
+                    fromStartOpacity: 0.0,
+                    toEndOpacity: 1.0,
+                    timeRange: CMTimeRange(start: start, end: fadeInEnd)
+                )
+            }
+            if fadeOutSeconds > 0 {
+                let actualFadeOut = min(fadeOutSeconds, clipDuration * 0.45)
+                let fadeOutStart = CMTimeSubtract(end, CMTime(seconds: actualFadeOut, preferredTimescale: 1000))
+                layerInstruction.setOpacityRamp(
+                    fromStartOpacity: 1.0,
+                    toEndOpacity: 0.0,
+                    timeRange: CMTimeRange(start: fadeOutStart, end: end)
+                )
+            }
+
+            instruction.layerInstructions = [layerInstruction]
+            videoComposition.instructions = [instruction]
+            session.videoComposition = videoComposition
+        }
+
         try await runExportSession(session)
         return destURL
     }
