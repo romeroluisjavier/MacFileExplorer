@@ -77,9 +77,9 @@ public struct ReleaseNoteSection: Identifiable, Sendable {
 public enum ReleaseNotesCatalog {
     public static let sections: [ReleaseNoteSection] = [
         ReleaseNoteSection(
-            id: "v1.5.0-search-duplicates-transfer-queue",
-            versionLabelES: "Versión 1.5.0 — Búsqueda Avanzada, Duplicados y Cola de Transferencias",
-            versionLabelEN: "Version 1.5.0 — Advanced Search, Duplicates & Transfer Queue",
+            id: "v1.5.1-check-upgrades",
+            versionLabelES: "Versión 1.5.1 — Buscar actualizaciones desde GitHub",
+            versionLabelEN: "Version 1.5.1 — Check Upgrades from GitHub",
             dateLabelES: "17 nov 2026",
             dateLabelEN: "Nov 17, 2026",
             items: [
@@ -90,7 +90,16 @@ public enum ReleaseNotesCatalog {
                     titleEN: "Check Upgrades directly from GitHub",
                     summaryES: "Agregamos el botón «Buscar actualizaciones» (en Acerca de MacFileExplorer, menú superior e icono de la barra de menús) para consultar directamente el repositorio en GitHub y descargar automáticamente el nuevo instalador en tu carpeta Descargas cuando haya una versión más reciente.",
                     summaryEN: "Added a «Check Upgrades» button (in About MacFileExplorer, the top menu, and the menu bar tray icon) to check GitHub directly and automatically download the new installer to your Downloads folder whenever a newer version is available."
-                ),
+                )
+            ]
+        ),
+        ReleaseNoteSection(
+            id: "v1.5.0-search-duplicates-transfer-queue",
+            versionLabelES: "Versión 1.5.0 — Búsqueda Avanzada, Duplicados y Cola de Transferencias",
+            versionLabelEN: "Version 1.5.0 — Advanced Search, Duplicates & Transfer Queue",
+            dateLabelES: "17 nov 2026",
+            dateLabelEN: "Nov 17, 2026",
+            items: [
                 ReleaseNoteItem(
                     id: "duplicate-finder",
                     icon: "doc.on.doc.fill",
