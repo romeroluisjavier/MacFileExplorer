@@ -781,30 +781,70 @@ public final class ExplorerViewModel {
         sidebarViewModel.refreshAllCachedDirectories(includeHidden: showHiddenFiles)
     }
 
-    /// Activa el modo de edición de texto plano en la barra de direcciones (`Cmd+L`).
+    /// Activa el modo de edición de texto plano en la barra de direcciones (`Cmd+L`, clic en el segmento actual o en la barra).
     public func beginAddressBarEditing() {
         addressBarText = currentDirectoryURL.path(percentEncoded: false)
         isEditingAddressBar = true
     }
 
-    /// Confirma la ruta escrita manualmente en la barra de direcciones.
+    /// Confirma la ruta escrita o pegada manualmente en la barra de direcciones (soporta `~`, comillas, `file://` y escapes).
     public func commitAddressBarNavigation() {
-        guard let resolvedURL = fileSystemService.resolveDirectoryPath(addressBarText) else {
+        guard let target = fileSystemService.resolvePathInput(addressBarText, relativeTo: currentDirectoryURL) else {
             let loc = LocalizationManager.shared
             errorMessage = loc.text(
-                es: "No se encontró el directorio '\(addressBarText)'.",
-                en: "Could not find directory '\(addressBarText)'."
+                es: "No se encontró la ruta '\(addressBarText)'.",
+                en: "Could not find path '\(addressBarText)'."
             )
             return
         }
         isEditingAddressBar = false
-        navigate(to: resolvedURL, recordHistory: true)
+        switch target {
+        case .directory(let resolvedURL):
+            navigate(to: resolvedURL, recordHistory: true)
+        case .file(let parentURL, let fileURL):
+            if Self.normalizedDirectoryPath(parentURL) != Self.normalizedDirectoryPath(currentDirectoryURL) {
+                navigate(to: parentURL, recordHistory: true)
+            }
+            Task { @MainActor [weak self] in
+                await self?.reloadDirectoryAndSelect([fileURL], startRenameOn: nil)
+            }
+        }
     }
 
     /// Cancela la edición manual de la barra de direcciones y restaura el Breadcrumb.
     public func cancelAddressBarEditing() {
         addressBarText = currentDirectoryURL.path(percentEncoded: false)
         isEditingAddressBar = false
+    }
+
+    /// Devuelve sugerencias de subcarpetas para autocompletado mientras se escribe una ruta.
+    public func addressBarAutocompleteSuggestions(for text: String) -> [(displayText: String, fullPath: String, url: URL)] {
+        fileSystemService.directoryAutocompleteSuggestions(
+            for: text,
+            relativeTo: currentDirectoryURL,
+            includeHidden: showHiddenFiles,
+            limit: 8
+        )
+    }
+
+    /// Devuelve las subcarpetas inmediatas de un segmento del Breadcrumb para navegar desde los separadores `>`.
+    public func breadcrumbChildFolders(in directoryURL: URL) -> [BreadcrumbSegment] {
+        let options: FileManager.DirectoryEnumerationOptions = showHiddenFiles ? [] : [.skipsHiddenFiles]
+        guard let children = try? FileManager.default.contentsOfDirectory(
+            at: directoryURL,
+            includingPropertiesForKeys: [.isDirectoryKey],
+            options: options
+        ) else {
+            return []
+        }
+        return children.compactMap { url -> BreadcrumbSegment? in
+            guard let values = try? url.resourceValues(forKeys: [.isDirectoryKey]),
+                  values.isDirectory == true else {
+                return nil
+            }
+            return BreadcrumbSegment(title: url.lastPathComponent, url: url.standardizedFileURL)
+        }
+        .sorted { $0.title.localizedStandardCompare($1.title) == .orderedAscending }
     }
 
     // MARK: - Apertura de Elementos y Vista Rápida (Quick Look / Preview.app)

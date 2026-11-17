@@ -623,21 +623,166 @@ public final class FileSystemService: Sendable {
     // MARK: - Resolución de Rutas (Barra de Direcciones / Cmd+L)
 
     /// Valida y resuelve una cadena de ruta escrita o pegada manualmente (`/Users/...` o `~/Downloads`).
-    public func resolveDirectoryPath(_ rawPath: String) -> URL? {
-        let trimmed = rawPath.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return nil }
+    public enum PathNavigationTarget: Equatable, Sendable {
+        case directory(URL)
+        case file(parentDirectory: URL, fileURL: URL)
+    }
 
-        let expanded = NSString(string: trimmed).expandingTildeInPath
-        let candidateURL = URL(fileURLWithPath: expanded).standardizedFileURL
-
+    /// Resuelve una ruta ingresada manualmente por el usuario (soporta `~`, comillas, `file://`,
+    /// escapes de Terminal y rutas relativas) devolviendo si apunta a una carpeta o a un archivo.
+    public func resolvePathInput(
+        _ rawPath: String,
+        relativeTo currentDirectory: URL? = nil
+    ) -> PathNavigationTarget? {
+        guard let resolvedPath = normalizeUserPathString(rawPath, relativeTo: currentDirectory) else {
+            return nil
+        }
+        let candidateURL = URL(fileURLWithPath: resolvedPath).standardizedFileURL
         var isDir: ObjCBool = false
         guard FileManager.default.fileExists(
             atPath: candidateURL.path(percentEncoded: false),
             isDirectory: &isDir
-        ), isDir.boolValue else {
+        ) else {
             return nil
         }
-        return candidateURL
+        if isDir.boolValue {
+            return .directory(candidateURL)
+        }
+        return .file(parentDirectory: candidateURL.deletingLastPathComponent().standardizedFileURL, fileURL: candidateURL)
+    }
+
+    public func resolveDirectoryPath(_ rawPath: String) -> URL? {
+        guard case .directory(let url) = resolvePathInput(rawPath) else {
+            return nil
+        }
+        return url
+    }
+
+    /// Devuelve sugerencias de subcarpetas para autocompletado de la barra de direcciones editable.
+    public nonisolated func directoryAutocompleteSuggestions(
+        for input: String,
+        relativeTo currentDirectory: URL,
+        includeHidden: Bool,
+        limit: Int = 8
+    ) -> [(displayText: String, fullPath: String, url: URL)] {
+        var trimmed = input.trimmingCharacters(in: .whitespacesAndNewlines)
+        trimmed = stripSurroundingQuotes(trimmed)
+        guard !trimmed.isEmpty else { return [] }
+
+        let usesTildePrefix = trimmed == "~" || trimmed.hasPrefix("~/")
+        let homePath = FileManager.default.homeDirectoryForCurrentUser.standardizedFileURL.path(percentEncoded: false)
+            .trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        let normalizedHome = "/\(homePath)"
+
+        let unescaped = unescapeShellPathIfNeeded(trimmed)
+        let expanded: String
+        if unescaped.hasPrefix("~") {
+            expanded = NSString(string: unescaped).expandingTildeInPath
+        } else if !unescaped.hasPrefix("/") {
+            expanded = currentDirectory.appendingPathComponent(unescaped).path(percentEncoded: false)
+        } else {
+            expanded = unescaped
+        }
+
+        let searchParentPath: String
+        let prefixFilter: String
+        if expanded.hasSuffix("/") {
+            searchParentPath = expanded
+            prefixFilter = ""
+        } else {
+            let parentURL = URL(fileURLWithPath: expanded).deletingLastPathComponent()
+            searchParentPath = parentURL.path(percentEncoded: false)
+            prefixFilter = URL(fileURLWithPath: expanded).lastPathComponent
+        }
+
+        let parentURL = URL(fileURLWithPath: searchParentPath)
+        let fm = FileManager.default
+        let showDotEntries = includeHidden || prefixFilter.hasPrefix(".")
+        let options: FileManager.DirectoryEnumerationOptions = showDotEntries ? [] : [.skipsHiddenFiles]
+        guard let children = try? fm.contentsOfDirectory(
+            at: parentURL,
+            includingPropertiesForKeys: [.isDirectoryKey],
+            options: options
+        ) else {
+            return []
+        }
+
+        let matchingDirs: [(displayText: String, fullPath: String, url: URL)] = children.compactMap { childURL in
+            guard let vals = try? childURL.resourceValues(forKeys: [.isDirectoryKey]),
+                  vals.isDirectory == true else {
+                return nil
+            }
+            let name = childURL.lastPathComponent
+            if !prefixFilter.isEmpty,
+               name.range(of: prefixFilter, options: [.caseInsensitive, .diacriticInsensitive, .anchored]) == nil {
+                return nil
+            }
+            let full = childURL.standardizedFileURL.path(percentEncoded: false)
+            let display: String
+            if usesTildePrefix && (full == normalizedHome || full.hasPrefix(normalizedHome + "/")) {
+                let relative = String(full.dropFirst(normalizedHome.count))
+                display = relative.isEmpty ? "~" : "~\(relative)"
+            } else {
+                display = full
+            }
+            return (displayText: display, fullPath: full, url: childURL.standardizedFileURL)
+        }
+        .sorted { $0.displayText.localizedStandardCompare($1.displayText) == .orderedAscending }
+
+        return Array(matchingDirs.prefix(limit))
+    }
+
+    private nonisolated func normalizeUserPathString(_ rawPath: String, relativeTo currentDirectory: URL?) -> String? {
+        var cleaned = rawPath.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleaned.isEmpty else { return nil }
+        cleaned = stripSurroundingQuotes(cleaned)
+        guard !cleaned.isEmpty else { return nil }
+
+        if cleaned.lowercased().hasPrefix("file://"),
+           let fileURL = URL(string: cleaned),
+           fileURL.isFileURL {
+            return fileURL.standardizedFileURL.path(percentEncoded: false)
+        }
+
+        let candidateDirect = NSString(string: cleaned).expandingTildeInPath
+        if candidateDirect.hasPrefix("/"),
+           FileManager.default.fileExists(atPath: candidateDirect) {
+            return candidateDirect
+        }
+
+        let unescaped = unescapeShellPathIfNeeded(cleaned)
+        let expanded = NSString(string: unescaped).expandingTildeInPath
+        if expanded.hasPrefix("/") {
+            return expanded
+        }
+
+        if let currentDirectory {
+            return currentDirectory.appendingPathComponent(expanded).standardizedFileURL.path(percentEncoded: false)
+        }
+        return expanded
+    }
+
+    private nonisolated func stripSurroundingQuotes(_ text: String) -> String {
+        if (text.hasPrefix("\"") && text.hasSuffix("\"") && text.count >= 2)
+            || (text.hasPrefix("'") && text.hasSuffix("'") && text.count >= 2) {
+            return String(text.dropFirst().dropLast()).trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        return text
+    }
+
+    private nonisolated func unescapeShellPathIfNeeded(_ text: String) -> String {
+        guard text.contains("\\") else { return text }
+        var result = ""
+        result.reserveCapacity(text.count)
+        var iterator = text.makeIterator()
+        while let ch = iterator.next() {
+            if ch == "\\", let escaped = iterator.next() {
+                result.append(escaped)
+            } else {
+                result.append(ch)
+            }
+        }
+        return result
     }
 
     // MARK: - Helpers Privados

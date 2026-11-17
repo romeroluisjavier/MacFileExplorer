@@ -84,6 +84,14 @@ public enum ReleaseNotesCatalog {
             dateLabelEN: "Nov 17, 2026",
             items: [
                 ReleaseNoteItem(
+                    id: "editable-breadcrumb-address-bar",
+                    icon: "chevron.right.2",
+                    titleES: "Barra de direcciones editable estilo Windows Explorer",
+                    titleEN: "Windows Explorer-style Editable Address Bar",
+                    summaryES: "Ahora podés hacer clic sobre el último segmento de la ruta o en cualquier espacio de la barra de direcciones (además de ⌘L) para escribir o pegar directamente rutas como ~/Documents/Proyectos con auto-selección, autocompletado con Tab y flechas › para saltar entre subcarpetas.",
+                    summaryEN: "Click the current path segment or empty bar area (as well as ⌘L) to type or paste paths like ~/Documents/Projects with auto-selection, Tab folder autocompletion, and clickable › chevron menus."
+                ),
+                ReleaseNoteItem(
                     id: "quick-actions-remove-background",
                     icon: "person.and.background.dotted",
                     titleES: "Eliminar fondo de imágenes en Quick Actions",
