@@ -6,6 +6,8 @@ public struct NavigationBarView: View {
     @Bindable var viewModel: ExplorerViewModel
     @FocusState private var isSearchFocused: Bool
     @ViewState private var isAdvancedSearchPresented: Bool = false
+    @ViewState private var optionsSnapshotOnOpen: AdvancedSearchOptions? = nil
+    @ViewState private var cancelledPopoverClose: Bool = false
 
     private var loc: LocalizationManager { LocalizationManager.shared }
 
@@ -169,6 +171,20 @@ public struct NavigationBarView: View {
             .popover(isPresented: $isAdvancedSearchPresented, arrowEdge: .bottom) {
                 advancedSearchPopover
             }
+            .onChange(of: isAdvancedSearchPresented) { wasOpen, isOpen in
+                if isOpen {
+                    cancelledPopoverClose = false
+                    optionsSnapshotOnOpen = viewModel.advancedSearchOptions
+                } else if wasOpen {
+                    if cancelledPopoverClose {
+                        cancelledPopoverClose = false
+                    } else if let prev = optionsSnapshotOnOpen,
+                              prev != viewModel.advancedSearchOptions {
+                        viewModel.runAdvancedSearch()
+                    }
+                    optionsSnapshotOnOpen = nil
+                }
+            }
         }
         .padding(.horizontal, 10)
         .frame(width: 245, height: 30)
@@ -219,6 +235,7 @@ public struct NavigationBarView: View {
                     )
                     .textFieldStyle(.roundedBorder)
                     .onSubmit {
+                        cancelledPopoverClose = true
                         isAdvancedSearchPresented = false
                         viewModel.runAdvancedSearch()
                     }
@@ -248,6 +265,7 @@ public struct NavigationBarView: View {
                     )
                     .textFieldStyle(.roundedBorder)
                     .onSubmit {
+                        cancelledPopoverClose = true
                         isAdvancedSearchPresented = false
                         viewModel.runAdvancedSearch()
                     }
@@ -307,11 +325,16 @@ public struct NavigationBarView: View {
             HStack {
                 Spacer()
                 Button(loc.text(es: "Cancelar", en: "Cancel")) {
+                    cancelledPopoverClose = true
+                    if let prev = optionsSnapshotOnOpen {
+                        viewModel.advancedSearchOptions = prev
+                    }
                     isAdvancedSearchPresented = false
                 }
                 .buttonStyle(.bordered)
 
                 Button(loc.text(es: "Buscar", en: "Search")) {
+                    cancelledPopoverClose = true
                     isAdvancedSearchPresented = false
                     viewModel.runAdvancedSearch()
                 }

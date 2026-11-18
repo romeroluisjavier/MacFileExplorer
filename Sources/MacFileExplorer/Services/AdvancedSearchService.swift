@@ -1,6 +1,7 @@
 import CoreGraphics
 import Foundation
 import ImageIO
+import os
 import PDFKit
 import UniformTypeIdentifiers
 import Vision
@@ -136,55 +137,12 @@ public struct AdvancedSearchOptions: Equatable, Sendable {
     }
 }
 
-/// Caché en memoria acotado de texto OCR reconocido por imagen (`path + size + mtime`).
-private final class OCRTextCache: @unchecked Sendable {
-    struct Key: Hashable {
-        let path: String
-        let size: Int64
-        let modifiedTime: TimeInterval
-    }
-
-    static let shared = OCRTextCache()
-
-    private let lock = NSLock()
-    private var entries: [Key: String] = [:]
-    private var insertionOrder: [Key] = []
-    private let maxEntries = 500
-    private var didPrewarm = false
-
-    private init() {}
-
-    func get(_ key: Key) -> String? {
-        lock.lock()
-        defer { lock.unlock() }
-        return entries[key]
-    }
-
-    func set(_ text: String, for key: Key) {
-        lock.lock()
-        defer { lock.unlock() }
-        if entries[key] == nil {
-            insertionOrder.append(key)
-            if insertionOrder.count > maxEntries {
-                let oldest = insertionOrder.removeFirst()
-                entries.removeValue(forKey: oldest)
-            }
-        }
-        entries[key] = text
-    }
-
-    func claimPrewarmSlot() -> Bool {
-        lock.lock()
-        defer { lock.unlock() }
-        if didPrewarm { return false }
-        didPrewarm = true
-        return true
-    }
-}
-
 /// Servicio de búsqueda avanzada en segundo plano:
-/// filtra por tipo, extensión, tamaño, subcarpetas y contenido interno (texto, PDF e imágenes mediante OCR Vision).
+/// filtra por tipo, extensión, tamaño, subcarpetas y contenido interno (texto, PDF e imágenes mediante OCR Vision),
+/// apoyándose en el índice oculto por carpeta `.macfileexplorer_ocr.cache` (<= 5 MB por carpeta).
 public enum AdvancedSearchService {
+
+    private static let prewarmClaimedLock = OSAllocatedUnfairLock(initialState: false)
 
     private static let plainTextExtensions: Set<String> = [
         "txt", "md", "markdown", "json", "csv", "log", "xml", "yaml", "yml",
@@ -231,7 +189,13 @@ public enum AdvancedSearchService {
     /// Precalienta el motor OCR `.accurate` de Vision en segundo plano tras iniciar la app
     /// para que la primera búsqueda dentro de imágenes responda en milisegundos.
     public static func prewarmOCRInBackground() {
-        guard OCRTextCache.shared.claimPrewarmSlot() else { return }
+        let shouldRun = prewarmClaimedLock.withLock { claimed in
+            if claimed { return false }
+            claimed = true
+            return true
+        }
+        guard shouldRun else { return }
+
         Task.detached(priority: .utility) {
             try? await Task.sleep(for: .seconds(2))
             if Task.isCancelled { return }
@@ -262,7 +226,8 @@ public enum AdvancedSearchService {
         options: AdvancedSearchOptions,
         in rootURL: URL,
         includeHidden: Bool,
-        onProgress: (@Sendable (Int, Int) -> Void)? = nil
+        onProgress: (@Sendable (Int, Int) -> Void)? = nil,
+        onPartialResults: (@Sendable ([FileItem]) -> Void)? = nil
     ) async -> [FileItem] {
         let trimmedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
 
@@ -298,21 +263,23 @@ public enum AdvancedSearchService {
                 var collected: [URL] = []
                 while let nextURL = enumerator.nextObject() as? URL {
                     if Task.isCancelled { return ([], []) }
-                    if skipSubtreeNames.contains(nextURL.lastPathComponent) {
+                    let name = nextURL.lastPathComponent
+                    if skipSubtreeNames.contains(name) {
                         enumerator.skipDescendants()
                         continue
                     }
+                    if name.hasPrefix(".macfileexplorer_") { continue }
                     collected.append(nextURL)
                     if collected.count >= 25_000 { break }
                 }
                 candidateURLs = collected
             } else {
                 let dirOptions: FileManager.DirectoryEnumerationOptions = includeHidden ? [] : [.skipsHiddenFiles]
-                candidateURLs = (try? fm.contentsOfDirectory(
+                candidateURLs = ((try? fm.contentsOfDirectory(
                     at: standardizedRoot,
                     includingPropertiesForKeys: keys,
                     options: dirOptions
-                )) ?? []
+                )) ?? []).filter { !$0.lastPathComponent.hasPrefix(".macfileexplorer_") }
             }
 
             var directMatches: [FileItem] = []
@@ -380,6 +347,9 @@ public enum AdvancedSearchService {
 
         var results = scanPlan.directMatches
         let queue = scanPlan.contentQueue
+        if !results.isEmpty {
+            onPartialResults?(results)
+        }
         guard !trimmedQuery.isEmpty, !queue.isEmpty, results.count < 1500 else {
             return results
         }
@@ -390,6 +360,7 @@ public enum AdvancedSearchService {
         let maxConcurrency = 4
         var nextIndex = 0
         var completedCount = 0
+        var lastStreamEmitCount = results.count
 
         await withTaskGroup(of: FileItem?.self) { group in
             let initialBatch = min(maxConcurrency, queue.count)
@@ -398,7 +369,7 @@ public enum AdvancedSearchService {
                 nextIndex += 1
                 group.addTask(priority: .userInitiated) {
                     if Task.isCancelled { return nil }
-                    let matched = matchesContent(
+                    let matched = await matchesContent(
                         candidate: candidate,
                         query: trimmedQuery
                     )
@@ -419,6 +390,10 @@ public enum AdvancedSearchService {
 
                 if let item = maybeItem {
                     results.append(item)
+                    if results.count != lastStreamEmitCount {
+                        lastStreamEmitCount = results.count
+                        onPartialResults?(results)
+                    }
                     if results.count >= 1500 {
                         group.cancelAll()
                         break
@@ -430,7 +405,7 @@ public enum AdvancedSearchService {
                     nextIndex += 1
                     group.addTask(priority: .userInitiated) {
                         if Task.isCancelled { return nil }
-                        let matched = matchesContent(
+                        let matched = await matchesContent(
                             candidate: candidate,
                             query: trimmedQuery
                         )
@@ -451,13 +426,33 @@ public enum AdvancedSearchService {
     }
 
     private static func containsQuery(_ text: String, query: String) -> Bool {
-        text.range(of: query, options: [.caseInsensitive, .diacriticInsensitive]) != nil
+        guard !query.isEmpty, !text.isEmpty else { return false }
+        if text.range(of: query, options: [.caseInsensitive, .diacriticInsensitive]) != nil {
+            return true
+        }
+
+        let normalizedText = text.replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+        if normalizedText.range(of: query, options: [.caseInsensitive, .diacriticInsensitive]) != nil {
+            return true
+        }
+
+        // Si la consulta tiene múltiples palabras, exigir que cada término aparezca en el texto OCR/documento
+        let tokens = query
+            .components(separatedBy: .whitespacesAndNewlines)
+            .map { $0.trimmingCharacters(in: .punctuationCharacters) }
+            .filter { $0.count >= 2 }
+        if tokens.count >= 2 {
+            return tokens.allSatisfy { token in
+                normalizedText.range(of: token, options: [.caseInsensitive, .diacriticInsensitive]) != nil
+            }
+        }
+        return false
     }
 
     private static func matchesContent(
         candidate: CandidateMetadata,
         query: String
-    ) -> Bool {
+    ) async -> Bool {
         let url = candidate.url
         let ext = candidate.ext
         let fileSize = candidate.fileSize
@@ -489,10 +484,10 @@ public enum AdvancedSearchService {
             }
         }
 
-        // Imágenes (OCR nativo preciso con Vision + caché en memoria)
+        // Imágenes (índice oculto por carpeta `.macfileexplorer_ocr.cache` + OCR Vision preciso)
         if QuickActionsService.isImageURL(url) || candidate.contentType?.conforms(to: .image) == true {
             if let fileSize, fileSize > 50_000_000 { return false }
-            return imageContainsTextViaOCR(
+            return await imageContainsTextViaOCR(
                 url: url,
                 fileSize: fileSize,
                 modificationDate: candidate.modificationDate,
@@ -508,7 +503,7 @@ public enum AdvancedSearchService {
         request.recognitionLevel = .accurate
         request.usesLanguageCorrection = true
         request.recognitionLanguages = ["es-ES", "en-US"]
-        request.minimumTextHeight = 0.008
+        request.minimumTextHeight = 0.005
         return request
     }
 
@@ -517,49 +512,87 @@ public enum AdvancedSearchService {
         fileSize: Int64?,
         modificationDate: Date,
         query: String
-    ) -> Bool {
-        let cacheKey = OCRTextCache.Key(
-            path: url.path,
-            size: fileSize ?? -1,
-            modifiedTime: modificationDate.timeIntervalSince1970
-        )
-
-        if let cachedTranscript = OCRTextCache.shared.get(cacheKey) {
+    ) async -> Bool {
+        if let cachedTranscript = await OCRIndexCacheService.shared.cachedTranscript(
+            for: url,
+            fileSize: fileSize,
+            modificationDate: modificationDate
+        ) {
             return containsQuery(cachedTranscript, query: query)
         }
 
-        let transcript = extractTranscriptFromImage(url: url)
-        OCRTextCache.shared.set(transcript, for: cacheKey)
+        let transcript = extractOCRTranscript(at: url)
+        await OCRIndexCacheService.shared.storeTranscript(
+            transcript,
+            for: url,
+            fileSize: fileSize,
+            modificationDate: modificationDate
+        )
         return containsQuery(transcript, query: query)
     }
 
-    private static func extractTranscriptFromImage(url: URL) -> String {
+    /// Extrae todo el texto legible de una imagen usando Vision `.accurate` + reescalado 2x para capturas pequeñas.
+    public static func extractOCRTranscript(at url: URL) -> String {
         autoreleasepool {
             let source = CGImageSourceCreateWithURL(url as CFURL, nil)
             let orientation = readImageOrientation(from: source)
 
+            var primaryTranscript = ""
             let primaryRequest = makeAccurateOCRRequest()
             let urlHandler = VNImageRequestHandler(url: url, orientation: orientation, options: [:])
             if (try? urlHandler.perform([primaryRequest])) != nil,
                let observations = primaryRequest.results,
                !observations.isEmpty {
-                return buildTranscript(from: observations)
-            }
-
-            // Respaldo vía CGImage para formatos PNG/WebP/P3 que fallen leyendo directamente por URL
-            if let source,
-               let cgImage = CGImageSourceCreateImageAtIndex(source, 0, nil) {
-                let fallbackRequest = makeAccurateOCRRequest()
-                let cgHandler = VNImageRequestHandler(cgImage: cgImage, orientation: orientation, options: [:])
-                if (try? cgHandler.perform([fallbackRequest])) != nil,
-                   let observations = fallbackRequest.results,
-                   !observations.isEmpty {
-                    return buildTranscript(from: observations)
+                primaryTranscript = buildTranscript(from: observations)
+                if primaryTranscript.count >= 12 {
+                    return primaryTranscript
                 }
             }
 
-            return ""
+            // Respaldo vía CGImage y reescalado 2x para capturas chicas/medianas o perfiles de color particulares
+            if let source,
+               let cgImage = CGImageSourceCreateImageAtIndex(source, 0, nil) {
+                let fallbackImage: CGImage
+                if cgImage.width < 1400 && cgImage.height < 1400,
+                   let upscaled = upscaleCGImage2x(cgImage) {
+                    fallbackImage = upscaled
+                } else {
+                    fallbackImage = cgImage
+                }
+
+                let fallbackRequest = makeAccurateOCRRequest()
+                let cgHandler = VNImageRequestHandler(cgImage: fallbackImage, orientation: orientation, options: [:])
+                if (try? cgHandler.perform([fallbackRequest])) != nil,
+                   let observations = fallbackRequest.results,
+                   !observations.isEmpty {
+                    let secondary = buildTranscript(from: observations)
+                    return secondary.count >= primaryTranscript.count ? secondary : primaryTranscript
+                }
+            }
+
+            return primaryTranscript
         }
+    }
+
+    private static func upscaleCGImage2x(_ image: CGImage) -> CGImage? {
+        let newW = image.width * 2
+        let newH = image.height * 2
+        guard newW > 0, newH > 0, newW <= 4096, newH <= 4096 else { return nil }
+        let colorSpace = CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB()
+        guard let ctx = CGContext(
+            data: nil,
+            width: newW,
+            height: newH,
+            bitsPerComponent: 8,
+            bytesPerRow: 0,
+            space: colorSpace,
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else {
+            return nil
+        }
+        ctx.interpolationQuality = .high
+        ctx.draw(image, in: CGRect(x: 0, y: 0, width: newW, height: newH))
+        return ctx.makeImage()
     }
 
     private static func readImageOrientation(from source: CGImageSource?) -> CGImagePropertyOrientation {

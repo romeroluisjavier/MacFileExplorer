@@ -84,6 +84,14 @@ public enum ReleaseNotesCatalog {
             dateLabelEN: "Nov 17, 2026",
             items: [
                 ReleaseNoteItem(
+                    id: "ocr-background-folder-cache",
+                    icon: "text.viewfinder",
+                    titleES: "Indexación OCR automática en segundo plano (máx. 5 MB por carpeta)",
+                    titleEN: "Background OCR Image Indexing (max 5 MB per folder)",
+                    summaryES: "Al abrir una carpeta, las imágenes se analizan silenciosamente en segundo plano y su texto se guarda comprimido en un índice oculto (tope estricto de 5 MB por carpeta). Así la búsqueda dentro de imágenes del buscador avanzado devuelve coincidencias al instante y muestra resultados en vivo mientras escanea imágenes nuevas.",
+                    summaryEN: "When opening a folder, images are quietly indexed in the background and saved in a compressed hidden cache capped at 5 MB per folder. Content search in Advanced Search now returns instant matches and streams live results for new images."
+                ),
+                ReleaseNoteItem(
                     id: "editable-breadcrumb-address-bar",
                     icon: "chevron.right.2",
                     titleES: "Barra de direcciones editable estilo Windows Explorer",

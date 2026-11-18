@@ -174,6 +174,18 @@ public final class ExplorerViewModel {
                         self.backgroundTaskProgress = Double(done) / Double(total)
                         self.backgroundTaskMessage = "\(baseMessage) (\(done)/\(total))"
                     }
+                },
+                onPartialResults: { [weak self] partialFound in
+                    Task { @MainActor [weak self] in
+                        guard let self, self.isAdvancedSearchActive else { return }
+                        self.displayedItems = Self.computeDisplayedItems(
+                            from: partialFound,
+                            showHiddenFiles: includeHidden,
+                            searchQuery: "",
+                            sortField: self.sortField,
+                            sortAscending: self.sortAscending
+                        )
+                    }
                 }
             )
             guard !Task.isCancelled, self.isAdvancedSearchActive else { return }
@@ -467,6 +479,12 @@ public final class ExplorerViewModel {
         guard viewMode == .largeIcons else { return }
         thumbnailPreloadTask = Task(priority: .utility) {
             await ThumbnailCacheService.shared.preloadFolderThumbnails(for: directoryURL, items: items)
+        }
+    }
+
+    private func scheduleBackgroundOCRIndexing(for directoryURL: URL, items: [FileItem]) {
+        Task(priority: .utility) {
+            await OCRIndexCacheService.shared.scheduleBackgroundIndexing(for: directoryURL, items: items)
         }
     }
 
@@ -2269,6 +2287,7 @@ public final class ExplorerViewModel {
         }
         sidebarViewModel.refreshSubdirectoriesIfNeeded(at: targetURL, includeHidden: showHiddenFiles)
         scheduleThumbnailPreload(for: targetURL, items: items)
+        scheduleBackgroundOCRIndexing(for: targetURL, items: items)
 
         if saveToDiskCache {
             Task.detached(priority: .utility) {
@@ -2411,6 +2430,7 @@ public final class ExplorerViewModel {
                         self.setAllItems(fetchedItems, precomputedDisplayed: sorted)
                         self.selectedItemIDs = self.selectedItemIDs.intersection(validIDs)
                         self.scheduleThumbnailPreload(for: watchedURL, items: fetchedItems)
+                        self.scheduleBackgroundOCRIndexing(for: watchedURL, items: fetchedItems)
                         Task.detached(priority: .utility) {
                             await DirectoryIndexCacheService.shared.saveSnapshot(fetchedItems, for: watchedURL)
                         }

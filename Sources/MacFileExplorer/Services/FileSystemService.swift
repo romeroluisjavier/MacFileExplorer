@@ -68,7 +68,8 @@ public final class FileSystemService: Sendable {
                 }
                 let fileName = url.lastPathComponent
                 if fileName.hasPrefix(ThumbnailDiskCoordinator.hiddenCacheFileName) ||
-                   fileName.hasPrefix(DirectoryIndexCacheService.hiddenCacheFileName) {
+                   fileName.hasPrefix(DirectoryIndexCacheService.hiddenCacheFileName) ||
+                   fileName.hasPrefix(OCRIndexCacheService.hiddenCacheFileName) {
                     continue
                 }
                 if let values = try? url.resourceValues(forKeys: FileItem.prefetchedResourceKeySet) {

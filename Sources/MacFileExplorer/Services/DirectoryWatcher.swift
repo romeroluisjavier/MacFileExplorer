@@ -41,7 +41,8 @@ public final class DirectoryWatcher {
                 watchedRootPath: watchedPath,
                 ignoredPrefixes: [
                     DirectoryIndexCacheService.hiddenCacheFileName,
-                    ThumbnailDiskCoordinator.hiddenCacheFileName
+                    ThumbnailDiskCoordinator.hiddenCacheFileName,
+                    OCRIndexCacheService.hiddenCacheFileName
                 ],
                 onChange: onChange
             )
