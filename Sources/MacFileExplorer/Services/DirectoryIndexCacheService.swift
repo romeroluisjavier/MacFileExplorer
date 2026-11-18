@@ -188,6 +188,11 @@ public actor DirectoryIndexCacheService {
         return values?.contentModificationDate?.timeIntervalSince1970
     }
 
+    public func clearAllCaches() {
+        memoryArchives.removeAll()
+        memoryAccessOrder.removeAll()
+    }
+
     private func storeInMemory(_ archive: CachedDirectoryArchive, for dir: URL) {
         memoryArchives[dir] = archive
         touchMemoryOrder(for: dir)

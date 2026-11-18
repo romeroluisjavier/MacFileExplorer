@@ -208,14 +208,27 @@ struct MacFileExplorerApp: App {
             CommandGroup(after: .newItem) {
                 Divider()
                 Button {
-                    focusedExplorerViewModel?.isDuplicateFinderPresented = true
+                    (focusedExplorerViewModel ?? activeExplorerViewModel)?.isDuplicateFinderPresented = true
                 } label: {
                     Label(
                         loc.text(es: "Buscar archivos duplicados…", en: "Find Duplicate Files…"),
                         systemImage: "doc.on.doc"
                     )
                 }
-                .disabled(focusedExplorerViewModel == nil)
+                .disabled((focusedExplorerViewModel ?? activeExplorerViewModel) == nil)
+
+                Button {
+                    (focusedExplorerViewModel ?? activeExplorerViewModel)?.isHiddenCacheManagerPresented = true
+                } label: {
+                    Label(
+                        loc.text(
+                            es: "Caché oculta (.macfileexplorer)…",
+                            en: "Hidden Cache (.macfileexplorer)…"
+                        ),
+                        systemImage: "internaldrive"
+                    )
+                }
+                .disabled((focusedExplorerViewModel ?? activeExplorerViewModel) == nil)
             }
 
             CommandGroup(after: .toolbar) {

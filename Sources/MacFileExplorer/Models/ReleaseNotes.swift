@@ -84,6 +84,14 @@ public enum ReleaseNotesCatalog {
             dateLabelEN: "Nov 17, 2026",
             items: [
                 ReleaseNoteItem(
+                    id: "hidden-cache-manager-file-menu",
+                    icon: "internaldrive.fill",
+                    titleES: "Gestor de caché oculta (.macfileexplorer) en el menú Archivo",
+                    titleEN: "Hidden Cache Manager (.macfileexplorer) in File Menu",
+                    summaryES: "Desde Archivo → Caché oculta (.macfileexplorer)… podés ver cuántos archivos ocultos de caché existen (índices de carpetas, miniaturas e OCR), cuánto espacio ocupan en total y borrarlos todos con un clic para regenerarlos limpios.",
+                    summaryEN: "From File → Hidden Cache (.macfileexplorer)… you can see how many hidden cache files exist (folder indexes, thumbnails, and OCR), their total disk usage, and delete all of them in one click to regenerate cleanly."
+                ),
+                ReleaseNoteItem(
                     id: "ocr-background-folder-cache",
                     icon: "text.viewfinder",
                     titleES: "Indexación OCR automática en segundo plano (máx. 5 MB por carpeta)",

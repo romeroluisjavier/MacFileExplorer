@@ -150,6 +150,17 @@ public actor OCRIndexCacheService {
         activeIndexedFolderURL = nil
     }
 
+    public func clearAllCaches() {
+        cancelBackgroundIndexing()
+        for task in saveTasks.values {
+            task.cancel()
+        }
+        saveTasks.removeAll()
+        dirtyFolders.removeAll()
+        loadedArchives.removeAll()
+        memoryAccessOrder.removeAll()
+    }
+
     private func runBackgroundIndexing(for dir: URL, candidates: [FileItem]) async {
         loadArchiveIfNeeded(for: dir)
         pruneDeletedEntries(in: dir, liveFileNames: Set(candidates.map(\.name)))

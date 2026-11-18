@@ -115,6 +115,8 @@ public struct MainExplorerView: View {
                 QuickActionVideoTrimModalView(viewModel: viewModel, targetURL: url)
             case .duplicateFinder:
                 DuplicateFinderModalView(viewModel: viewModel)
+            case .hiddenCacheManager:
+                HiddenCacheManagerModalView(viewModel: viewModel)
             case .permanentDelete(let req):
                 PermanentDeleteConfirmModalView(viewModel: viewModel, request: req)
             }
@@ -130,6 +132,7 @@ public struct MainExplorerView: View {
         case videoConvert([URL])
         case videoTrim(URL)
         case duplicateFinder
+        case hiddenCacheManager
         case permanentDelete(ExplorerViewModel.PendingPermanentDeleteRequest)
 
         var id: String {
@@ -141,6 +144,7 @@ public struct MainExplorerView: View {
             case .videoConvert(let urls): return "videoConvert-\(urls.count)"
             case .videoTrim(let url): return "videoTrim-\(url.absoluteString)"
             case .duplicateFinder: return "duplicateFinder"
+            case .hiddenCacheManager: return "hiddenCacheManager"
             case .permanentDelete(let req): return "permanentDelete-\(req.urls.count)"
             }
         }
@@ -156,6 +160,7 @@ public struct MainExplorerView: View {
                 if let urls = viewModel.quickActionVideoConvertURLs { return .videoConvert(urls) }
                 if let url = viewModel.quickActionVideoTrimURL { return .videoTrim(url) }
                 if viewModel.isDuplicateFinderPresented { return .duplicateFinder }
+                if viewModel.isHiddenCacheManagerPresented { return .hiddenCacheManager }
                 if let req = viewModel.pendingPermanentDelete { return .permanentDelete(req) }
                 return nil
             },
@@ -168,6 +173,7 @@ public struct MainExplorerView: View {
                     viewModel.quickActionVideoConvertURLs = nil
                     viewModel.quickActionVideoTrimURL = nil
                     viewModel.isDuplicateFinderPresented = false
+                    viewModel.isHiddenCacheManagerPresented = false
                     viewModel.pendingPermanentDelete = nil
                 }
             }

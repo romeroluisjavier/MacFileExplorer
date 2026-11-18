@@ -204,6 +204,15 @@ actor ThumbnailDiskCoordinator {
 
     // MARK: - Control de Concurrencia
 
+    func clearAllArchives() {
+        for task in saveTasks.values {
+            task.cancel()
+        }
+        saveTasks.removeAll()
+        dirtyFolders.removeAll()
+        loadedArchives.removeAll()
+    }
+
     private func acquireGenerationSlot() async {
         if activeGenerationCount < maxConcurrentGenerations {
             activeGenerationCount += 1
@@ -370,6 +379,13 @@ public final class ThumbnailCacheService {
 
         memoryCache.setObject(image, forKey: memoryKey(for: item) as NSString)
         return image
+    }
+
+    public func clearMemoryAndPendingCaches() {
+        memoryCache.removeAllObjects()
+        Task {
+            await ThumbnailDiskCoordinator.shared.clearAllArchives()
+        }
     }
 
     private func memoryKey(for item: FileItem) -> String {

@@ -341,6 +341,8 @@ public final class LocalizationManager: NSObject, NSMenuDelegate {
             ("Mostrar todo", "Show All"),
             ("Salir de MacFileExplorer", "Quit MacFileExplorer"),
             ("Nueva ventana", "New Window"),
+            ("Buscar archivos duplicados…", "Find Duplicate Files…"),
+            ("Caché oculta (.macfileexplorer)…", "Hidden Cache (.macfileexplorer)…"),
             ("Cerrar", "Close"),
             ("Cerrar ventana", "Close Window"),
             ("Cerrar pestaña", "Close Tab"),
@@ -584,6 +586,10 @@ public final class LocalizationManager: NSObject, NSMenuDelegate {
             return "macwindow.badge.plus"
         case "nueva pestaña de carpetas", "new folder tab":
             return "folder.badge.plus"
+        case "buscar archivos duplicados…", "find duplicate files…":
+            return "doc.on.doc"
+        case "caché oculta (.macfileexplorer)…", "hidden cache (.macfileexplorer)…":
+            return "internaldrive"
         case "cerrar", "close":
             return "xmark.circle"
         case "cerrar ventana", "close window":

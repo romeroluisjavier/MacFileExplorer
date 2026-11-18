@@ -94,6 +94,7 @@ public final class ExplorerViewModel {
     private var advancedSearchTask: Task<Void, Never>?
     private var searchDebounceTask: Task<Void, Never>?
     public var isDuplicateFinderPresented: Bool = false
+    public var isHiddenCacheManagerPresented: Bool = false
 
     /// Ejecuta la búsqueda avanzada (local instantánea o profunda en segundo plano para subcarpetas y contenido).
     public func runAdvancedSearch() {
