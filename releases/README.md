@@ -1,6 +1,20 @@
 # MacFileExplorer Releases
 
-## Versión 1.6.0 (Versión Actual)
+## Versión 1.7.0 (Versión Actual)
+
+- **Instalador:** [`MacFileExplorer-1.7.0.dmg`](./MacFileExplorer-1.7.0.dmg)
+- **Tamaño:** ~13 MB
+- **Arquitectura:** Binario Universal (`arm64` Apple Silicon + `x86_64` Intel)
+- **Requisitos del sistema:** macOS 14.0 (Sonoma) o posterior
+
+### Novedades principales en la v1.7.0:
+1. **Indexación OCR automática en segundo plano (`.macfileexplorer_ocr.cache`, máx. 5 MB por carpeta)**: al abrir una carpeta, las imágenes nuevas se analizan silenciosamente y su texto se guarda comprimido con LZFSE (con tope estricto de 5 MB mediante LRU). El buscador avanzado muestra coincidencias al instante y resultados parciales en vivo mientras escanea.
+2. **Gestor de caché oculta (`.macfileexplorer`) en menú Archivo**: nueva opción *Archivo → Caché oculta (.macfileexplorer)…* que lista cuántos archivos ocultos existen, cuánto ocupan en total desglosado por tipo y permite borrarlos todos para regenerarlos limpios.
+3. **Ayuda interactiva completa en menú Help (`⌘?`)**: guía navegable y buscable con funciones destacadas, explicación del menú lateral y del buscador avanzado con OCR, tabla completa de atajos, todas las configuraciones posibles e historial de releases.
+
+---
+
+## Versión 1.6.0
 
 - **Instalador:** [`MacFileExplorer-1.6.0.dmg`](./MacFileExplorer-1.6.0.dmg)
 - **Tamaño:** ~13 MB

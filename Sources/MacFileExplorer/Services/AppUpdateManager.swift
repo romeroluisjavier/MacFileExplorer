@@ -13,13 +13,13 @@ public enum AppVersionInfo {
     public static var currentVersion: String {
         (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String)
             .flatMap { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : $0 }
-            ?? "1.6.0"
+            ?? "1.7.0"
     }
 
     public static var currentBuild: String {
         (Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String)
             .flatMap { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : $0 }
-            ?? "9"
+            ?? "10"
     }
 }
 

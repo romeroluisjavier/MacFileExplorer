@@ -5,16 +5,16 @@ Un explorador de archivos nativo, ágil y moderno para macOS, inspirado en la pr
 ![macOS 14+](https://img.shields.io/badge/macOS-14.0%2B-blue?logo=apple)
 ![Swift 6](https://img.shields.io/badge/Swift-6.0-orange?logo=swift)
 ![Architecture](https://img.shields.io/badge/Architecture-Universal%20(Apple%20Silicon%20%2B%20Intel)-brightgreen)
-![Release](https://img.shields.io/badge/Release-v1.6.0-blueviolet)
+![Release](https://img.shields.io/badge/Release-v1.7.0-blueviolet)
 
 ---
 
-## ✨ Novedades recientes (v1.6.0)
+## ✨ Novedades recientes (v1.7.0)
 
-- 🧭 **Barra de direcciones editable estilo Windows Explorer**: hacé clic en el segmento actual o en cualquier área libre de la barra de ruta (además de `Cmd + L`) para escribir o pegar directamente rutas como `~/Documents/Proyectos` con auto-selección, autocompletado con `Tab`, menú de subcarpetas en cada `>` y soporte para pegar rutas con comillas, `file://` o escapes de Terminal.
-- 🪄 **Eliminar fondo en Quick Actions (`PNG transparente`)**: clic derecho sobre imágenes (JPG, PNG, HEIC, etc.) → **Quick Actions → Eliminar fondo (PNG transparente)** para separar automáticamente el sujeto u objeto principal y guardar una copia nueva `.png` con fondo transparente sin pisar el archivo original.
-- 🔍 **Búsqueda avanzada con OCR preciso en imágenes**: escaneo de texto dentro de imágenes, PDFs y archivos de texto plano, insensible a mayúsculas y tildes, con filtro por tipo, extensión, tamaño y subcarpetas.
-- 🔄 **Buscar actualizaciones desde GitHub (`Check Upgrades`)**: botón dedicado en *Acerca de MacFileExplorer*, menú de la aplicación, barra de herramientas y Tray Icon para verificar si hay una versión nueva en GitHub y descargar automáticamente el instalador `.dmg`.
+- 🧠 **Índice OCR automático en segundo plano (`<= 5 MB` por carpeta)**: al abrir una carpeta, las imágenes se indexan silenciosamente en `.macfileexplorer_ocr.cache` (comprimido con LZFSE y tope estricto de 5 MB) para que la búsqueda dentro de imágenes devuelva resultados al instante y en tiempo real.
+- 🗂️ **Gestor de caché oculta (`.macfileexplorer`) en Archivo**: desde *Archivo → Caché oculta (.macfileexplorer)…* podés ver cuántos archivos ocultos existen, su tamaño total desglosado y borrarlos todos para regenerarlos limpios.
+- 📖 **Guía interactiva completa en el menú Help / Ayuda (`⌘?`)**: ventana navegable y buscable con funciones destacadas, catálogo completo, explicación del menú lateral y buscador avanzado, atajos de teclado, configuraciones posibles e historial de releases.
+- 🧭 **Barra de direcciones editable, Eliminar fondo (PNG transparente) y Check Upgrades**: todo incluido desde v1.6.0 / v1.5.1.
 
 ---
 

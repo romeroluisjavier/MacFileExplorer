@@ -77,11 +77,11 @@ public struct ReleaseNoteSection: Identifiable, Sendable {
 public enum ReleaseNotesCatalog {
     public static let sections: [ReleaseNoteSection] = [
         ReleaseNoteSection(
-            id: "v1.6.0-address-bar-bg-remove-ocr",
-            versionLabelES: "Versión 1.6.0 — Barra Editable, Eliminar Fondo (PNG) y OCR Preciso",
-            versionLabelEN: "Version 1.6.0 — Editable Address Bar, Remove Background & Enhanced OCR",
-            dateLabelES: "17 nov 2026",
-            dateLabelEN: "Nov 17, 2026",
+            id: "v1.7.0-ocr-cache-manager-help",
+            versionLabelES: "Versión 1.7.0 — Índice OCR en Background, Gestor de Caché y Ayuda",
+            versionLabelEN: "Version 1.7.0 — Background OCR Index, Cache Manager & Help Guide",
+            dateLabelES: "18 nov 2026",
+            dateLabelEN: "Nov 18, 2026",
             items: [
                 ReleaseNoteItem(
                     id: "interactive-help-guide",
@@ -106,7 +106,16 @@ public enum ReleaseNotesCatalog {
                     titleEN: "Background OCR Image Indexing (max 5 MB per folder)",
                     summaryES: "Al abrir una carpeta, las imágenes se analizan silenciosamente en segundo plano y su texto se guarda comprimido en un índice oculto (tope estricto de 5 MB por carpeta). Así la búsqueda dentro de imágenes del buscador avanzado devuelve coincidencias al instante y muestra resultados en vivo mientras escanea imágenes nuevas.",
                     summaryEN: "When opening a folder, images are quietly indexed in the background and saved in a compressed hidden cache capped at 5 MB per folder. Content search in Advanced Search now returns instant matches and streams live results for new images."
-                ),
+                )
+            ]
+        ),
+        ReleaseNoteSection(
+            id: "v1.6.0-address-bar-bg-remove-ocr",
+            versionLabelES: "Versión 1.6.0 — Barra Editable, Eliminar Fondo (PNG) y OCR Preciso",
+            versionLabelEN: "Version 1.6.0 — Editable Address Bar, Remove Background & Enhanced OCR",
+            dateLabelES: "17 nov 2026",
+            dateLabelEN: "Nov 17, 2026",
+            items: [
                 ReleaseNoteItem(
                     id: "editable-breadcrumb-address-bar",
                     icon: "chevron.right.2",
