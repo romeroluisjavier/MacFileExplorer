@@ -84,6 +84,14 @@ public enum ReleaseNotesCatalog {
             dateLabelEN: "Nov 17, 2026",
             items: [
                 ReleaseNoteItem(
+                    id: "interactive-help-guide",
+                    icon: "questionmark.circle.fill",
+                    titleES: "Guía completa y Ayuda interactiva en el menú Help",
+                    titleEN: "Complete Interactive Help & User Guide in Help Menu",
+                    summaryES: "El menú superior Ayuda / Help ahora abre una guía navegable y buscable basada en todos los releases: funciones destacadas, catálogo completo, explicación del menú lateral y del buscador avanzado con OCR, tabla de todos los atajos de teclado y todas las configuraciones disponibles.",
+                    summaryEN: "The top Help menu now opens a searchable interactive guide built from all releases, covering highlighted & full features, sidebar & OCR search explanations, complete keyboard/mouse shortcuts, and all available settings."
+                ),
+                ReleaseNoteItem(
                     id: "hidden-cache-manager-file-menu",
                     icon: "internaldrive.fill",
                     titleES: "Gestor de caché oculta (.macfileexplorer) en el menú Archivo",

@@ -599,6 +599,49 @@ struct MacFileExplorerApp: App {
             CommandMenu(loc.text(es: "Idioma", en: "Language")) {
                 languageSelectionPicker
             }
+
+            CommandGroup(replacing: .help) {
+                Button {
+                    HelpWindowController.shared.show(section: .highlights)
+                } label: {
+                    Label(loc.text(es: "Ayuda de MacFileExplorer", en: "MacFileExplorer Help"), systemImage: "questionmark.circle")
+                }
+                .keyboardShortcut("?", modifiers: [.command])
+
+                Divider()
+
+                Button {
+                    HelpWindowController.shared.show(section: .sidebar)
+                } label: {
+                    Label(loc.text(es: "Guía del Menú Lateral…", en: "Sidebar Menu Guide…"), systemImage: "sidebar.left")
+                }
+
+                Button {
+                    HelpWindowController.shared.show(section: .search)
+                } label: {
+                    Label(loc.text(es: "Guía de Búsqueda y OCR…", en: "Search & OCR Guide…"), systemImage: "magnifyingglass")
+                }
+
+                Button {
+                    HelpWindowController.shared.show(section: .shortcuts)
+                } label: {
+                    Label(loc.text(es: "Atajos de teclado…", en: "Keyboard Shortcuts…"), systemImage: "keyboard")
+                }
+
+                Button {
+                    HelpWindowController.shared.show(section: .settings)
+                } label: {
+                    Label(loc.text(es: "Configuraciones posibles…", en: "Available Settings…"), systemImage: "slider.horizontal.3")
+                }
+
+                Divider()
+
+                Button {
+                    HelpWindowController.shared.show(section: .releases)
+                } label: {
+                    Label(loc.text(es: "Historial de releases…", en: "Release History…"), systemImage: "sparkles")
+                }
+            }
         }
     }
 

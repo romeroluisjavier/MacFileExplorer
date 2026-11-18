@@ -343,6 +343,11 @@ public final class LocalizationManager: NSObject, NSMenuDelegate {
             ("Nueva ventana", "New Window"),
             ("Buscar archivos duplicados…", "Find Duplicate Files…"),
             ("Caché oculta (.macfileexplorer)…", "Hidden Cache (.macfileexplorer)…"),
+            ("Guía del Menú Lateral…", "Sidebar Menu Guide…"),
+            ("Guía de Búsqueda y OCR…", "Search & OCR Guide…"),
+            ("Atajos de teclado…", "Keyboard Shortcuts…"),
+            ("Configuraciones posibles…", "Available Settings…"),
+            ("Historial de releases…", "Release History…"),
             ("Cerrar", "Close"),
             ("Cerrar ventana", "Close Window"),
             ("Cerrar pestaña", "Close Tab"),
@@ -828,6 +833,16 @@ public final class LocalizationManager: NSObject, NSMenuDelegate {
         // Help / Ayuda
         case "ayuda de macfileexplorer", "macfileexplorer help":
             return "questionmark.circle"
+        case "guía del menú lateral…", "sidebar menu guide…":
+            return "sidebar.left"
+        case "guía de búsqueda y ocr…", "search & ocr guide…":
+            return "magnifyingglass"
+        case "atajos de teclado…", "keyboard shortcuts…":
+            return "keyboard"
+        case "configuraciones posibles…", "available settings…":
+            return "slider.horizontal.3"
+        case "historial de releases…", "release history…":
+            return "sparkles"
 
         // Language / Idioma
         case "idioma", "language":
