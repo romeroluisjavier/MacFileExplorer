@@ -77,9 +77,9 @@ public struct ReleaseNoteSection: Identifiable, Sendable {
 public enum ReleaseNotesCatalog {
     public static let sections: [ReleaseNoteSection] = [
         ReleaseNoteSection(
-            id: "v1.5.1-check-upgrades",
-            versionLabelES: "Versión 1.5.1 — Buscar actualizaciones desde GitHub",
-            versionLabelEN: "Version 1.5.1 — Check Upgrades from GitHub",
+            id: "v1.6.0-address-bar-bg-remove-ocr",
+            versionLabelES: "Versión 1.6.0 — Barra Editable, Eliminar Fondo (PNG) y OCR Preciso",
+            versionLabelEN: "Version 1.6.0 — Editable Address Bar, Remove Background & Enhanced OCR",
             dateLabelES: "17 nov 2026",
             dateLabelEN: "Nov 17, 2026",
             items: [
@@ -106,7 +106,16 @@ public enum ReleaseNotesCatalog {
                     titleEN: "More accurate text search inside images (Enhanced OCR)",
                     summaryES: "Se mejoró la búsqueda dentro de imágenes del buscador avanzado para reconocer textos pequeños o sobre fondos complejos (como capturas de videollamadas o pantallas), ignorando mayúsculas y tildes, y acelerando búsquedas repetidas.",
                     summaryEN: "Improved image text search in Advanced Search to recognize small or low-contrast captions (such as video call or UI screenshots), ignoring case and accents, with faster scanning and caching."
-                ),
+                )
+            ]
+        ),
+        ReleaseNoteSection(
+            id: "v1.5.1-check-upgrades",
+            versionLabelES: "Versión 1.5.1 — Buscar actualizaciones desde GitHub",
+            versionLabelEN: "Version 1.5.1 — Check Upgrades from GitHub",
+            dateLabelES: "17 nov 2026",
+            dateLabelEN: "Nov 17, 2026",
+            items: [
                 ReleaseNoteItem(
                     id: "check-upgrades-github",
                     icon: "arrow.down.circle.fill",

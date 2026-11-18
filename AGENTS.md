@@ -11,3 +11,7 @@
 - **NO hacer `git push` en cada cambio.**
 - Solo realizar `git push` cuando el usuario lo indique explícitamente (ej. "hacé push", "subí los cambios") o cuando solicite generar una versión (ej. "generá una versión x", release/corte de versión).
 - En el flujo de trabajo habitual se compila, prueba y verifica localmente sin empujar al repositorio remoto hasta recibir la instrucción directa.
+
+## Actualización de README en Releases
+
+- Cada vez que se cree un release o se actualice y pushee una versión al repositorio, **actualizar obligatoriamente** [`README.md`](./README.md) y [`releases/README.md`](./releases/README.md) con el número de versión actual, el enlace de descarga al nuevo `.dmg` y el detalle claro de las novedades para que quien visite GitHub vea los últimos cambios de la app.
