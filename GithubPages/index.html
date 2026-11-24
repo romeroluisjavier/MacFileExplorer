@@ -1,0 +1,1191 @@
+<!DOCTYPE html>
+<html lang="es" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MacFileExplorer — Explorador de Archivos Nativo para macOS en Swift y SwiftUI</title>
+  <meta name="description" content="La velocidad, el árbol de directorios y el flujo de trabajo del Explorador de Windows, desarrollado 100% nativo en Swift 6 y SwiftUI para macOS 14+. Detector SHA-256, índice OCR, Quick Actions y más." />
+  <meta property="og:title" content="MacFileExplorer — Explorador Nativo para macOS" />
+  <meta property="og:description" content="Explorador de archivos ultrarrápido para macOS en Swift 6 & SwiftUI con pestañas, barra de direcciones editable, detector de duplicados SHA-256, OCR en segundo plano y Quick Actions." />
+  <meta property="og:image" content="assets/main-explorer.png" />
+  <meta property="og:type" content="website" />
+  <link rel="icon" type="image/png" href="assets/app-icon.png" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['-apple-system', 'BlinkMacSystemFont', '"SF Pro Display"', '"SF Pro Text"', 'Inter', 'system-ui', 'sans-serif'],
+            mono: ['"SF Mono"', '"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', 'monospace'],
+          },
+          colors: {
+            macos: {
+              blue: '#0A84FF',
+              blueDark: '#007AFF',
+              indigo: '#5E5CE6',
+              teal: '#30D158',
+              amber: '#FF9F0A',
+              pink: '#FF375F',
+            }
+          },
+          boxShadow: {
+            'mac-window': '0 28px 80px -18px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.12)',
+            'mac-window-light': '0 24px 65px -16px rgba(15, 23, 42, 0.22), 0 0 0 1px rgba(15, 23, 42, 0.08)',
+            'glass-card': '0 10px 34px -10px rgba(0, 0, 0, 0.22)',
+          }
+        }
+      }
+    };
+  </script>
+
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg-page: #f5f6fa;
+      --bg-card: rgba(255, 255, 255, 0.72);
+      --bg-card-hover: rgba(255, 255, 255, 0.90);
+      --border-hairline: rgba(15, 23, 42, 0.09);
+      --border-strong: rgba(15, 23, 42, 0.15);
+      --glass-nav: rgba(255, 255, 255, 0.72);
+    }
+
+    html.dark {
+      --bg-page: #0a0b0f;
+      --bg-card: rgba(24, 26, 34, 0.68);
+      --bg-card-hover: rgba(31, 34, 46, 0.84);
+      --border-hairline: rgba(255, 255, 255, 0.10);
+      --border-strong: rgba(255, 255, 255, 0.18);
+      --glass-nav: rgba(16, 18, 24, 0.72);
+    }
+
+    body {
+      background-color: var(--bg-page);
+      font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    /* Fondo ambiental estilo wallpaper macOS Sequoia */
+    .sequoia-ambient {
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      pointer-events: none;
+      overflow: hidden;
+    }
+    .sequoia-blob {
+      position: absolute;
+      border-radius: 9999px;
+      filter: blur(110px);
+      opacity: 0.34;
+      transform: translate3d(0, 0, 0);
+      animation: floatBlob 18s ease-in-out infinite alternate;
+    }
+    html.dark .sequoia-blob {
+      opacity: 0.22;
+    }
+    .sequoia-blob-1 {
+      width: 560px; height: 560px;
+      top: -180px; left: -120px;
+      background: radial-gradient(circle, #0A84FF 0%, #5E5CE6 65%, transparent 100%);
+    }
+    .sequoia-blob-2 {
+      width: 520px; height: 520px;
+      top: 120px; right: -160px;
+      background: radial-gradient(circle, #30D158 0%, #0A84FF 70%, transparent 100%);
+      animation-delay: -6s;
+    }
+    .sequoia-blob-3 {
+      width: 480px; height: 480px;
+      bottom: -160px; left: 32%;
+      background: radial-gradient(circle, #BF5AF2 0%, #FF375F 65%, transparent 100%);
+      animation-delay: -11s;
+    }
+    @keyframes floatBlob {
+      0% { transform: translate(0px, 0px) scale(1); }
+      100% { transform: translate(32px, -24px) scale(1.07); }
+    }
+
+    /* Glassmorphism macOS */
+    .mac-glass {
+      background: var(--bg-card);
+      backdrop-filter: blur(22px) saturate(180%);
+      -webkit-backdrop-filter: blur(22px) saturate(180%);
+      border: 1px solid var(--border-hairline);
+      transition: background-color 220ms ease, border-color 220ms ease, transform 240ms cubic-bezier(.22,1,.36,1), box-shadow 240ms ease;
+    }
+    .mac-glass-interactive:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--border-strong);
+      transform: translateY(-3px);
+      box-shadow: 0 18px 42px -14px rgba(10, 132, 255, 0.16);
+    }
+
+    .mac-nav {
+      background: var(--glass-nav);
+      backdrop-filter: blur(24px) saturate(190%);
+      -webkit-backdrop-filter: blur(24px) saturate(190%);
+      border: 1px solid var(--border-hairline);
+    }
+
+    /* Animación de entrada por IntersectionObserver */
+    .reveal {
+      opacity: 0;
+      transform: translateY(22px) scale(0.985);
+      transition: opacity 620ms cubic-bezier(0.22, 1, 0.36, 1), transform 620ms cubic-bezier(0.22, 1, 0.36, 1);
+      will-change: opacity, transform;
+    }
+    .reveal.is-visible {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+
+    /* Marco interactivo del Hero */
+    .hero-frame {
+      transition: transform 350ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 350ms ease;
+    }
+    .hero-frame:hover {
+      transform: translateY(-4px);
+    }
+
+    /* Teclas kbd estilo macOS */
+    kbd.mac-kbd {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.16rem 0.48rem;
+      font-family: "SF Mono", "JetBrains Mono", ui-monospace, monospace;
+      font-size: 0.72rem;
+      font-weight: 600;
+      border-radius: 6px;
+      border: 1px solid var(--border-strong);
+      background: rgba(128, 128, 140, 0.12);
+      box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.12);
+    }
+
+    /* Lightbox */
+    .lightbox-backdrop {
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 200ms ease;
+    }
+    .lightbox-backdrop.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .lightbox-panel {
+      transform: scale(0.96) translateY(8px);
+      transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .lightbox-backdrop.open .lightbox-panel {
+      transform: scale(1) translateY(0);
+    }
+
+    /* Timeline vertical line */
+    .timeline-line {
+      background: linear-gradient(180deg, rgba(10, 132, 255, 0.7) 0%, rgba(94, 92, 230, 0.45) 55%, rgba(148, 163, 184, 0.12) 100%);
+    }
+  </style>
+
+  <!-- Tema automático inicial sin flash -->
+  <script>
+    (function () {
+      const stored = localStorage.getItem('mfe-theme');
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      if (stored === 'dark' || (!stored && prefersDark)) {
+        document.documentElement.classList.add('dark');
+      }
+    })();
+  </script>
+</head>
+
+<body class="text-slate-900 dark:text-slate-100 antialiased selection:bg-macos-blue/25 selection:text-macos-blue">
+  <!-- Fondo ambiental Sequoia -->
+  <div class="sequoia-ambient" aria-hidden="true">
+    <div class="sequoia-blob sequoia-blob-1"></div>
+    <div class="sequoia-blob sequoia-blob-2"></div>
+    <div class="sequoia-blob sequoia-blob-3"></div>
+  </div>
+
+  <!-- =========================================================
+       NAVBAR FLOTANTE (GLASSMORPHISM)
+  ========================================================== -->
+  <header class="fixed top-3 inset-x-0 z-40 px-4">
+    <nav class="mac-nav max-w-6xl mx-auto rounded-2xl px-4 sm:px-5 h-14 flex items-center justify-between shadow-lg shadow-black/5 dark:shadow-black/30">
+      <a href="#top" class="flex items-center gap-2.5 group">
+        <img src="assets/app-icon.png" alt="MacFileExplorer" class="w-8 h-8 rounded-lg shadow-sm group-hover:scale-105 transition-transform" />
+        <div class="flex items-center gap-2">
+          <span class="font-bold tracking-tight text-[15px] text-slate-900 dark:text-white">MacFileExplorer</span>
+          <span id="nav-version-pill" class="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-macos-blue/15 text-macos-blueDark dark:text-macos-blue border border-macos-blue/20">v1.7.0</span>
+        </div>
+      </a>
+
+      <div class="hidden md:flex items-center gap-1 text-[13.5px] font-medium text-slate-600 dark:text-slate-300">
+        <a href="#features" class="px-3 py-1.5 rounded-lg hover:bg-slate-900/5 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white transition-colors">Features</a>
+        <a href="#demo" class="px-3 py-1.5 rounded-lg hover:bg-slate-900/5 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white transition-colors">En Ejecución</a>
+        <a href="#releases" class="px-3 py-1.5 rounded-lg hover:bg-slate-900/5 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white transition-colors">Releases</a>
+        <a href="#architecture" class="px-3 py-1.5 rounded-lg hover:bg-slate-900/5 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white transition-colors">Arquitectura</a>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button id="theme-toggle" type="button" aria-label="Cambiar tema claro/oscuro" title="Cambiar tema claro/oscuro"
+          class="w-9 h-9 rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-900/5 dark:hover:bg-white/10 transition-colors">
+          <!-- Sun icon (visible in dark mode) -->
+          <svg class="w-4 h-4 hidden dark:block" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="4"></circle>
+            <path stroke-linecap="round" d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41m11.32-11.32 1.41-1.41"/>
+          </svg>
+          <!-- Moon icon (visible in light mode) -->
+          <svg class="w-4 h-4 block dark:hidden" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+          </svg>
+        </button>
+
+        <a href="https://github.com/romeroluisjavier/MacFileExplorer" target="_blank" rel="noopener noreferrer"
+          class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[13px] font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-900/5 dark:hover:bg-white/10 border border-slate-900/10 dark:border-white/10 transition-colors">
+          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844a9.59 9.59 0 0 1 2.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0 0 22 12.017C22 6.484 17.522 2 12 2z"/>
+          </svg>
+          GitHub
+        </a>
+
+        <a id="nav-download-cta" href="https://github.com/romeroluisjavier/MacFileExplorer/raw/main/releases/MacFileExplorer-1.7.0.dmg"
+          class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-[13px] font-semibold text-white bg-gradient-to-b from-[#1A90FF] to-[#0071E3] hover:brightness-110 shadow-md shadow-macos-blue/25 transition-all">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.3" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v11m0 0-4-4m4 4 4-4M4 19h16"/>
+          </svg>
+          <span>Descargar</span>
+        </a>
+      </div>
+    </nav>
+  </header>
+
+  <!-- =========================================================
+       HERO SECTION
+  ========================================================== -->
+  <main id="top" class="pt-28 sm:pt-32 pb-20 px-4">
+    <section class="max-w-6xl mx-auto text-center">
+      <!-- Dynamic Status Badges -->
+      <div class="reveal inline-flex flex-wrap items-center justify-center gap-2 mb-7">
+        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold mac-glass text-orange-600 dark:text-orange-400">
+          <span class="w-1.5 h-1.5 rounded-full bg-orange-500"></span>
+          Swift 6.0 &amp; SwiftUI
+        </span>
+        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold mac-glass text-sky-600 dark:text-sky-400">
+          <span class="w-1.5 h-1.5 rounded-full bg-sky-500"></span>
+          macOS 14+ (Sonoma / Sequoia)
+        </span>
+        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold mac-glass text-emerald-600 dark:text-emerald-400">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+          Universal · Apple Silicon + Intel
+        </span>
+        <span id="hero-release-badge" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold mac-glass text-violet-600 dark:text-violet-400">
+          <span class="w-1.5 h-1.5 rounded-full bg-violet-500"></span>
+          Última versión: v1.7.0
+        </span>
+        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold mac-glass text-slate-600 dark:text-slate-300">
+          Open Source
+        </span>
+      </div>
+
+      <!-- Headline -->
+      <h1 class="reveal text-4xl sm:text-6xl lg:text-[64px] font-extrabold tracking-[-0.035em] leading-[1.06] text-slate-950 dark:text-white max-w-4xl mx-auto">
+        La agilidad del Explorador de Windows,
+        <span class="bg-gradient-to-r from-[#0A84FF] via-[#5E5CE6] to-[#BF5AF2] bg-clip-text text-transparent">
+          100% nativo en macOS.
+        </span>
+      </h1>
+
+      <p class="reveal mt-6 text-base sm:text-xl text-slate-600 dark:text-slate-300/90 max-w-2xl mx-auto leading-relaxed">
+        Árbol de directorios instantáneo, pestañas, barra de direcciones editable (<kbd class="mac-kbd">⌘L</kbd>),
+        detector de duplicados <strong class="font-semibold text-slate-900 dark:text-white">SHA-256</strong> con CryptoKit,
+        índice <strong class="font-semibold text-slate-900 dark:text-white">OCR</strong> en segundo plano y Quick Actions multimedia — sin Electron, compilado en Swift puro.
+      </p>
+
+      <!-- Hero CTAs -->
+      <div class="reveal mt-8 flex flex-wrap items-center justify-center gap-3.5">
+        <a id="hero-download-cta" href="https://github.com/romeroluisjavier/MacFileExplorer/raw/main/releases/MacFileExplorer-1.7.0.dmg"
+          class="inline-flex items-center gap-2.5 px-6 py-3.5 rounded-2xl text-[15px] font-semibold text-white bg-gradient-to-b from-[#1A90FF] to-[#0071E3] hover:brightness-110 shadow-xl shadow-macos-blue/30 transition-all hover:-translate-y-0.5">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v12m0 0-4.5-4.5M12 15l4.5-4.5M4 20h16"/>
+          </svg>
+          <span id="hero-download-label">Descargar MacFileExplorer v1.7.0 (.dmg)</span>
+        </a>
+
+        <a href="https://github.com/romeroluisjavier/MacFileExplorer" target="_blank" rel="noopener noreferrer"
+          class="inline-flex items-center gap-2 px-6 py-3.5 rounded-2xl text-[15px] font-semibold mac-glass text-slate-800 dark:text-white hover:bg-white/95 dark:hover:bg-white/15 transition-all hover:-translate-y-0.5">
+          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844a9.59 9.59 0 0 1 2.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0 0 22 12.017C22 6.484 17.522 2 12 2z"/>
+          </svg>
+          Ver código fuente
+        </a>
+      </div>
+
+      <p class="reveal mt-3.5 text-xs text-slate-500 dark:text-slate-400">
+        Instalador Universal (~13 MB) · Apple Silicon &amp; Intel · Sin telemetría · Gratis
+      </p>
+
+      <!-- Hero Window Showcase Frame -->
+      <div class="reveal mt-12 sm:mt-14 max-w-5xl mx-auto">
+        <!-- Switcher pills above window -->
+        <div class="inline-flex flex-wrap items-center justify-center gap-1.5 p-1.5 rounded-2xl mac-glass mb-5" role="tablist" aria-label="Vista previa rápida">
+          <button type="button" data-hero-src="assets/main-explorer.png" data-hero-caption="Vista Detalles con barra híbrida editable, árbol lateral y miniaturas"
+            class="hero-tab active px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all bg-macos-blue text-white shadow-sm">
+            Explorador Principal
+          </button>
+          <button type="button" data-hero-src="assets/duplicate-detector-sha256.png" data-hero-caption="Detector asíncrono SHA-256 en 3 fases con pre-marcado de copias"
+            class="hero-tab px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white">
+            Detector SHA-256
+          </button>
+          <button type="button" data-hero-src="assets/large-icons-gallery.png" data-hero-caption="Galería de Iconos Grandes con miniaturas Retina y control deslizante de zoom"
+            class="hero-tab px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white">
+            Iconos Grandes
+          </button>
+          <button type="button" data-hero-src="assets/navigation-demo.gif" data-hero-caption="Demostración en movimiento: navegación entre carpetas y cambio de vista"
+            class="hero-tab px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white inline-flex items-center gap-1.5">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            Demo GIF
+          </button>
+        </div>
+
+        <div class="hero-frame relative rounded-2xl sm:rounded-3xl p-1.5 sm:p-2 mac-glass shadow-mac-window-light dark:shadow-mac-window">
+          <div class="relative rounded-xl sm:rounded-2xl overflow-hidden bg-[#16171d] border border-white/10">
+            <img id="hero-preview-img" src="assets/main-explorer.png" alt="MacFileExplorer ejecutándose en macOS sobre un entorno de demostración"
+              class="w-full h-auto block transition-opacity duration-200 cursor-zoom-in" />
+          </div>
+          <div class="mt-2.5 mb-1 px-3 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400">
+            <span id="hero-preview-caption" class="font-medium">Vista Detalles con barra híbrida editable, árbol lateral y miniaturas</span>
+            <span class="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-medium">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z"/>
+              </svg>
+              Capturado en sandbox limpio
+            </span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================
+         FEATURES BENTO GRID (#features)
+    ========================================================== -->
+    <section id="features" class="max-w-6xl mx-auto mt-28 sm:mt-36 scroll-mt-24">
+      <div class="reveal text-center max-w-2xl mx-auto mb-14">
+        <span class="inline-block text-xs font-bold uppercase tracking-widest text-macos-blue mb-2">Funcionalidades Reales</span>
+        <h2 class="text-3xl sm:text-5xl font-extrabold tracking-tight text-slate-950 dark:text-white">
+          Productividad sin fricción para power users de macOS
+        </h2>
+        <p class="mt-4 text-slate-600 dark:text-slate-400 text-base sm:text-lg">
+          Cada función está construida directamente sobre frameworks nativos de Apple: SwiftUI, AppKit, CryptoKit, Vision, PDFKit y QuickLook.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-6 gap-5">
+        <!-- Bento 1 (Large 4 cols): Windows-style Navigation + Hybrid Breadcrumb -->
+        <article class="reveal md:col-span-4 mac-glass mac-glass-interactive rounded-3xl p-7 flex flex-col justify-between">
+          <div>
+            <div class="w-11 h-11 rounded-2xl bg-macos-blue/15 text-macos-blue flex items-center justify-center mb-5">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.9" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 7.5A2.5 2.5 0 0 1 5.5 5h4.379a2.5 2.5 0 0 1 1.768.732l1.121 1.121A2.5 2.5 0 0 0 14.536 7.5H18.5A2.5 2.5 0 0 1 21 10v6.5A2.5 2.5 0 0 1 18.5 19h-13A2.5 2.5 0 0 1 3 16.5v-9Z"/>
+              </svg>
+            </div>
+            <h3 class="text-xl sm:text-2xl font-bold tracking-tight text-slate-950 dark:text-white">
+              Navegación Windows 11 Explorer + Barra Híbrida Editable
+            </h3>
+            <p class="mt-2.5 text-sm sm:text-[15px] text-slate-600 dark:text-slate-300 leading-relaxed">
+              Árbol lateral colapsable con <strong>Acceso rápido</strong>, <strong>Este equipo</strong> y pestañas nativas (<kbd class="mac-kbd">⌘T</kbd>).
+              Hacé clic en la barra de direcciones o pulsá <kbd class="mac-kbd">⌘L</kbd> para escribir o pegar rutas con autocompletado <kbd class="mac-kbd">Tab</kbd>,
+              menús desplegables en cada <code class="font-mono text-xs px-1.5 py-0.5 rounded bg-slate-900/5 dark:bg-white/10">&gt;</code> y soporte nativo para botones laterales del ratón (Logitech MX Master 3).
+            </p>
+          </div>
+          <div class="mt-6 flex flex-wrap gap-2 text-xs font-medium">
+            <span class="px-2.5 py-1 rounded-lg bg-slate-900/5 dark:bg-white/10 text-slate-700 dark:text-slate-200">Columnas redimensionables</span>
+            <span class="px-2.5 py-1 rounded-lg bg-slate-900/5 dark:bg-white/10 text-slate-700 dark:text-slate-200">3 modos de íconos en Lista</span>
+            <span class="px-2.5 py-1 rounded-lg bg-slate-900/5 dark:bg-white/10 text-slate-700 dark:text-slate-200">Sesiones persistentes</span>
+            <span class="px-2.5 py-1 rounded-lg bg-slate-900/5 dark:bg-white/10 text-slate-700 dark:text-slate-200">Monitoreo FSEvents en vivo</span>
+          </div>
+        </article>
+
+        <!-- Bento 2 (2 cols): SHA-256 Duplicate Finder -->
+        <article class="reveal md:col-span-2 mac-glass mac-glass-interactive rounded-3xl p-7 flex flex-col justify-between">
+          <div>
+            <div class="w-11 h-11 rounded-2xl bg-amber-500/15 text-amber-500 flex items-center justify-center mb-5">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.9" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25Z"/>
+              </svg>
+            </div>
+            <h3 class="text-xl font-bold tracking-tight text-slate-950 dark:text-white">
+              Duplicados SHA-256 en 3 Fases
+            </h3>
+            <p class="mt-2.5 text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+              Escaneo asíncrono con <strong>CryptoKit</strong>: filtra por tamaño exacto, valida hash parcial (64 KB inicio/fin) y confirma con <strong>SHA-256 por streaming</strong>. Pre-marca copias protegiendo siempre el original.
+            </p>
+          </div>
+          <div class="mt-5 pt-4 border-t border-slate-900/10 dark:border-white/10 flex items-center justify-between text-xs font-mono text-amber-600 dark:text-amber-400">
+            <span>Size → 64KB → SHA-256</span>
+            <span>CryptoKit</span>
+          </div>
+        </article>
+
+        <!-- Bento 3 (3 cols): OCR Background Index + Advanced Search -->
+        <article class="reveal md:col-span-3 mac-glass mac-glass-interactive rounded-3xl p-7 flex flex-col justify-between">
+          <div>
+            <div class="w-11 h-11 rounded-2xl bg-violet-500/15 text-violet-500 flex items-center justify-center mb-5">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.9" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-4.35-4.35M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm-3-8h6m-3-3v6"/>
+              </svg>
+            </div>
+            <h3 class="text-xl font-bold tracking-tight text-slate-950 dark:text-white">
+              Buscador Avanzado e Índice OCR en Segundo Plano
+            </h3>
+            <p class="mt-2.5 text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+              Filtra por tipo, extensión, rango de tamaño, subcarpetas y texto dentro de documentos, <strong>PDFs</strong> e <strong>imágenes</strong>.
+              El índice OCR comprimido con <strong>LZFSE</strong> (tope estricto de <strong>5 MB</strong> por carpeta con LRU) devuelve resultados en tiempo real e ignora tildes y mayúsculas.
+            </p>
+          </div>
+          <div class="mt-5 flex flex-wrap gap-2 text-xs font-medium">
+            <span class="px-2.5 py-1 rounded-lg bg-violet-500/10 text-violet-600 dark:text-violet-300">Vision .accurate</span>
+            <span class="px-2.5 py-1 rounded-lg bg-violet-500/10 text-violet-600 dark:text-violet-300">PDFKit</span>
+            <span class="px-2.5 py-1 rounded-lg bg-violet-500/10 text-violet-600 dark:text-violet-300">Caché oculta gestionable</span>
+          </div>
+        </article>
+
+        <!-- Bento 4 (3 cols): Quick Actions + Privacy Stripper -->
+        <article class="reveal md:col-span-3 mac-glass mac-glass-interactive rounded-3xl p-7 flex flex-col justify-between">
+          <div>
+            <div class="w-11 h-11 rounded-2xl bg-pink-500/15 text-pink-500 flex items-center justify-center mb-5">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.9" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456Z"/>
+              </svg>
+            </div>
+            <h3 class="text-xl font-bold tracking-tight text-slate-950 dark:text-white">
+              Quick Actions Multimedia y Privacy Stripper
+            </h3>
+            <p class="mt-2.5 text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+              Desde el clic derecho: <strong>eliminar fondo (PNG transparente)</strong> con Vision, limpiar metadatos GPS/EXIF/autor en fotos, videos y PDFs,
+              convertir a JPG/PNG por calidad/DPI/MB, pasar MOV a MP4, recortar o silenciar video, comprimir/extraer <code class="font-mono text-xs">.zip/.7z/.tar.gz/.rar</code> y renombrar en lote con Regex y fechas EXIF.
+            </p>
+          </div>
+          <div class="mt-5 flex flex-wrap gap-2 text-xs font-medium">
+            <span class="px-2.5 py-1 rounded-lg bg-pink-500/10 text-pink-600 dark:text-pink-300">Quitar fondo PNG</span>
+            <span class="px-2.5 py-1 rounded-lg bg-pink-500/10 text-pink-600 dark:text-pink-300">Borrar GPS / EXIF</span>
+            <span class="px-2.5 py-1 rounded-lg bg-pink-500/10 text-pink-600 dark:text-pink-300">Renombrado Regex</span>
+          </div>
+        </article>
+
+        <!-- Bento 5 (2 cols): Drag & Drop for Save Dialogs + Hidden files -->
+        <article class="reveal md:col-span-2 mac-glass mac-glass-interactive rounded-3xl p-7 flex flex-col justify-between">
+          <div>
+            <div class="w-11 h-11 rounded-2xl bg-emerald-500/15 text-emerald-500 flex items-center justify-center mb-5">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.9" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 21 3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5"/>
+              </svg>
+            </div>
+            <h3 class="text-lg font-bold tracking-tight text-slate-950 dark:text-white">
+              Drag &amp; Drop y Archivos Ocultos
+            </h3>
+            <p class="mt-2 text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+              Arrastrá rutas o archivos directo a diálogos de guardado de macOS, Slack o Gemini. Alterná archivos ocultos y <code class="font-mono text-xs">.DS_Store</code> al instante con <kbd class="mac-kbd">⌘⇧.</kbd>, con <strong>Deshacer/Rehacer</strong> (<kbd class="mac-kbd">⌘Z</kbd>).
+            </p>
+          </div>
+          <div class="mt-4 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+            + Cola de transferencias &gt; 1 GB con pausa/reanudación
+          </div>
+        </article>
+
+        <!-- Bento 6 (2 cols): Maccy Clipboard + Tray Icon -->
+        <article class="reveal md:col-span-2 mac-glass mac-glass-interactive rounded-3xl p-7 flex flex-col justify-between">
+          <div>
+            <div class="w-11 h-11 rounded-2xl bg-sky-500/15 text-sky-500 flex items-center justify-center mb-5">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.9" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184"/>
+              </svg>
+            </div>
+            <h3 class="text-lg font-bold tracking-tight text-slate-950 dark:text-white">
+              Portapapeles y Tray Icon
+            </h3>
+            <p class="mt-2 text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+              Historial estilo Maccy (<kbd class="mac-kbd">⌃⌘V</kbd>) para texto, enlaces, archivos e imágenes con pegado rápido y acceso permanente desde la barra de menús de macOS.
+            </p>
+          </div>
+          <div class="mt-4 text-xs font-medium text-sky-600 dark:text-sky-400">
+            + Cuentas de Google aisladas + Compartir a Slack y Gemini
+          </div>
+        </article>
+
+        <!-- Bento 7 (2 cols): Rich Quick Look & EXIF -->
+        <article class="reveal md:col-span-2 mac-glass mac-glass-interactive rounded-3xl p-7 flex flex-col justify-between">
+          <div>
+            <div class="w-11 h-11 rounded-2xl bg-indigo-500/15 text-indigo-500 flex items-center justify-center mb-5">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.9" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>
+              </svg>
+            </div>
+            <h3 class="text-lg font-bold tracking-tight text-slate-950 dark:text-white">
+              Vista Rápida (<kbd class="mac-kbd">Espacio</kbd>) y EXIF
+            </h3>
+            <p class="mt-2 text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+              Ventana flotante redimensionable para Markdown completo, JSON en árbol colapsable, código con números de línea, propiedades de carpetas y visor técnico EXIF (<kbd class="mac-kbd">⌘I</kbd>).
+            </p>
+          </div>
+          <div class="mt-4 text-xs font-medium text-indigo-600 dark:text-indigo-400">
+            + Guía interactiva buscable en Ayuda (<kbd class="mac-kbd">⌘?</kbd>)
+          </div>
+        </article>
+      </div>
+
+      <!-- Compact Keyboard Shortcuts Strip -->
+      <div class="reveal mt-6 mac-glass rounded-2xl p-5 flex flex-wrap items-center justify-between gap-4">
+        <div class="flex items-center gap-2.5 text-sm font-semibold text-slate-900 dark:text-white">
+          <svg class="w-4 h-4 text-macos-blue" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <rect x="2" y="6" width="20" height="12" rx="2.5"></rect>
+            <path stroke-linecap="round" d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M8 14h8"/>
+          </svg>
+          Atajos esenciales:
+        </div>
+        <div class="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-slate-600 dark:text-slate-300">
+          <span><kbd class="mac-kbd">⌘L</kbd> Editar ruta</span>
+          <span><kbd class="mac-kbd">⌘T</kbd> Nueva pestaña</span>
+          <span><kbd class="mac-kbd">Espacio</kbd> Vista Rápida</span>
+          <span><kbd class="mac-kbd">F2</kbd> Renombrar / Regex</span>
+          <span><kbd class="mac-kbd">⌘I</kbd> EXIF / Propiedades</span>
+          <span><kbd class="mac-kbd">⌃⌘V</kbd> Portapapeles</span>
+          <span><kbd class="mac-kbd">⌘⇧.</kbd> Ocultos</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================
+         EN EJECUCIÓN / DEMO GALLERY (#demo)
+    ========================================================== -->
+    <section id="demo" class="max-w-6xl mx-auto mt-28 sm:mt-36 scroll-mt-24">
+      <div class="reveal flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
+        <div>
+          <span class="inline-block text-xs font-bold uppercase tracking-widest text-macos-blue mb-2">En Ejecución</span>
+          <h2 class="text-3xl sm:text-5xl font-extrabold tracking-tight text-slate-950 dark:text-white">
+            Capturas HD y GIFs en vivo
+          </h2>
+          <p class="mt-3 text-slate-600 dark:text-slate-400 max-w-xl">
+            Grabados directamente desde la app compilada ejecutándose sobre un sandbox aislado de demostración. Hacé clic en cualquier tarjeta para ampliar en el visor modal.
+          </p>
+        </div>
+
+        <!-- Gallery Filter Tabs -->
+        <div class="inline-flex items-center p-1.5 rounded-2xl mac-glass self-start md:self-auto" role="tablist" aria-label="Filtrar galería">
+          <button type="button" data-demo-filter="screenshots"
+            class="demo-filter-btn active px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all bg-macos-blue text-white shadow-sm">
+            Screenshots (4)
+          </button>
+          <button type="button" data-demo-filter="gifs"
+            class="demo-filter-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white inline-flex items-center gap-1.5">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+            GIFs en vivo (3)
+          </button>
+          <button type="button" data-demo-filter="all"
+            class="demo-filter-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white">
+            Todos (7)
+          </button>
+        </div>
+      </div>
+
+      <div id="demo-grid" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Cards populated declaratively & hooked to Lightbox -->
+      </div>
+    </section>
+
+    <!-- =========================================================
+         ARQUITECTURA NATIVA & INSTALACIÓN (#architecture)
+    ========================================================== -->
+    <section id="architecture" class="max-w-6xl mx-auto mt-28 sm:mt-36 scroll-mt-24">
+      <div class="reveal text-center max-w-2xl mx-auto mb-12">
+        <span class="inline-block text-xs font-bold uppercase tracking-widest text-macos-blue mb-2">Ingeniería macOS</span>
+        <h2 class="text-3xl sm:text-5xl font-extrabold tracking-tight text-slate-950 dark:text-white">
+          Arquitectura 100% Nativa, Cero Overhead
+        </h2>
+        <p class="mt-4 text-slate-600 dark:text-slate-400">
+          Diseñado bajo concurrencia estricta de <strong>Swift 6</strong> combinando reactividad de SwiftUI con rendimiento de AppKit y aceleración por hardware de Apple Silicon.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- Architecture Stack -->
+        <div class="reveal lg:col-span-7 mac-glass rounded-3xl p-7">
+          <h3 class="text-lg font-bold text-slate-950 dark:text-white mb-5 flex items-center gap-2">
+            <svg class="w-5 h-5 text-macos-blue" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6.429 9.75 2.25 12l4.179 2.25m0-4.5 5.571 3 5.571-3m-11.142 0L2.25 7.5 12 2.25l9.75 5.25-4.179 2.25m0 0L21.75 12l-4.179 2.25m0 0 4.179 2.25L12 21.75 2.25 16.5l4.179-2.25m11.142 0-5.571 3-5.571-3"/>
+            </svg>
+            Stack Técnico del Repositorio
+          </h3>
+
+          <div class="space-y-3.5 text-sm">
+            <div class="flex items-start gap-3.5 p-3.5 rounded-2xl bg-slate-900/[0.03] dark:bg-white/[0.04] border border-slate-900/5 dark:border-white/5">
+              <span class="px-2.5 py-1 rounded-lg text-xs font-mono font-semibold bg-macos-blue/15 text-macos-blue shrink-0">UI Layer</span>
+              <div>
+                <p class="font-semibold text-slate-900 dark:text-white">SwiftUI <code class="font-mono text-xs">@Observable</code> + Puentes Nativos AppKit</p>
+                <p class="text-slate-600 dark:text-slate-400 text-xs mt-0.5">Lista Detalles de alta fluidez con gestos de ratón, drag &amp; drop nativo, cursores <code class="font-mono">NSCursor</code> y ventanas flotantes no activantes.</p>
+              </div>
+            </div>
+
+            <div class="flex items-start gap-3.5 p-3.5 rounded-2xl bg-slate-900/[0.03] dark:bg-white/[0.04] border border-slate-900/5 dark:border-white/5">
+              <span class="px-2.5 py-1 rounded-lg text-xs font-mono font-semibold bg-amber-500/15 text-amber-600 dark:text-amber-400 shrink-0">CryptoKit</span>
+              <div>
+                <p class="font-semibold text-slate-900 dark:text-white">Pipeline de Deduplicación SHA-256 en 3 Fases</p>
+                <p class="text-slate-600 dark:text-slate-400 text-xs mt-0.5"><code class="font-mono">DuplicateFinderService</code> evita I/O innecesario agrupando primero por tamaño, luego hash parcial de 64 KB (inicio + fin) y finalmente SHA-256 streaming en bloques de 1 MB.</p>
+              </div>
+            </div>
+
+            <div class="flex items-start gap-3.5 p-3.5 rounded-2xl bg-slate-900/[0.03] dark:bg-white/[0.04] border border-slate-900/5 dark:border-white/5">
+              <span class="px-2.5 py-1 rounded-lg text-xs font-mono font-semibold bg-violet-500/15 text-violet-600 dark:text-violet-400 shrink-0">Vision + LZFSE</span>
+              <div>
+                <p class="font-semibold text-slate-900 dark:text-white">OCR en Segundo Plano + Eliminación de Fondo</p>
+                <p class="text-slate-600 dark:text-slate-400 text-xs mt-0.5"><code class="font-mono">OCRIndexCacheService</code> indexa texto dentro de imágenes con reconocimiento <code class="font-mono">.accurate</code>, guarda índice comprimido con tope de 5 MB y emite coincidencias en vivo.</p>
+              </div>
+            </div>
+
+            <div class="flex items-start gap-3.5 p-3.5 rounded-2xl bg-slate-900/[0.03] dark:bg-white/[0.04] border border-slate-900/5 dark:border-white/5">
+              <span class="px-2.5 py-1 rounded-lg text-xs font-mono font-semibold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 shrink-0">Universal</span>
+              <div>
+                <p class="font-semibold text-slate-900 dark:text-white">Swift Package Manager · Binario Universal (<code class="font-mono text-xs">arm64</code> + <code class="font-mono text-xs">x86_64</code>)</p>
+                <p class="text-slate-600 dark:text-slate-400 text-xs mt-0.5">Sin dependencias de terceros pesadas. ~13 MB empaquetado como <code class="font-mono">.dmg</code> con actualizador integrado desde GitHub.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Install & Build Commands -->
+        <div class="reveal lg:col-span-5 mac-glass rounded-3xl p-7 flex flex-col justify-between">
+          <div>
+            <h3 class="text-lg font-bold text-slate-950 dark:text-white mb-2 flex items-center gap-2">
+              <svg class="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="m6.75 7.5 3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0 0 21 18V6a2.25 2.25 0 0 0-2.25-2.25H5.25A2.25 2.25 0 0 0 3 6v12a2.25 2.25 0 0 0 2.25 2.25Z"/>
+              </svg>
+              Instalación Rápida y Compilación
+            </h3>
+            <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mb-5">
+              Descargá el <code class="font-mono">.dmg</code> universal, arrastralo a <strong>Aplicaciones</strong> y abrí la primera vez con clic derecho → <strong>Abrir</strong> (o quitá la cuarentena por Terminal):
+            </p>
+
+            <!-- Command 1: Gatekeeper -->
+            <div class="mb-4">
+              <div class="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
+                <span>Primer inicio sin aviso de Gatekeeper</span>
+                <button type="button" data-copy="xattr -cr /Applications/MacFileExplorer.app"
+                  class="copy-btn text-macos-blue hover:underline font-semibold normal-case">Copiar</button>
+              </div>
+              <pre class="rounded-xl bg-slate-950 text-slate-100 p-3.5 text-xs font-mono overflow-x-auto border border-white/10"><code>xattr -cr /Applications/MacFileExplorer.app</code></pre>
+            </div>
+
+            <!-- Command 2: Build from source -->
+            <div>
+              <div class="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
+                <span>Compilar desde código fuente (Swift 6)</span>
+                <button type="button" data-copy="git clone https://github.com/romeroluisjavier/MacFileExplorer.git && cd MacFileExplorer && ./run.sh"
+                  class="copy-btn text-macos-blue hover:underline font-semibold normal-case">Copiar</button>
+              </div>
+              <pre class="rounded-xl bg-slate-950 text-slate-100 p-3.5 text-xs font-mono overflow-x-auto border border-white/10 leading-relaxed"><code>git clone https://github.com/romeroluisjavier/MacFileExplorer.git
+cd MacFileExplorer
+./run.sh                 # Compila y abre en modo Debug
+./package_release.sh     # Genera .dmg Universal (arm64+x86_64)</code></pre>
+            </div>
+          </div>
+
+          <div class="mt-6 pt-4 border-t border-slate-900/10 dark:border-white/10 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+            <span>Requiere macOS 14.0+</span>
+            <a href="https://github.com/romeroluisjavier/MacFileExplorer/tree/main/releases" target="_blank" rel="noopener noreferrer" class="text-macos-blue font-semibold hover:underline">
+              Ver carpeta releases/ →
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================
+         RELEASES & CHANGELOG TIMELINE (#releases)
+    ========================================================== -->
+    <section id="releases" class="max-w-5xl mx-auto mt-28 sm:mt-36 scroll-mt-24">
+      <div class="reveal text-center max-w-2xl mx-auto mb-14">
+        <span class="inline-block text-xs font-bold uppercase tracking-widest text-macos-blue mb-2">Evolución Continua</span>
+        <h2 class="text-3xl sm:text-5xl font-extrabold tracking-tight text-slate-950 dark:text-white">
+          Releases &amp; Changelog
+        </h2>
+        <p id="releases-sync-status" class="mt-3 text-sm sm:text-base text-slate-600 dark:text-slate-400">
+          Historial real extraído de los tags y lanzamientos de <code class="font-mono text-xs px-1.5 py-0.5 rounded bg-slate-900/5 dark:bg-white/10">romeroluisjavier/MacFileExplorer</code>.
+        </p>
+      </div>
+
+      <div class="relative pl-6 sm:pl-10">
+        <!-- Vertical line -->
+        <div class="timeline-line absolute left-2 sm:left-3.5 top-2 bottom-4 w-0.5 rounded-full" aria-hidden="true"></div>
+        <div id="releases-timeline" class="space-y-6">
+          <!-- Populated cleanly from verified static data + live GitHub API enrichment -->
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- =========================================================
+       FOOTER
+  ========================================================== -->
+  <footer class="mt-20 border-t border-slate-900/10 dark:border-white/10 py-10 px-4">
+    <div class="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-5 text-sm text-slate-500 dark:text-slate-400">
+      <div class="flex items-center gap-3">
+        <img src="assets/app-icon.png" alt="MacFileExplorer" class="w-7 h-7 rounded-lg" />
+        <div>
+          <p class="font-semibold text-slate-800 dark:text-slate-200 leading-tight">MacFileExplorer</p>
+          <p class="text-xs">Desarrollado por <a href="https://github.com/romeroluisjavier" target="_blank" rel="noopener noreferrer" class="hover:text-macos-blue underline-offset-2 hover:underline">Luis Javier Romero</a> · Software libre de uso abierto</p>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center justify-center gap-5 text-xs sm:text-sm font-medium">
+        <a href="https://github.com/romeroluisjavier/MacFileExplorer" target="_blank" rel="noopener noreferrer" class="hover:text-macos-blue transition-colors">Código fuente</a>
+        <a href="https://github.com/romeroluisjavier/MacFileExplorer/issues" target="_blank" rel="noopener noreferrer" class="hover:text-macos-blue transition-colors">Issues</a>
+        <a href="https://github.com/romeroluisjavier/MacFileExplorer/releases" target="_blank" rel="noopener noreferrer" class="hover:text-macos-blue transition-colors">Releases</a>
+        <a href="https://github.com/romeroluisjavier/MacFileExplorer/blob/main/README.md" target="_blank" rel="noopener noreferrer" class="hover:text-macos-blue transition-colors">Documentación</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- =========================================================
+       LIGHTBOX MODAL PARA SCREENSHOTS Y GIFS
+  ========================================================== -->
+  <div id="lightbox" class="lightbox-backdrop fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 sm:p-8" role="dialog" aria-modal="true" aria-labelledby="lightbox-title">
+    <div class="lightbox-panel relative max-w-5xl w-full rounded-3xl bg-[#14161e] border border-white/15 shadow-2xl overflow-hidden text-white">
+      <div class="flex items-center justify-between px-5 py-3.5 border-b border-white/10 bg-white/[0.03]">
+        <div class="flex items-center gap-3 min-w-0">
+          <span id="lightbox-badge" class="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-macos-blue/20 text-macos-blue shrink-0">PNG HD</span>
+          <h3 id="lightbox-title" class="text-sm sm:text-base font-semibold truncate">Vista previa</h3>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <button id="lightbox-prev" type="button" aria-label="Anterior" class="w-8 h-8 rounded-lg hover:bg-white/10 flex items-center justify-center transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+          </button>
+          <button id="lightbox-next" type="button" aria-label="Siguiente" class="w-8 h-8 rounded-lg hover:bg-white/10 flex items-center justify-center transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+          </button>
+          <button id="lightbox-close" type="button" aria-label="Cerrar" class="w-8 h-8 rounded-lg hover:bg-white/15 flex items-center justify-center transition-colors ml-1">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="p-3 sm:p-5 bg-[#0c0e14] flex items-center justify-center max-h-[74vh] overflow-hidden">
+        <img id="lightbox-img" src="" alt="" class="max-h-[68vh] w-auto rounded-xl border border-white/10 object-contain" />
+      </div>
+
+      <div class="px-5 py-3.5 border-t border-white/10 bg-white/[0.02] flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs sm:text-sm text-slate-300">
+        <p id="lightbox-desc"></p>
+        <span class="text-xs text-slate-500 shrink-0 font-mono">Esc · ← · →</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       INTERACTIVIDAD, GALERÍA, LIGHTBOX Y SYNC GITHUB API
+  ========================================================== -->
+  <script>
+    const REPO_OWNER = 'romeroluisjavier';
+    const REPO_NAME = 'MacFileExplorer';
+
+    // 1. Toggle tema claro/oscuro respetando prefers-color-scheme
+    const themeToggleBtn = document.getElementById('theme-toggle');
+    themeToggleBtn.addEventListener('click', () => {
+      const isDark = document.documentElement.classList.toggle('dark');
+      localStorage.setItem('mfe-theme', isDark ? 'dark' : 'light');
+    });
+
+    // 2. Hero Showcase Tabs
+    const heroImg = document.getElementById('hero-preview-img');
+    const heroCaption = document.getElementById('hero-preview-caption');
+    const heroTabs = document.querySelectorAll('.hero-tab');
+    heroTabs.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        heroTabs.forEach((b) => {
+          b.classList.remove('active', 'bg-macos-blue', 'text-white', 'shadow-sm');
+          b.classList.add('text-slate-600', 'dark:text-slate-300');
+        });
+        btn.classList.add('active', 'bg-macos-blue', 'text-white', 'shadow-sm');
+        btn.classList.remove('text-slate-600', 'dark:text-slate-300');
+
+        heroImg.style.opacity = '0.35';
+        setTimeout(() => {
+          heroImg.src = btn.dataset.heroSrc;
+          heroCaption.textContent = btn.dataset.heroCaption;
+          heroImg.style.opacity = '1';
+        }, 120);
+      });
+    });
+
+    // 3. Catálogo de Assets Sanitizados (Screenshots + GIFs en vivo)
+    const DEMO_ITEMS = [
+      {
+        id: 'main-explorer',
+        type: 'screenshots',
+        badge: 'Screenshot HD · 1440px',
+        title: 'Explorador Principal — Vista Detalles',
+        src: 'assets/main-explorer.png',
+        desc: 'Interfaz nativa SwiftUI inspirada en Windows 11 Explorer: barra de comandos superior, Breadcrumb editable (⌘L), árbol lateral de Acceso Rápido, columnas redimensionables y miniaturas en lista.'
+      },
+      {
+        id: 'duplicate-detector',
+        type: 'screenshots',
+        badge: 'Screenshot HD · CryptoKit',
+        title: 'Detector de Duplicados SHA-256 en 3 Fases',
+        src: 'assets/duplicate-detector-sha256.png',
+        desc: 'Agrupa copias exactas aunque tengan distinto nombre (Backup_Final_v2.zip vs Copia_Backup_Final.zip), protege el archivo Original, pre-marca duplicados y calcula el espacio recuperable.'
+      },
+      {
+        id: 'large-icons',
+        type: 'screenshots',
+        badge: 'Screenshot HD · Retina',
+        title: 'Galería de Iconos Grandes con Zoom Fluido',
+        src: 'assets/large-icons-gallery.png',
+        desc: 'Vista de cuadrícula con previsualizaciones nítidas generadas con caché en memoria y disco, más deslizador inferior estilo Finder para escalar de 40 px a 192 px.'
+      },
+      {
+        id: 'interactive-help',
+        type: 'screenshots',
+        badge: 'Screenshot HD · v1.7.0',
+        title: 'Guía Interactiva y Catálogo de Atajos (⌘?)',
+        src: 'assets/interactive-help.png',
+        desc: 'Centro de ayuda buscable dentro de la app con funciones destacadas, explicación del menú lateral, buscador OCR, atajos de teclado e historial de releases.'
+      },
+      {
+        id: 'nav-gif',
+        type: 'gifs',
+        badge: 'GIF en vivo · Navegación',
+        title: 'Navegación Instantánea y Cambio de Vista',
+        src: 'assets/navigation-demo.gif',
+        desc: 'Recorrido fluido entre Proyectos_2026, Facturas_Demo y Diseño_UI alternando en vivo entre Vista Detalles y Galería de Iconos Grandes.'
+      },
+      {
+        id: 'dup-gif',
+        type: 'gifs',
+        badge: 'GIF en vivo · SHA-256',
+        title: 'Escaneo Real de Archivos Duplicados',
+        src: 'assets/duplicates-demo.gif',
+        desc: 'Ejecución real del motor DuplicateFinderService (tamaño → hash parcial 64 KB → SHA-256 streaming) encontrando los 3 grupos de copias exactas en milisegundos.'
+      },
+      {
+        id: 'search-gif',
+        type: 'gifs',
+        badge: 'GIF en vivo · Búsqueda',
+        title: 'Filtrado Instantáneo en Tiempo Real',
+        src: 'assets/search-filter-demo.gif',
+        desc: 'Filtrado reactivo al escribir consultas («Backup», «Logo», «.pdf») con soporte integrado para búsqueda avanzada por tamaño, subcarpetas, PDFs y OCR.'
+      }
+    ];
+
+    const demoGrid = document.getElementById('demo-grid');
+    let currentFilter = 'screenshots';
+    let currentLightboxList = [];
+    let currentLightboxIndex = 0;
+
+    function renderDemoGallery(filter) {
+      currentFilter = filter;
+      const filtered = filter === 'all' ? DEMO_ITEMS : DEMO_ITEMS.filter((i) => i.type === filter);
+      currentLightboxList = filtered;
+
+      demoGrid.innerHTML = filtered.map((item, idx) => `
+        <article class="mac-glass mac-glass-interactive rounded-3xl overflow-hidden flex flex-col cursor-pointer group" data-open-lightbox="${idx}">
+          <div class="relative bg-[#14161d] overflow-hidden border-b border-slate-900/10 dark:border-white/10 aspect-[16/10]">
+            <img src="${item.src}" alt="${item.title}" loading="lazy"
+              class="w-full h-full object-cover object-top group-hover:scale-[1.02] transition-transform duration-300" />
+            <div class="absolute top-3 left-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-black/65 backdrop-blur-md text-white border border-white/15">
+              ${item.type === 'gifs' ? '<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>' : ''}
+              ${item.badge}
+            </div>
+            <div class="absolute bottom-3 right-3 w-8 h-8 rounded-xl bg-black/60 backdrop-blur-md text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity border border-white/15">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15"/>
+              </svg>
+            </div>
+          </div>
+          <div class="p-5 sm:p-6 flex-1 flex flex-col justify-between">
+            <div>
+              <h3 class="text-base sm:text-lg font-bold text-slate-950 dark:text-white group-hover:text-macos-blue transition-colors">${item.title}</h3>
+              <p class="mt-1.5 text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">${item.desc}</p>
+            </div>
+          </div>
+        </article>
+      `).join('');
+
+      demoGrid.querySelectorAll('[data-open-lightbox]').forEach((el) => {
+        el.addEventListener('click', () => {
+          openLightbox(Number(el.dataset.openLightbox));
+        });
+      });
+    }
+
+    document.querySelectorAll('.demo-filter-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.demo-filter-btn').forEach((b) => {
+          b.classList.remove('active', 'bg-macos-blue', 'text-white', 'shadow-sm');
+          b.classList.add('text-slate-600', 'dark:text-slate-300');
+        });
+        btn.classList.add('active', 'bg-macos-blue', 'text-white', 'shadow-sm');
+        btn.classList.remove('text-slate-600', 'dark:text-slate-300');
+        renderDemoGallery(btn.dataset.demoFilter);
+      });
+    });
+
+    // Abrir lightbox también desde la imagen principal del Hero
+    heroImg.addEventListener('click', () => {
+      currentLightboxList = DEMO_ITEMS;
+      const srcAttr = heroImg.getAttribute('src');
+      const idx = Math.max(0, DEMO_ITEMS.findIndex((i) => i.src === srcAttr));
+      openLightbox(idx);
+    });
+
+    // 4. Lightbox Modal Controller
+    const lightbox = document.getElementById('lightbox');
+    const lbImg = document.getElementById('lightbox-img');
+    const lbTitle = document.getElementById('lightbox-title');
+    const lbDesc = document.getElementById('lightbox-desc');
+    const lbBadge = document.getElementById('lightbox-badge');
+
+    function updateLightboxContent() {
+      const item = currentLightboxList[currentLightboxIndex];
+      if (!item) return;
+      lbImg.src = item.src;
+      lbImg.alt = item.title;
+      lbTitle.textContent = item.title;
+      lbDesc.textContent = item.desc;
+      lbBadge.textContent = item.badge;
+    }
+
+    function openLightbox(index) {
+      currentLightboxIndex = index;
+      updateLightboxContent();
+      lightbox.classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeLightbox() {
+      lightbox.classList.remove('open');
+      document.body.style.overflow = '';
+    }
+
+    document.getElementById('lightbox-close').addEventListener('click', closeLightbox);
+    document.getElementById('lightbox-prev').addEventListener('click', () => {
+      currentLightboxIndex = (currentLightboxIndex - 1 + currentLightboxList.length) % currentLightboxList.length;
+      updateLightboxContent();
+    });
+    document.getElementById('lightbox-next').addEventListener('click', () => {
+      currentLightboxIndex = (currentLightboxIndex + 1) % currentLightboxList.length;
+      updateLightboxContent();
+    });
+    lightbox.addEventListener('click', (e) => {
+      if (e.target === lightbox) closeLightbox();
+    });
+    document.addEventListener('keydown', (e) => {
+      if (!lightbox.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLightbox();
+      if (e.key === 'ArrowLeft') document.getElementById('lightbox-prev').click();
+      if (e.key === 'ArrowRight') document.getElementById('lightbox-next').click();
+    });
+
+    // 5. Botones copiar comando
+    document.querySelectorAll('.copy-btn').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(btn.dataset.copy);
+          const prev = btn.textContent;
+          btn.textContent = '¡Copiado!';
+          setTimeout(() => { btn.textContent = prev; }, 1600);
+        } catch (_) {}
+      });
+    });
+
+    // 6. Releases & Changelog Timeline (Static verified baseline + live GitHub API sync)
+    const STATIC_RELEASES = [
+      {
+        tag: 'v1.7.0',
+        date: '18 nov 2026',
+        title: 'Índice OCR en Background, Gestor de Caché y Guía Interactiva',
+        latest: true,
+        dmgUrl: `https://github.com/${REPO_OWNER}/${REPO_NAME}/raw/main/releases/MacFileExplorer-1.7.0.dmg`,
+        highlights: [
+          'Indexación OCR automática en segundo plano (.macfileexplorer_ocr.cache comprimido con LZFSE, tope estricto 5 MB por carpeta) con resultados en vivo.',
+          'Gestor de caché oculta (.macfileexplorer) en Archivo con desglose por tipo y limpieza en un clic.',
+          'Guía interactiva completa y buscable en el menú Ayuda (⌘?) con funciones, atajos y configuraciones.'
+        ]
+      },
+      {
+        tag: 'v1.6.0',
+        date: '17 nov 2026',
+        title: 'Barra Editable Estilo Windows, Eliminar Fondo PNG y OCR Preciso',
+        dmgUrl: `https://github.com/${REPO_OWNER}/${REPO_NAME}/raw/main/releases/MacFileExplorer-1.6.0.dmg`,
+        highlights: [
+          'Barra de direcciones híbrida editable al hacer clic o con ⌘L, auto-selección, autocompletado con Tab y menús de subcarpetas.',
+          'Quick Action «Eliminar fondo (PNG transparente)» nativa con Vision para aislar sujetos sin modificar el original.',
+          'OCR mejorado con reconocimiento .accurate, búsqueda sin tildes y escaneo paralelo.'
+        ]
+      },
+      {
+        tag: 'v1.5.1',
+        date: '17 nov 2026',
+        title: 'Actualizador Integrado desde GitHub (Check Upgrades)',
+        dmgUrl: `https://github.com/${REPO_OWNER}/${REPO_NAME}/raw/main/releases/MacFileExplorer-1.5.1.dmg`,
+        highlights: [
+          'Comprobación directa de nuevas versiones en GitHub con descarga automática del instalador .dmg a Descargas.'
+        ]
+      },
+      {
+        tag: 'v1.5.0',
+        date: '17 nov 2026',
+        title: 'Buscador Avanzado, Detector de Duplicados SHA-256 y Cola > 1 GB',
+        dmgUrl: `https://github.com/${REPO_OWNER}/${REPO_NAME}/raw/main/releases/MacFileExplorer-1.5.0.dmg`,
+        highlights: [
+          'Buscador avanzado con filtros por tipo, extensión, tamaño, subcarpetas y contenido en texto, PDF e imágenes.',
+          'Detector de archivos duplicados por tamaño + hash parcial 64 KB + SHA-256 completo con pre-marcado inteligente.',
+          'Cola de transferencias unificada (> 1 GB) en barra inferior con pausa, reanudación y cancelación.'
+        ]
+      },
+      {
+        tag: 'v1.4.0',
+        date: '16 nov 2026',
+        title: 'Quick Actions Multimedia, Privacy Stripper, EXIF y Renombrado Masivo',
+        dmgUrl: `https://github.com/${REPO_OWNER}/${REPO_NAME}/raw/main/releases/MacFileExplorer-1.4.0.dmg`,
+        highlights: [
+          'Conversión rápida JPG/PNG, rotación, MOV→MP4, Trim, silenciado de video y eliminación de metadatos GPS/EXIF.',
+          'Vista Rápida enriquecida (Markdown, JSON colapsable, código) y visor EXIF en Propiedades (⌘I).',
+          'Compresión/extracción (.zip, .7z, .tar.gz, .rar), renombrado por lotes Regex/EXIF y Modificados hoy (24h).'
+        ]
+      },
+      {
+        tag: 'v1.3.0 / v1.3.1',
+        date: '16 nov 2026',
+        title: 'Historial del Portapapeles (⌃⌘V) y Tray Icon en Barra de Menús',
+        dmgUrl: `https://github.com/${REPO_OWNER}/${REPO_NAME}/tags`,
+        highlights: [
+          'Historial del Portapapeles estilo Maccy con desplegable global no activante y pegado automático.',
+          'Ícono en barra de menús de macOS y persistencia completa de carpetas, pestañas y sesiones.'
+        ]
+      },
+      {
+        tag: 'v1.2.0',
+        date: '13 nov 2026',
+        title: 'Compartir en Slack, Soporte Logitech MX Master 3 y Menú Ir',
+        dmgUrl: `https://github.com/${REPO_OWNER}/${REPO_NAME}/raw/main/releases/MacFileExplorer-1.2.0.dmg`,
+        highlights: [
+          'Envío directo «Añadir a Slack» desde el menú contextual con autocompletado de canales y personas.',
+          'Navegación Atrás/Adelante con botones laterales del ratón (.swipe Logi Options+) y atajos ⌘[ / ⌘].'
+        ]
+      },
+      {
+        tag: 'v1.0.0 — v1.1.0',
+        date: '12 nov 2026',
+        title: 'Lanzamiento Inicial: Pestañas, Columnas Redimensionables y Quick Look',
+        dmgUrl: `https://github.com/${REPO_OWNER}/${REPO_NAME}/raw/main/releases/MacFileExplorer-1.1.0.dmg`,
+        highlights: [
+          'Navegación por pestañas (⌘T), columnas redimensionables, 3 modos de iconos en vista Lista y slider de zoom en cuadrícula.',
+          'Menú contextual con «Abrir Terminal aquí», «Añadir a Gemini», Deshacer/Rehacer (⌘Z) y monitoreo en vivo.'
+        ]
+      }
+    ];
+
+    function renderReleases(releases) {
+      const container = document.getElementById('releases-timeline');
+      container.innerHTML = releases.map((rel) => `
+        <article class="reveal relative mac-glass rounded-3xl p-6 sm:p-7">
+          <span class="absolute -left-[25px] sm:-left-[35px] top-7 w-4 h-4 rounded-full border-2 border-white dark:border-[#0a0b0f] ${rel.latest ? 'bg-macos-blue ring-4 ring-macos-blue/25' : 'bg-slate-400 dark:bg-slate-600'}"></span>
+          <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+            <div class="flex flex-wrap items-center gap-2.5">
+              <span class="px-3 py-1 rounded-full text-xs font-mono font-bold ${rel.latest ? 'bg-macos-blue text-white shadow-sm' : 'bg-slate-900/8 dark:bg-white/10 text-slate-800 dark:text-slate-200'}">${rel.tag}</span>
+              ${rel.latest ? '<span class="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">Actual</span>' : ''}
+              <span class="text-xs font-medium text-slate-500 dark:text-slate-400">${rel.date}</span>
+            </div>
+            ${rel.dmgUrl ? `
+              <a href="${rel.dmgUrl}" target="_blank" rel="noopener noreferrer"
+                class="inline-flex items-center gap-1.5 text-xs font-semibold text-macos-blue hover:underline">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v11m0 0-4-4m4 4 4-4M4 19h16"/></svg>
+                ${rel.dmgUrl.endsWith('.dmg') ? 'Descargar .dmg' : 'Ver en GitHub'}
+              </a>` : ''}
+          </div>
+          <h3 class="text-lg sm:text-xl font-bold text-slate-950 dark:text-white">${rel.title}</h3>
+          <ul class="mt-3 space-y-1.5 text-sm text-slate-600 dark:text-slate-300">
+            ${rel.highlights.map((h) => `
+              <li class="flex items-start gap-2.5">
+                <span class="w-1.5 h-1.5 rounded-full bg-macos-blue/80 mt-2 shrink-0"></span>
+                <span>${h}</span>
+              </li>`).join('')}
+          </ul>
+        </article>
+      `).join('');
+      observeRevealElements();
+    }
+
+    async function syncReleasesFromGitHub() {
+      const statusEl = document.getElementById('releases-sync-status');
+      try {
+        const res = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases?per_page=10`, {
+          headers: { 'Accept': 'application/vnd.github+json' }
+        });
+        if (!res.ok) return;
+        const apiReleases = await res.json();
+        if (Array.isArray(apiReleases) && apiReleases.length > 0) {
+          const mapped = apiReleases.map((r, idx) => {
+            const dmgAsset = (r.assets || []).find((a) => a.name && a.name.endsWith('.dmg'));
+            const lines = (r.body || '')
+              .split(/\r?\n/)
+              .map((l) => l.replace(/^[-*•\d.)\s]+/, '').trim())
+              .filter((l) => l.length > 10)
+              .slice(0, 4);
+            return {
+              tag: r.tag_name,
+              date: r.published_at ? new Date(r.published_at).toLocaleDateString('es-AR', { day: 'numeric', month: 'short', year: 'numeric' }) : '',
+              title: r.name || r.tag_name,
+              latest: idx === 0,
+              dmgUrl: dmgAsset ? dmgAsset.browser_download_url : r.html_url,
+              highlights: lines.length ? lines : ['Lanzamiento oficial publicado en GitHub Releases.']
+            };
+          });
+          // Actualizar CTAs con el último release real de la API
+          const latest = mapped[0];
+          document.getElementById('nav-version-pill').textContent = latest.tag;
+          document.getElementById('hero-release-badge').innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-violet-500"></span>Última versión: ${latest.tag}`;
+          if (latest.dmgUrl) {
+            document.getElementById('nav-download-cta').href = latest.dmgUrl;
+            document.getElementById('hero-download-cta').href = latest.dmgUrl;
+            document.getElementById('hero-download-label').textContent = `Descargar MacFileExplorer ${latest.tag} (.dmg)`;
+          }
+          renderReleases(mapped);
+          statusEl.textContent = `Sincronizado en vivo con GitHub Releases (${REPO_OWNER}/${REPO_NAME}).`;
+        }
+      } catch (_) {
+        // Fallback estático ya renderizado con los 10 tags reales del repositorio
+      }
+    }
+
+    // 7. IntersectionObserver para animaciones fluidas al hacer scroll
+    let revealObserver;
+    function observeRevealElements() {
+      if (!revealObserver) {
+        revealObserver = new IntersectionObserver((entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              entry.target.classList.add('is-visible');
+              revealObserver.unobserve(entry.target);
+            }
+          });
+        }, { threshold: 0.08, rootMargin: '0px 0px -30px 0px' });
+      }
+      document.querySelectorAll('.reveal:not(.is-visible)').forEach((el) => revealObserver.observe(el));
+    }
+
+    // Inicialización
+    renderDemoGallery('screenshots');
+    renderReleases(STATIC_RELEASES);
+    observeRevealElements();
+    syncReleasesFromGitHub();
+  </script>
+</body>
+</html>
