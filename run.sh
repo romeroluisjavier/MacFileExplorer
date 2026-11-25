@@ -20,6 +20,7 @@ fi
 cp Sources/MacFileExplorer/Resources/AppIcon.icns MacFileExplorer.app/Contents/Resources/AppIcon.icns
 cp Sources/MacFileExplorer/Resources/AppIcon-Light.png MacFileExplorer.app/Contents/Resources/AppIcon-Light.png
 cp Sources/MacFileExplorer/Resources/AppIcon-Dark.png MacFileExplorer.app/Contents/Resources/AppIcon-Dark.png
+cp Sources/MacFileExplorer/Resources/StartIcon-EmonkBrain.png MacFileExplorer.app/Contents/Resources/StartIcon-EmonkBrain.png
 
 mkdir -p MacFileExplorer.app/Contents/Resources/en.lproj
 mkdir -p MacFileExplorer.app/Contents/Resources/es.lproj

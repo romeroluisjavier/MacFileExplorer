@@ -53,6 +53,7 @@ public final class LocalizationManager: NSObject, NSMenuDelegate {
             syncAppleLanguagesDefault()
             applyLanguageToMainMenu()
             StatusBarManager.shared.refreshTooltipAndMenu()
+            TaskbarManager.shared.refreshLocalizedUI()
         }
     }
 
@@ -213,6 +214,8 @@ public final class LocalizationManager: NSObject, NSMenuDelegate {
             ("Ver", "View"),
             ("Ir", "Go"),
             ("Portapapeles", "Clipboard"),
+            ("Barra de tareas", "Taskbar"),
+            ("AltTab", "AltTab"),
             ("Idioma", "Language"),
             ("Ventana", "Window"),
             ("Ayuda", "Help"),
@@ -851,6 +854,60 @@ public final class LocalizationManager: NSObject, NSMenuDelegate {
             return "globe.americas.fill"
         case "english":
             return "globe.europe.africa.fill"
+
+        // Taskbar / Barra de tareas
+        case "barra de tareas", "taskbar", "activar barra de tareas", "enable taskbar", "gestión del dock de macos", "macos dock management":
+            return "dock.rectangle"
+        case "activar por defecto al iniciar macfileexplorer", "enable by default on launch":
+            return "power.circle"
+        case "abrir menú inicio", "open start menu":
+            return "square.grid.2x2"
+        case "configuración de la barra de tareas…", "taskbar settings…":
+            return "slider.horizontal.3"
+        case "asistente de permisos y configuración…", "setup & permissions assistant…":
+            return "lock.shield"
+        case "vista previa al pasar el cursor", "hover window previews":
+            return "rectangle.on.rectangle.angled"
+        case "agrupar ventanas por aplicación", "group windows by application":
+            return "square.stack.3d.up"
+        case "mostrar títulos de ventanas", "show window titles":
+            return "textformat"
+        case "redimensionar ventanas superpuestas", "auto-resize overlapping windows":
+            return "arrow.up.left.and.arrow.down.right"
+        case "monitores y espacios", "displays & spaces":
+            return "display.2"
+        case "tema y tamaño", "theme & size":
+            return "paintbrush"
+        case "ícono del botón inicio", "start button icon":
+            return "sparkles.square.filled.on.square"
+        case "animación de notificaciones", "notification animation":
+            return "bell.badge.fill"
+        case "animación de vista previa", "hover preview animation":
+            return "rectangle.on.rectangle.angled"
+        case "emergencia: restaurar dock original de macos", "emergency: restore original macos dock":
+            return "arrow.uturn.backward.circle"
+        case "forzar dock de fábrica (abajo y visible)", "force factory macos dock (bottom & visible)":
+            return "exclamationmark.shield"
+
+        // AltTab
+        case "alttab":
+            return "rectangle.stack.fill"
+        case "probar selector de ventanas ahora", "test window switcher now":
+            return "play.rectangle"
+        case "configuración de alttab…", "alttab settings…":
+            return "slider.horizontal.3"
+        case "estilo de visualización", "display style":
+            return "rectangle.grid.2x2"
+        case "vista previa a tamaño completo", "full-size window preview":
+            return "macwindow.on.rectangle"
+        case "mostrar buscador en el selector", "show search bar in switcher":
+            return "magnifyingglass"
+        case "etiquetas y controles", "badges & controls":
+            return "tag"
+        case "ajuste de tamaño automático", "automatic sizing":
+            return "arrow.up.left.and.arrow.down.right"
+        case "personalizar atajos y filtros…", "customize shortcuts & filters…":
+            return "keyboard"
 
         default:
             if lower.hasPrefix("automático del sistema") || lower.hasPrefix("system default") {

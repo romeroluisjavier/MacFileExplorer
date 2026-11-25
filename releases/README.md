@@ -1,6 +1,21 @@
 # MacFileExplorer Releases
 
-## Versión 1.7.0 (Versión Actual)
+## Versión 1.8.0 (Versión Actual)
+
+- **Instalador:** [`MacFileExplorer-1.8.0.dmg`](./MacFileExplorer-1.8.0.dmg)
+- **Tamaño:** ~18 MB
+- **Arquitectura:** Binario Universal (`arm64` Apple Silicon + `x86_64` Intel)
+- **Requisitos del sistema:** macOS 14.0 (Sonoma) o posterior
+
+### Novedades principales en la v1.8.0:
+1. **Barra de tareas estilo Windows y Menú Inicio (`Barra de tareas`)**: barra inferior opcional con soporte multimonitor (hasta 5 pantallas), sincronización con Spaces, un botón por ventana (incluyendo apps abiertas sin ventana como VS Code y apps web/PWA), orden fijo al minimizar o restaurar, reordenamiento arrastrando, **12 íconos personalizables para el botón Inicio** con animación hover, Menú Inicio con buscador instantáneo y gestión segura del Dock de macOS con restauración de emergencia.
+2. **Vistas previas al pasar el cursor con tamaño fijo y 4 animaciones seleccionables**: miniaturas ultrarrápidas con precarga al pasar el cursor y 4 estilos con previsualización en vivo en Configuración (**Suave**, **Desde la barra**, **Rebote elástico** y **Giro 3D**).
+3. **6 animaciones configurables para notificaciones en la barra**: avisos animados (**Salto**, **Campana**, **Latido**, **Destello**, **Onda expansiva** y **Bamboleo**) cuando una app tiene notificaciones pendientes (Slack, Mail, WhatsApp y PWAs), con selector de frecuencia y pausa automática al entrar a leer.
+4. **Selector rápido de ventanas AltTab (`⌥ + Tab` / menú `AltTab`)**: selector estilo Windows para ver cada ventana abierta por separado (incluyendo minimizadas, ocultas y otros Spaces), con vista previa a tamaño completo, 3 estilos visuales (Miniaturas, Íconos o Lista), buscador integrado y hasta 5 atajos personalizables.
+
+---
+
+## Versión 1.7.0
 
 - **Instalador:** [`MacFileExplorer-1.7.0.dmg`](./MacFileExplorer-1.7.0.dmg)
 - **Tamaño:** ~13 MB

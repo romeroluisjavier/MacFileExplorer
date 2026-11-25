@@ -14,6 +14,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         MouseNavigationManager.shared.installIfNeeded()
         InternalErrorLogger.shared.install()
         ClipboardHistoryManager.shared.installIfNeeded()
+        TaskbarManager.shared.installIfNeeded()
+        AltTabManager.shared.installIfNeeded()
         StatusBarManager.shared.installIfNeeded()
         LocalizationManager.shared.installMenuTrackingObserverIfNeeded()
         LocalizationManager.shared.applyLanguageToMainMenu()
@@ -36,15 +38,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
-        !TrayIconPreferences.shared.isTrayIconEnabled
+        !(TrayIconPreferences.shared.isTrayIconEnabled || TaskbarPreferences.shared.isEnabled || AltTabPreferences.shared.isEnabled)
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        TaskbarManager.shared.prepareForTermination()
+        AltTabManager.shared.prepareForTermination()
         GoogleAccountsManager.shared.prepareForTermination()
         return .terminateNow
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        TaskbarManager.shared.prepareForTermination()
+        AltTabManager.shared.prepareForTermination()
         GoogleAccountsManager.shared.prepareForTermination()
     }
 }
@@ -62,6 +68,8 @@ struct MacFileExplorerApp: App {
     @Bindable private var sessionPrefs = SessionPreferences.shared
     @Bindable private var trayIconPrefs = TrayIconPreferences.shared
     @Bindable private var clipboardPrefs = ClipboardHistoryPreferences.shared
+    @Bindable private var taskbarPrefs = TaskbarPreferences.shared
+    @Bindable private var altTabPrefs = AltTabPreferences.shared
     @FocusedValue(\.explorerViewModel) private var focusedExplorerViewModel
 
     var body: some Scene {
@@ -594,6 +602,440 @@ struct MacFileExplorerApp: App {
                     )
                 }
                 .disabled(ClipboardHistoryManager.shared.items.allSatisfy(\.isPinned))
+            }
+
+            CommandMenu(loc.text(es: "Barra de tareas", en: "Taskbar")) {
+                Toggle(isOn: Binding(
+                    get: { taskbarPrefs.isEnabled },
+                    set: { TaskbarManager.shared.setEnabled($0) }
+                )) {
+                    Label(
+                        loc.text(es: "Activar barra de tareas", en: "Enable Taskbar"),
+                        systemImage: "dock.rectangle"
+                    )
+                }
+
+                Toggle(isOn: $taskbarPrefs.startEnabledByDefault) {
+                    Label(
+                        loc.text(es: "Activar por defecto al iniciar MacFileExplorer", en: "Enable by Default on Launch"),
+                        systemImage: "power.circle"
+                    )
+                }
+
+                Divider()
+
+                Button {
+                    TaskbarManager.shared.toggleStartMenu()
+                } label: {
+                    Label(loc.text(es: "Abrir Menú Inicio", en: "Open Start Menu"), systemImage: "square.grid.2x2")
+                }
+                .disabled(!taskbarPrefs.isEnabled)
+
+                Button {
+                    TaskbarSettingsWindowController.shared.show()
+                } label: {
+                    Label(
+                        loc.text(es: "Configuración de la barra de tareas…", en: "Taskbar Settings…"),
+                        systemImage: "slider.horizontal.3"
+                    )
+                }
+
+                Button {
+                    TaskbarSetupWizardWindowController.shared.show()
+                } label: {
+                    Label(
+                        loc.text(es: "Asistente de permisos y configuración…", en: "Setup & Permissions Assistant…"),
+                        systemImage: "lock.shield"
+                    )
+                }
+
+                Divider()
+
+                Toggle(isOn: $taskbarPrefs.showHoverPreviews) {
+                    Label(
+                        loc.text(es: "Vista previa al pasar el cursor", en: "Hover Window Previews"),
+                        systemImage: "rectangle.on.rectangle.angled"
+                    )
+                }
+
+                Toggle(isOn: $taskbarPrefs.groupWindowsByApp) {
+                    Label(
+                        loc.text(es: "Agrupar ventanas por aplicación", en: "Group Windows by Application"),
+                        systemImage: "square.stack.3d.up"
+                    )
+                }
+
+                Toggle(isOn: $taskbarPrefs.showWindowTitles) {
+                    Label(
+                        loc.text(es: "Mostrar títulos de ventanas", en: "Show Window Titles"),
+                        systemImage: "textformat"
+                    )
+                }
+
+                Toggle(isOn: $taskbarPrefs.autoResizeOverlappingWindows) {
+                    Label(
+                        loc.text(es: "Redimensionar ventanas superpuestas", en: "Auto-Resize Overlapping Windows"),
+                        systemImage: "arrow.up.left.and.arrow.down.right"
+                    )
+                }
+
+                Divider()
+
+                Menu {
+                    Picker(
+                        loc.text(es: "Mostrar barra en", en: "Show Bar On"),
+                        selection: $taskbarPrefs.displayMode
+                    ) {
+                        ForEach(TaskbarDisplayMode.allCases) { mode in
+                            Label(mode.localizedTitle(using: loc), systemImage: mode.systemImage)
+                                .tag(mode)
+                        }
+                    }
+                    .pickerStyle(.inline)
+
+                    Divider()
+
+                    Picker(
+                        loc.text(es: "Ventanas por barra", en: "Windows Per Bar"),
+                        selection: $taskbarPrefs.windowScopeMode
+                    ) {
+                        ForEach(TaskbarWindowScopeMode.allCases) { scope in
+                            Label(scope.localizedTitle(using: loc), systemImage: scope.systemImage)
+                                .tag(scope)
+                        }
+                    }
+                    .pickerStyle(.inline)
+
+                    Divider()
+
+                    Toggle(isOn: $taskbarPrefs.syncWithActiveSpace) {
+                        Label(
+                            loc.text(es: "Sincronizar con Espacios (Spaces)", en: "Sync with macOS Spaces"),
+                            systemImage: "squares.leading.rectangle"
+                        )
+                    }
+
+                    if !taskbarPrefs.hiddenDisplayIDs.isEmpty {
+                        Divider()
+                        Button {
+                            taskbarPrefs.showAllHiddenDisplays()
+                        } label: {
+                            Label(
+                                loc.text(es: "Mostrar todas las pantallas ocultas", en: "Show All Hidden Displays"),
+                                systemImage: "eye"
+                            )
+                        }
+                    }
+                } label: {
+                    Label(loc.text(es: "Monitores y Espacios", en: "Displays & Spaces"), systemImage: "display.2")
+                }
+
+                Menu {
+                    Picker(loc.text(es: "Tema", en: "Theme"), selection: $taskbarPrefs.themeMode) {
+                        ForEach(TaskbarThemeMode.allCases) { mode in
+                            Label(mode.localizedTitle(using: loc), systemImage: mode.systemImage)
+                                .tag(mode)
+                        }
+                    }
+                    .pickerStyle(.inline)
+
+                    Divider()
+
+                    Picker(loc.text(es: "Alineación", en: "Alignment"), selection: $taskbarPrefs.alignment) {
+                        ForEach(TaskbarAlignment.allCases) { alignment in
+                            Label(alignment.localizedTitle(using: loc), systemImage: alignment.systemImage)
+                                .tag(alignment)
+                        }
+                    }
+                    .pickerStyle(.inline)
+
+                    Divider()
+
+                    Menu {
+                        Picker(
+                            loc.text(es: "Ícono del botón Inicio", en: "Start Button Icon"),
+                            selection: $taskbarPrefs.startButtonIcon
+                        ) {
+                            ForEach(TaskbarStartButtonIcon.allCases) { iconOption in
+                                Label(iconOption.localizedTitle(using: loc), systemImage: iconOption.menuSymbolName)
+                                    .tag(iconOption)
+                            }
+                        }
+                        .pickerStyle(.inline)
+                    } label: {
+                        Label(
+                            loc.text(es: "Ícono del botón Inicio", en: "Start Button Icon"),
+                            systemImage: "sparkles.square.filled.on.square"
+                        )
+                    }
+
+                    Menu {
+                        Picker(
+                            loc.text(es: "Animación de notificaciones", en: "Notification Animation"),
+                            selection: $taskbarPrefs.notificationAnimation
+                        ) {
+                            ForEach(TaskbarNotificationAnimation.allCases) { animOption in
+                                Label(animOption.localizedTitle(using: loc), systemImage: animOption.symbolName)
+                                    .tag(animOption)
+                            }
+                        }
+                        .pickerStyle(.inline)
+
+                        if taskbarPrefs.notificationAnimation != .none {
+                            Divider()
+
+                            Picker(
+                                loc.text(es: "Frecuencia", en: "Cadence"),
+                                selection: $taskbarPrefs.notificationAnimationCadence
+                            ) {
+                                ForEach(TaskbarNotificationAnimationCadence.allCases) { cadence in
+                                    Label(cadence.localizedTitle(using: loc), systemImage: cadence.symbolName)
+                                        .tag(cadence)
+                                }
+                            }
+                            .pickerStyle(.inline)
+                        }
+                    } label: {
+                        Label(
+                            loc.text(es: "Animación de notificaciones", en: "Notification Animation"),
+                            systemImage: "bell.badge.fill"
+                        )
+                    }
+
+                    Menu {
+                        Picker(
+                            loc.text(es: "Animación de vista previa", en: "Hover Preview Animation"),
+                            selection: $taskbarPrefs.hoverPreviewAnimation
+                        ) {
+                            ForEach(TaskbarHoverPreviewAnimation.allCases) { animOption in
+                                Label(animOption.localizedTitle(using: loc), systemImage: animOption.symbolName)
+                                    .tag(animOption)
+                            }
+                        }
+                        .pickerStyle(.inline)
+                    } label: {
+                        Label(
+                            loc.text(es: "Animación de vista previa", en: "Hover Preview Animation"),
+                            systemImage: "rectangle.on.rectangle.angled"
+                        )
+                    }
+
+                    Divider()
+
+                    Button {
+                        taskbarPrefs.barHeight = 36
+                    } label: {
+                        Label(loc.text(es: "Tamaño Compacto (36 px)", en: "Compact Size (36 px)"), systemImage: "rectangle.compress.vertical")
+                    }
+                    Button {
+                        taskbarPrefs.barHeight = 42
+                    } label: {
+                        Label(loc.text(es: "Tamaño Normal (42 px)", en: "Normal Size (42 px)"), systemImage: "rectangle")
+                    }
+                    Button {
+                        taskbarPrefs.barHeight = 50
+                    } label: {
+                        Label(loc.text(es: "Tamaño Grande (50 px)", en: "Large Size (50 px)"), systemImage: "rectangle.expand.vertical")
+                    }
+                    Button {
+                        taskbarPrefs.barHeight = 58
+                    } label: {
+                        Label(loc.text(es: "Tamaño Extra grande (58 px)", en: "Extra Large Size (58 px)"), systemImage: "rectangle.expand.vertical")
+                    }
+                } label: {
+                    Label(loc.text(es: "Tema y tamaño", en: "Theme & Size"), systemImage: "paintbrush")
+                }
+
+                Menu {
+                    ForEach(TaskbarDockMode.allCases) { mode in
+                        Button {
+                            TaskbarDockManager.shared.applyUserSelectedDockMode(mode)
+                        } label: {
+                            Label(
+                                mode.localizedTitle(using: loc),
+                                systemImage: taskbarPrefs.dockMode == mode ? "checkmark.circle.fill" : mode.systemImage
+                            )
+                        }
+                    }
+
+                    Divider()
+
+                    Button {
+                        TaskbarDockManager.shared.emergencyRestoreOriginalMacOSDock(forceFactoryDefaults: false)
+                    } label: {
+                        Label(
+                            loc.text(es: "Emergencia: Restaurar Dock original de macOS", en: "Emergency: Restore Original macOS Dock"),
+                            systemImage: "arrow.uturn.backward.circle"
+                        )
+                    }
+
+                    Button {
+                        TaskbarDockManager.shared.emergencyRestoreOriginalMacOSDock(forceFactoryDefaults: true)
+                    } label: {
+                        Label(
+                            loc.text(es: "Forzar Dock de fábrica (Abajo y visible)", en: "Force Factory macOS Dock (Bottom & Visible)"),
+                            systemImage: "exclamationmark.shield"
+                        )
+                    }
+                } label: {
+                    Label(loc.text(es: "Gestión del Dock de macOS", en: "macOS Dock Management"), systemImage: "dock.rectangle")
+                }
+
+                Divider()
+
+                Button {
+                    TaskbarDockManager.shared.emergencyRestoreOriginalMacOSDock(forceFactoryDefaults: false)
+                } label: {
+                    Label(
+                        loc.text(es: "Emergencia: Restaurar Dock original de macOS", en: "Emergency: Restore Original macOS Dock"),
+                        systemImage: "arrow.uturn.backward.circle"
+                    )
+                }
+            }
+
+            CommandMenu("AltTab") {
+                Toggle(isOn: Binding(
+                    get: { altTabPrefs.isEnabled },
+                    set: { AltTabManager.shared.setEnabled($0) }
+                )) {
+                    Label(
+                        loc.text(
+                            es: "Activar AltTab (\(altTabPrefs.primaryShortcutDisplay))",
+                            en: "Enable AltTab (\(altTabPrefs.primaryShortcutDisplay))"
+                        ),
+                        systemImage: "rectangle.stack.fill"
+                    )
+                }
+
+                Toggle(isOn: $altTabPrefs.startEnabledByDefault) {
+                    Label(
+                        loc.text(es: "Activar por defecto al iniciar MacFileExplorer", en: "Enable by Default on Launch"),
+                        systemImage: "power.circle"
+                    )
+                }
+
+                Divider()
+
+                Button {
+                    AltTabManager.shared.openInteractiveTestSwitcher()
+                } label: {
+                    Label(
+                        loc.text(es: "Probar selector de ventanas ahora", en: "Test Window Switcher Now"),
+                        systemImage: "play.rectangle"
+                    )
+                }
+
+                Button {
+                    AltTabSettingsWindowController.shared.show(tab: .general)
+                } label: {
+                    Label(
+                        loc.text(es: "Configuración de AltTab…", en: "AltTab Settings…"),
+                        systemImage: "slider.horizontal.3"
+                    )
+                }
+
+                Divider()
+
+                Menu {
+                    Picker(
+                        loc.text(es: "Estilo de visualización", en: "Display Style"),
+                        selection: $altTabPrefs.displayStyle
+                    ) {
+                        ForEach(AltTabDisplayStyle.allCases) { style in
+                            Label(style.localizedTitle(using: loc), systemImage: style.systemImage)
+                                .tag(style)
+                        }
+                    }
+                    .pickerStyle(.inline)
+
+                    Divider()
+
+                    Toggle(isOn: $altTabPrefs.autoSizeEnabled) {
+                        Label(
+                            loc.text(es: "Ajuste de tamaño automático", en: "Automatic Sizing"),
+                            systemImage: "arrow.up.left.and.arrow.down.right"
+                        )
+                    }
+                } label: {
+                    Label(loc.text(es: "Estilo de visualización", en: "Display Style"), systemImage: "rectangle.grid.2x2")
+                }
+
+                Toggle(isOn: $altTabPrefs.showFullSizePreview) {
+                    Label(
+                        loc.text(es: "Vista previa a tamaño completo", en: "Full-Size Window Preview"),
+                        systemImage: "macwindow.on.rectangle"
+                    )
+                }
+
+                Toggle(isOn: $altTabPrefs.showSearchBar) {
+                    Label(
+                        loc.text(es: "Mostrar buscador en el selector", en: "Show Search Bar in Switcher"),
+                        systemImage: "magnifyingglass"
+                    )
+                }
+
+                Divider()
+
+                Menu {
+                    Button {
+                        altTabPrefs.setPrimaryShortcutPreset(command: false, option: true, control: false)
+                    } label: {
+                        Label("⌥ ⇥ (Option + Tab)", systemImage: "option")
+                    }
+
+                    Button {
+                        altTabPrefs.setPrimaryShortcutPreset(command: true, option: false, control: false)
+                    } label: {
+                        Label("⌘ ⇥ (Command + Tab)", systemImage: "command")
+                    }
+
+                    Button {
+                        altTabPrefs.setPrimaryShortcutPreset(command: false, option: false, control: true)
+                    } label: {
+                        Label("⌃ ⇥ (Control + Tab)", systemImage: "control")
+                    }
+
+                    Divider()
+
+                    Button {
+                        AltTabSettingsWindowController.shared.show(tab: .shortcuts)
+                    } label: {
+                        Label(
+                            loc.text(es: "Personalizar atajos y filtros…", en: "Customize Shortcuts & Filters…"),
+                            systemImage: "keyboard"
+                        )
+                    }
+                } label: {
+                    Label(
+                        loc.text(es: "Atajo principal (\(altTabPrefs.primaryShortcutDisplay))", en: "Primary Shortcut (\(altTabPrefs.primaryShortcutDisplay))"),
+                        systemImage: "keyboard"
+                    )
+                }
+
+                Menu {
+                    Toggle(isOn: $altTabPrefs.showSpaceBadges) {
+                        Label(
+                            loc.text(es: "Mostrar etiquetas de Spaces (Space 2, 3…)", en: "Show Space Badges (Space 2, 3…)"),
+                            systemImage: "squares.leading.rectangle"
+                        )
+                    }
+
+                    Toggle(isOn: $altTabPrefs.showWindowStateBadges) {
+                        Label(
+                            loc.text(es: "Mostrar etiquetas de minimizadas y ocultas", en: "Show Minimized & Hidden Badges"),
+                            systemImage: "tag"
+                        )
+                    }
+
+                    Toggle(isOn: $altTabPrefs.showHoverQuickActions) {
+                        Label(
+                            loc.text(es: "Botones rápidos al pasar el mouse", en: "Hover Quick Actions"),
+                            systemImage: "cursorarrow.click.2"
+                        )
+                    }
+                } label: {
+                    Label(loc.text(es: "Etiquetas y controles", en: "Badges & Controls"), systemImage: "tag")
+                }
             }
 
             CommandMenu(loc.text(es: "Idioma", en: "Language")) {

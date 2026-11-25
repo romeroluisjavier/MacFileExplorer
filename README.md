@@ -5,16 +5,18 @@ Un explorador de archivos nativo, ágil y moderno para macOS, inspirado en la pr
 ![macOS 14+](https://img.shields.io/badge/macOS-14.0%2B-blue?logo=apple)
 ![Swift 6](https://img.shields.io/badge/Swift-6.0-orange?logo=swift)
 ![Architecture](https://img.shields.io/badge/Architecture-Universal%20(Apple%20Silicon%20%2B%20Intel)-brightgreen)
-![Release](https://img.shields.io/badge/Release-v1.7.0-blueviolet)
+![Release](https://img.shields.io/badge/Release-v1.8.0-blueviolet)
+
+🌐 **Sitio web oficial con demos en vivo e instalación paso a paso:** [romeroluisjavier.github.io/MacFileExplorer](https://romeroluisjavier.github.io/MacFileExplorer/)
 
 ---
 
-## ✨ Novedades recientes (v1.7.0)
+## ✨ Novedades recientes (v1.8.0)
 
-- 🧠 **Índice OCR automático en segundo plano (`<= 5 MB` por carpeta)**: al abrir una carpeta, las imágenes se indexan silenciosamente en `.macfileexplorer_ocr.cache` (comprimido con LZFSE y tope estricto de 5 MB) para que la búsqueda dentro de imágenes devuelva resultados al instante y en tiempo real.
-- 🗂️ **Gestor de caché oculta (`.macfileexplorer`) en Archivo**: desde *Archivo → Caché oculta (.macfileexplorer)…* podés ver cuántos archivos ocultos existen, su tamaño total desglosado y borrarlos todos para regenerarlos limpios.
-- 📖 **Guía interactiva completa en el menú Help / Ayuda (`⌘?`)**: ventana navegable y buscable con funciones destacadas, catálogo completo, explicación del menú lateral y buscador avanzado, atajos de teclado, configuraciones posibles e historial de releases.
-- 🧭 **Barra de direcciones editable, Eliminar fondo (PNG transparente) y Check Upgrades**: todo incluido desde v1.6.0 / v1.5.1.
+- 🖥️ **Barra de tareas estilo Windows y Menú Inicio (`Barra de tareas`)**: activá una barra inferior opcional (multimonitor hasta 5 pantallas y sincronizada con Spaces) con un botón por ventana, apps abiertas sin ventana (como VS Code), aplicaciones fijadas, **12 íconos personalizables para el botón Inicio** (con animación hover), **6 animaciones de notificaciones** para globos rojos (Slack, Mail, WhatsApp/PWAs) y **Menú Inicio** con buscador instantáneo.
+- 🪟 **Vistas previas al pasar el cursor con 4 animaciones seleccionables**: miniaturas de tamaño fijo con carga anticipada y 4 estilos con previsualización en vivo en Configuración (**Suave**, **Desde la barra**, **Rebote elástico** y **Giro 3D**).
+- ⚡ **Selector rápido de ventanas AltTab (`⌥ + Tab` / menú `AltTab`)**: vista panorámica de todas tus ventanas abiertas (incluyendo minimizadas y otros escritorios) con 3 estilos visuales (Miniaturas, Íconos o Lista), vista previa a tamaño completo, buscador integrado y atajos rápidos para cerrar o minimizar.
+- 🧠 **Todo lo de v1.7.0 incluido**: índice OCR automático en segundo plano, gestor de caché oculta (`.macfileexplorer`), guía interactiva en Ayuda (`⌘?`), barra de direcciones editable y Quick Actions multimedia.
 
 ---
 
@@ -51,12 +53,12 @@ Un explorador de archivos nativo, ágil y moderno para macOS, inspirado en la pr
 
 ### 1. Descargar el instalador
 Descarga la versión más reciente en formato `.dmg` directamente desde este repositorio:
-- 👉 **[Descargar MacFileExplorer-1.6.0.dmg](https://github.com/romeroluisjavier/MacFileExplorer/raw/main/releases/MacFileExplorer-1.6.0.dmg)** *(ubicado en la carpeta [`releases/`](./releases) — también podés ver el historial en [`releases/README.md`](./releases/README.md))*
+- 👉 **[Descargar MacFileExplorer-1.8.0.dmg](https://github.com/romeroluisjavier/MacFileExplorer/raw/main/releases/MacFileExplorer-1.8.0.dmg)** *(ubicado en la carpeta [`releases/`](./releases) — también podés ver el historial en [`releases/README.md`](./releases/README.md))*
 
 ---
 
 ### 2. Instalación en tu Mac
-1. Haz doble clic en el archivo descargado **`MacFileExplorer-1.6.0.dmg`**.
+1. Haz doble clic en el archivo descargado **`MacFileExplorer-1.8.0.dmg`**.
 2. Arrastra el icono de **MacFileExplorer** a la carpeta **Applications** (Aplicaciones).
 
 ---

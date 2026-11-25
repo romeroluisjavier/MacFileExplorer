@@ -13,11 +13,40 @@ public final class FileIconProvider {
     private let cache = NSCache<NSString, NSImage>()
     private var cachedLightAppIcon: NSImage?
     private var cachedDarkAppIcon: NSImage?
+    private var cachedResourceImages: [String: NSImage] = [:]
 
     private init() {
         cache.countLimit = 1024
         cachedLightAppIcon = loadBundledImage(named: "AppIcon-Light")
         cachedDarkAppIcon = loadBundledImage(named: "AppIcon-Dark")
+    }
+
+    /// Carga y cachea una imagen PNG empaquetada en los recursos de la app (`Contents/Resources` o `Bundle.module`).
+    public func bundledResourceImage(named name: String) -> NSImage? {
+        if let cached = cachedResourceImages[name] {
+            return cached
+        }
+        var found: NSImage?
+        if let url = Bundle.main.url(forResource: name, withExtension: "png"),
+           let image = NSImage(contentsOf: url) {
+            found = image
+        } else if let resourceURL = Bundle.main.resourceURL?.appendingPathComponent("\(name).png"),
+                  FileManager.default.fileExists(atPath: resourceURL.path(percentEncoded: false)),
+                  let image = NSImage(contentsOf: resourceURL) {
+            found = image
+        } else if let subBundleURL = Bundle.main.resourceURL?.appendingPathComponent("MacFileExplorer_MacFileExplorer.bundle"),
+                  let subBundle = Bundle(url: subBundleURL),
+                  let url = subBundle.url(forResource: name, withExtension: "png"),
+                  let image = NSImage(contentsOf: url) {
+            found = image
+        } else if let url = Bundle.module.url(forResource: name, withExtension: "png"),
+                  let image = NSImage(contentsOf: url) {
+            found = image
+        }
+        if let found {
+            cachedResourceImages[name] = found
+        }
+        return found
     }
 
     /// Obtiene el icono de la aplicación adaptado al esquema de color de SwiftUI (Claro u Oscuro).

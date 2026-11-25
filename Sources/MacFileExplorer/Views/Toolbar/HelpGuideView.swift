@@ -726,6 +726,26 @@ extension HelpGuideView {
 
     private static let highlightedTopics: [HelpTopicCard] = [
         HelpTopicCard(
+            id: "hl-alttab-switcher",
+            icon: "rectangle.stack.fill",
+            badgeES: "Nuevo",
+            badgeEN: "New",
+            titleES: "Selector de ventanas AltTab (Menú superior «AltTab»)",
+            titleEN: "AltTab Window Switcher («AltTab» Top Menu)",
+            bodyES: "Alterna al instante entre cada ventana abierta individualmente (incluso varias ventanas de una misma app), mostrando ventanas minimizadas, ocultas y de otros Spaces con su etiqueta (Space 2, Minimizada, Oculta), vista previa a tamaño completo encima del resto, 3 estilos (Miniaturas, Íconos, Lista de títulos) con tamaño automático, buscador y hasta 5 atajos personalizables (⌥⇥ y ⌥` por defecto). Comparte el motor de ventanas y miniaturas con la Barra de tareas para máxima performance.",
+            bodyEN: "Switch instantly between individual windows (including multiple windows of the same app), showing minimized, hidden, and other-Space windows with clear badges (Space 2, Minimized, Hidden), full-size preview above other windows, 3 display styles (Thumbnails, App Icons, Compact Titles List) with auto-sizing, live search, and up to 5 custom shortcuts (⌥⇥ and ⌥` by default). Shares the window & thumbnail engine with Taskbar for peak performance."
+        ),
+        HelpTopicCard(
+            id: "hl-windows-taskbar",
+            icon: "dock.rectangle",
+            badgeES: "Nuevo",
+            badgeEN: "New",
+            titleES: "Barra de tareas estilo Windows (Menú superior «Barra de tareas»)",
+            titleEN: "Windows-Style Taskbar («Taskbar» Top Menu)",
+            bodyES: "Activable y desactivable desde el menú superior Barra de tareas (apagada por defecto y sin tocar el Dock original de macOS). Muestra un botón por cada ventana abierta, miniaturas en vivo al pasar el cursor, apps fijadas, Menú Inicio alfabético con buscador, soporte multimonitor (hasta 5 pantallas), sincronización con Spaces, drag-and-drop y restauración de emergencia del Dock.",
+            bodyEN: "Toggle on or off from the top Taskbar menu (off by default without touching your original macOS Dock). Shows one button per open window, live hover thumbnails, pinned apps, a searchable alphabetical Start Menu, multi-monitor support (up to 5 displays), Spaces sync, drag-and-drop reordering, and emergency Dock restore."
+        ),
+        HelpTopicCard(
             id: "hl-address-bar",
             icon: "chevron.right.2",
             badgeES: "v1.6",
@@ -889,6 +909,22 @@ extension HelpGuideView {
             titleEN: "Undo/Redo, Drag & Drop, Bookmarks Bar & Cache Manager",
             bodyES: "Soporte completo de Deshacer (⌘Z) y Rehacer (⇧⌘Z) para renombrado, mover, pegar y Papelera. Barra de marcadores web estilo Chrome (⇧⌘B) con favicons, cola de transferencias pausable (> 1 GB), gestor de caché oculta .macfileexplorer en el menú Archivo y comprobador de actualizaciones desde GitHub.",
             bodyEN: "Full Undo (⌘Z) / Redo (⇧⌘Z) for rename, move, paste, and Trash actions. Chrome-style web bookmarks bar (⇧⌘B) with favicons, pausable >1 GB transfer queue, hidden cache manager in the File menu, and GitHub upgrade checker."
+        ),
+        HelpTopicCard(
+            id: "af-taskbar-full",
+            icon: "dock.rectangle",
+            titleES: "Barra de tareas estilo Windows, Menú Inicio y Multimonitor",
+            titleEN: "Windows-Style Taskbar, Start Menu & Multi-Monitor",
+            bodyES: "Desde el menú Barra de tareas podés encender una barra inferior con un botón por ventana, vistas previas al pasar el mouse, apps fijadas, Menú Inicio con buscador/recientes/A–Z, hasta 5 monitores independientes o unificados, sincronización con Spaces, clic en ventana activa para minimizar, clic central para cerrar y auto-redimensionamiento de ventanas superpuestas.",
+            bodyEN: "Enable a bottom bar from the Taskbar menu with one button per window, live hover previews, pinned apps, searchable Start Menu with recent & A–Z apps, up to 5 independent or unified displays, Spaces sync, click active window to minimize, middle-click to close, and automatic overlap resizing."
+        ),
+        HelpTopicCard(
+            id: "af-alttab-full",
+            icon: "rectangle.stack.fill",
+            titleES: "AltTab: Selector de ventanas con Vista Previa Completa y Atajos Múltiples",
+            titleEN: "AltTab: Window Switcher with Full-Size Preview & Multiple Shortcuts",
+            bodyES: "Desde el menú individual AltTab podés activar el selector ultrarrápido de ventanas individuales (⌥⇥ por defecto, o ⌘⇥ si preferís), ver ventanas minimizadas, ocultas o de otros Spaces con su etiqueta, previsualizar en tamaño completo antes de soltar, cerrar/minimizar/ocultar con teclado (W/M/H/Q/F) o botones hover, buscar con / y alternar entre Miniaturas, Íconos o Lista compacta con auto-tamaño.",
+            bodyEN: "From the dedicated AltTab menu enable the ultra-fast individual window switcher (⌥⇥ by default, or ⌘⇥ if preferred), view minimized, hidden, and other-Space windows with badges, preview full-size before switching, close/minimize/hide via keyboard (W/M/H/Q/F) or hover buttons, search with /, and switch between Thumbnails, App Icons, or Titles List with auto-sizing."
         )
     ]
 
@@ -916,10 +952,29 @@ extension HelpGuideView {
         HelpShortcutRow(id: "sc-permdelete", categoryES: "Edición y Archivos", categoryEN: "Edit & Files", keys: "⇧ ⌫", actionES: "Eliminar permanentemente (con confirmación centrada)", actionEN: "Delete permanently (with confirmation modal)"),
         HelpShortcutRow(id: "sc-maccy", categoryES: "Portapapeles Maccy", categoryEN: "Maccy Clipboard", keys: "⌃ ⌘ V  (+ ⌘1..9)", actionES: "Abrir menú rápido global del Portapapeles (personalizable)", actionEN: "Open global Clipboard Quick Dropdown (customizable)"),
         HelpShortcutRow(id: "sc-webzoom", categoryES: "Pestañas Web", categoryEN: "Web Tabs", keys: "⌘ +  /  ⌘ -  /  ⌘ 0", actionES: "Acercar, alejar o restablecer zoom web (100%)", actionEN: "Zoom In, Zoom Out, or Reset Web Zoom (100%)"),
+        HelpShortcutRow(id: "sc-alttab-all", categoryES: "AltTab (Selector)", categoryEN: "AltTab Switcher", keys: "⌥ ⇥  /  ⇧ ⌥ ⇥", actionES: "Alternar entre todas las ventanas abiertas (personalizable a ⌘⇥ o ⌃⇥)", actionEN: "Switch across all open windows (customizable to ⌘⇥ or ⌃⇥)"),
+        HelpShortcutRow(id: "sc-alttab-app", categoryES: "AltTab (Selector)", categoryEN: "AltTab Switcher", keys: "⌥ `", actionES: "Alternar entre ventanas de la aplicación activa actual", actionEN: "Switch between windows of the active application"),
+        HelpShortcutRow(id: "sc-alttab-actions", categoryES: "AltTab (Selector)", categoryEN: "AltTab Switcher", keys: "W / M / H / Q / F / /", actionES: "Dentro de AltTab: Cerrar, Minimizar, Ocultar, Salir, Pantalla completa o Buscar", actionEN: "Inside AltTab: Close, Minimize, Hide, Quit, Full Screen, or Search"),
         HelpShortcutRow(id: "sc-help", categoryES: "Ayuda", categoryEN: "Help", keys: "⌘ ?", actionES: "Abrir esta ventana de Ayuda de MacFileExplorer", actionEN: "Open this MacFileExplorer Help window")
     ]
 
     private static let settingsTopics: [HelpTopicCard] = [
+        HelpTopicCard(
+            id: "cfg-alttab",
+            icon: "rectangle.stack.fill",
+            titleES: "Selector AltTab, estilos, vista previa y atajos (Menú AltTab)",
+            titleEN: "AltTab Switcher, Styles, Preview & Shortcuts (AltTab Menu)",
+            bodyES: "Arranca desactivado por defecto. Desde AltTab → Configuración podés encenderlo, elegir si arranca activo al abrir la app, grabar hasta 5 perfiles de atajos con filtros propios (app actual, Space actual, monitor, minimizadas/ocultas), elegir entre Miniaturas, Íconos o Lista con tamaño automático, activar la vista previa a tamaño completo y excluir apps específicas.",
+            bodyEN: "Starts disabled by default. Under AltTab → Settings you can enable it, choose launch-on-startup behavior, record up to 5 shortcut profiles with custom filters, choose Thumbnails, App Icons, or Titles List with auto-sizing, toggle full-size window previews, and exclude specific apps."
+        ),
+        HelpTopicCard(
+            id: "cfg-taskbar",
+            icon: "dock.rectangle",
+            titleES: "Barra de tareas, apariencia, monitores y Dock (Menú Barra de tareas)",
+            titleEN: "Taskbar, Appearance, Displays & Dock (Taskbar Menu)",
+            bodyES: "Arranca desactivada por defecto con el Dock original de macOS intacto. En Barra de tareas → Configuración podés elegir si se activa por defecto al abrir la app, ajustar altura, fuente, transparencia, tema claro/oscuro, solo íconos, apps fijadas/excluidas, comportamiento multimonitor y gestión opcional del Dock con botón de emergencia para restaurar el Dock original en un clic.",
+            bodyEN: "Starts disabled by default with your original macOS Dock untouched. Under Taskbar → Settings you can choose whether to launch enabled by default, customize height, font, opacity, light/dark theme, icon-only mode, pinned/excluded apps, multi-monitor rules, and optional Dock placement with a one-click emergency restore."
+        ),
         HelpTopicCard(
             id: "cfg-language",
             icon: "globe",

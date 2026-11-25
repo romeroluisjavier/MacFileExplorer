@@ -189,6 +189,34 @@ public final class StatusBarManager: NSObject, NSMenuDelegate {
             statusMenu.addItem(clipParentItem)
         }
 
+        // 6c. Submenú: Barra de tareas estilo Windows (siempre accesible + restauración de emergencia del Dock)
+        let taskbarMenu = buildTaskbarSubmenu(using: loc)
+        let taskbarStateSuffix = TaskbarPreferences.shared.isEnabled
+            ? loc.text(es: " (Activa)", en: " (On)")
+            : ""
+        let taskbarParentItem = NSMenuItem(
+            title: loc.text(es: "Barra de tareas", en: "Taskbar") + taskbarStateSuffix,
+            action: nil,
+            keyEquivalent: ""
+        )
+        taskbarParentItem.image = LocalizationManager.symbolImage(named: "dock.rectangle")
+        taskbarParentItem.submenu = taskbarMenu
+        statusMenu.addItem(taskbarParentItem)
+
+        // 6d. Submenú: AltTab (selector de ventanas individuales)
+        let altTabMenu = buildAltTabSubmenu(using: loc)
+        let altTabStateSuffix = AltTabPreferences.shared.isEnabled
+            ? loc.text(es: " (Activo)", en: " (On)")
+            : ""
+        let altTabParentItem = NSMenuItem(
+            title: "AltTab" + altTabStateSuffix,
+            action: nil,
+            keyEquivalent: ""
+        )
+        altTabParentItem.image = LocalizationManager.symbolImage(named: "rectangle.stack.fill")
+        altTabParentItem.submenu = altTabMenu
+        statusMenu.addItem(altTabParentItem)
+
         statusMenu.addItem(.separator())
 
         // 7. Cerrar pestaña actual
@@ -413,6 +441,117 @@ public final class StatusBarManager: NSObject, NSMenuDelegate {
         return submenu
     }
 
+    private func buildTaskbarSubmenu(using loc: LocalizationManager) -> NSMenu {
+        let submenu = NSMenu(title: loc.text(es: "Barra de tareas", en: "Taskbar"))
+        submenu.autoenablesItems = false
+        let prefs = TaskbarPreferences.shared
+
+        let toggleItem = NSMenuItem(
+            title: loc.text(es: "Activar barra de tareas", en: "Enable Taskbar"),
+            action: #selector(handleToggleTaskbar(_:)),
+            keyEquivalent: ""
+        )
+        toggleItem.target = self
+        toggleItem.state = prefs.isEnabled ? .on : .off
+        toggleItem.image = LocalizationManager.symbolImage(named: "dock.rectangle")
+        submenu.addItem(toggleItem)
+
+        let defaultToggleItem = NSMenuItem(
+            title: loc.text(es: "Activar por defecto al iniciar", en: "Enable by Default on Launch"),
+            action: #selector(handleToggleTaskbarStartByDefault(_:)),
+            keyEquivalent: ""
+        )
+        defaultToggleItem.target = self
+        defaultToggleItem.state = prefs.startEnabledByDefault ? .on : .off
+        defaultToggleItem.image = LocalizationManager.symbolImage(named: "power.circle")
+        submenu.addItem(defaultToggleItem)
+
+        submenu.addItem(.separator())
+
+        let startMenuItem = NSMenuItem(
+            title: loc.text(es: "Abrir Menú Inicio", en: "Open Start Menu"),
+            action: #selector(handleOpenTaskbarStartMenu(_:)),
+            keyEquivalent: ""
+        )
+        startMenuItem.target = self
+        startMenuItem.isEnabled = prefs.isEnabled
+        startMenuItem.image = LocalizationManager.symbolImage(named: "square.grid.2x2")
+        submenu.addItem(startMenuItem)
+
+        let settingsItem = NSMenuItem(
+            title: loc.text(es: "Configuración de la barra de tareas…", en: "Taskbar Settings…"),
+            action: #selector(handleOpenTaskbarSettings(_:)),
+            keyEquivalent: ""
+        )
+        settingsItem.target = self
+        settingsItem.image = LocalizationManager.symbolImage(named: "slider.horizontal.3")
+        submenu.addItem(settingsItem)
+
+        submenu.addItem(.separator())
+
+        let emergencyRestoreItem = NSMenuItem(
+            title: loc.text(es: "Emergencia: Restaurar Dock original de macOS", en: "Emergency: Restore Original macOS Dock"),
+            action: #selector(handleEmergencyRestoreDock(_:)),
+            keyEquivalent: ""
+        )
+        emergencyRestoreItem.target = self
+        emergencyRestoreItem.image = LocalizationManager.symbolImage(named: "arrow.uturn.backward.circle")
+        submenu.addItem(emergencyRestoreItem)
+
+        return submenu
+    }
+
+    private func buildAltTabSubmenu(using loc: LocalizationManager) -> NSMenu {
+        let submenu = NSMenu(title: "AltTab")
+        submenu.autoenablesItems = false
+        let prefs = AltTabPreferences.shared
+
+        let toggleItem = NSMenuItem(
+            title: loc.text(
+                es: "Activar AltTab (\(prefs.primaryShortcutDisplay))",
+                en: "Enable AltTab (\(prefs.primaryShortcutDisplay))"
+            ),
+            action: #selector(handleToggleAltTab(_:)),
+            keyEquivalent: ""
+        )
+        toggleItem.target = self
+        toggleItem.state = prefs.isEnabled ? .on : .off
+        toggleItem.image = LocalizationManager.symbolImage(named: "rectangle.stack.fill")
+        submenu.addItem(toggleItem)
+
+        let defaultToggleItem = NSMenuItem(
+            title: loc.text(es: "Activar por defecto al iniciar", en: "Enable by Default on Launch"),
+            action: #selector(handleToggleAltTabStartByDefault(_:)),
+            keyEquivalent: ""
+        )
+        defaultToggleItem.target = self
+        defaultToggleItem.state = prefs.startEnabledByDefault ? .on : .off
+        defaultToggleItem.image = LocalizationManager.symbolImage(named: "power.circle")
+        submenu.addItem(defaultToggleItem)
+
+        submenu.addItem(.separator())
+
+        let testItem = NSMenuItem(
+            title: loc.text(es: "Probar selector de ventanas ahora", en: "Test Window Switcher Now"),
+            action: #selector(handleOpenAltTabTestSwitcher(_:)),
+            keyEquivalent: ""
+        )
+        testItem.target = self
+        testItem.image = LocalizationManager.symbolImage(named: "play.rectangle")
+        submenu.addItem(testItem)
+
+        let settingsItem = NSMenuItem(
+            title: loc.text(es: "Configuración de AltTab…", en: "AltTab Settings…"),
+            action: #selector(handleOpenAltTabSettings(_:)),
+            keyEquivalent: ""
+        )
+        settingsItem.target = self
+        settingsItem.image = LocalizationManager.symbolImage(named: "slider.horizontal.3")
+        submenu.addItem(settingsItem)
+
+        return submenu
+    }
+
     // MARK: - Acciones del Menú del Tray Icon
 
     @objc public func handleOpenMainWindow(_ sender: Any?) {
@@ -490,7 +629,47 @@ public final class StatusBarManager: NSObject, NSMenuDelegate {
         UpdateWindowController.shared.showAndCheck()
     }
 
+    @objc public func handleToggleTaskbar(_ sender: Any?) {
+        TaskbarManager.shared.setEnabled(!TaskbarPreferences.shared.isEnabled)
+    }
+
+    @objc public func handleToggleTaskbarStartByDefault(_ sender: Any?) {
+        TaskbarPreferences.shared.startEnabledByDefault.toggle()
+        refreshTooltipAndMenu()
+    }
+
+    @objc public func handleOpenTaskbarStartMenu(_ sender: Any?) {
+        TaskbarManager.shared.toggleStartMenu()
+    }
+
+    @objc public func handleOpenTaskbarSettings(_ sender: Any?) {
+        TaskbarSettingsWindowController.shared.show()
+    }
+
+    @objc public func handleEmergencyRestoreDock(_ sender: Any?) {
+        TaskbarDockManager.shared.emergencyRestoreOriginalMacOSDock(forceFactoryDefaults: false)
+    }
+
+    @objc public func handleToggleAltTab(_ sender: Any?) {
+        AltTabManager.shared.setEnabled(!AltTabPreferences.shared.isEnabled)
+    }
+
+    @objc public func handleToggleAltTabStartByDefault(_ sender: Any?) {
+        AltTabPreferences.shared.startEnabledByDefault.toggle()
+        refreshTooltipAndMenu()
+    }
+
+    @objc public func handleOpenAltTabTestSwitcher(_ sender: Any?) {
+        AltTabManager.shared.openInteractiveTestSwitcher()
+    }
+
+    @objc public func handleOpenAltTabSettings(_ sender: Any?) {
+        AltTabSettingsWindowController.shared.show()
+    }
+
     @objc public func handleQuitApp(_ sender: Any?) {
+        TaskbarManager.shared.prepareForTermination()
+        AltTabManager.shared.prepareForTermination()
         GoogleAccountsManager.shared.prepareForTermination()
         NSApplication.shared.terminate(nil)
     }

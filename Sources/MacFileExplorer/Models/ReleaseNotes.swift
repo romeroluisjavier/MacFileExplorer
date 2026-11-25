@@ -77,6 +77,79 @@ public struct ReleaseNoteSection: Identifiable, Sendable {
 public enum ReleaseNotesCatalog {
     public static let sections: [ReleaseNoteSection] = [
         ReleaseNoteSection(
+            id: "v1.8.0-windows-style-taskbar",
+            versionLabelES: "Versión 1.8.0 — Barra de tareas estilo Windows, Menú Inicio y Selector AltTab",
+            versionLabelEN: "Version 1.8.0 — Windows-Style Taskbar, Start Menu & AltTab Window Switcher",
+            dateLabelES: "24 nov 2026",
+            dateLabelEN: "Nov 24, 2026",
+            items: [
+                ReleaseNoteItem(
+                    id: "taskbar-hover-preview-4-animations",
+                    icon: "dock.arrow.up.rectangle",
+                    titleES: "4 animaciones seleccionables para la vista previa de ventanas en la barra",
+                    titleEN: "4 Selectable Hover Window Preview Animations on the Taskbar",
+                    summaryES: "Ahora podés elegir cómo aparece y se oculta la vista previa al pasar el cursor por un botón de la barra de tareas entre 4 estilos: Suave (fundido y elevación), Desde la barra (emerge directamente desde el borde superior de la barra y vuelve a guardarse dentro de ella), Rebote elástico y Giro 3D. Podés probarlos y elegir el tuyo en vivo desde Configuración de la barra de tareas → Apariencia → Vista previa al pasar el cursor o desde el menú Barra de tareas → Tema y tamaño.",
+                    summaryEN: "You can now choose how the hover window preview enters and exits on the taskbar from 4 styles: Smooth Fade, Rise from Bar (slides straight out of the top edge of the taskbar and retracts back into it), Elastic Pop, and 3D Tilt. Preview all 4 styles live and switch anytime from Taskbar Settings → Appearance → Hover Window Previews or the Taskbar → Theme & Size menu."
+                ),
+                ReleaseNoteItem(
+                    id: "taskbar-smooth-hover-preview-fixed-size",
+                    icon: "rectangle.on.rectangle.angled",
+                    titleES: "Vistas previas de la barra más rápidas, con tamaño fijo y transiciones suaves",
+                    titleEN: "Faster Taskbar Hover Previews with Fixed Size & Smooth Transitions",
+                    summaryES: "Las miniaturas al pasar el cursor por la barra de tareas ahora calculan su tamaño definitivo antes de abrirse para que la tarjeta nunca salte ni cambie de tamaño al cargarse la imagen. Además precargan la captura apenas apoyás el cursor, mantienen miniaturas listas al cambiar de ventana y aplican aparición suave, deslizamiento entre botones y fundido progresivo al actualizar la imagen.",
+                    summaryEN: "Taskbar hover thumbnails now lock their exact final size before appearing so the preview card never jumps or resizes when the screenshot finishes loading. Captures also prefetch the instant your pointer enters a button, pre-warm on focus switches, and animate smoothly with fade-in entrance, gliding between buttons, and crossfade updates."
+                ),
+                ReleaseNoteItem(
+                    id: "taskbar-windowless-apps-and-stable-order",
+                    icon: "pin.square.fill",
+                    titleES: "Apps abiertas sin ventanas (como VS Code) y orden fijo al minimizar/restaurar",
+                    titleEN: "Running Windowless Apps (e.g. VS Code) & Fixed Order on Minimize/Restore",
+                    summaryES: "La barra de tareas ahora muestra también las apps que siguen abiertas en macOS aunque hayas cerrado su última ventana (como Visual Studio Code, Terminal o Numbers, al igual que el Dock original), con clic directo para abrir ventana y opción para activar o desactivar esto en Configuración → General. Además se reforzó el orden de botones para que minimizar, restaurar o cambiar pestañas mantenga siempre cada app en su posición original sin mandarla al final.",
+                    summaryEN: "The taskbar now also shows macOS apps that remain running even after closing their last window (such as Visual Studio Code, Terminal, or Numbers, just like the native Dock) with one-click window reopen and a toggle in Settings → General. Button ordering was also hardened so minimizing, restoring, or switching tabs always keeps each app in its exact original slot instead of moving it to the end."
+                ),
+                ReleaseNoteItem(
+                    id: "taskbar-notification-badge-animations",
+                    icon: "bell.badge.fill",
+                    titleES: "6 animaciones configurables y detección mejorada de notificaciones en la barra",
+                    titleEN: "6 Configurable Notification Animations & Enhanced Badge Detection",
+                    summaryES: "Cuando una app recibe una notificación (como el globo rojo de Slack, WhatsApp, Mail o apps web PWA), ahora se detecta combinando el Dock de macOS, LaunchServices y el contador de título en PWAs/mensajería, y podés elegir entre 6 animaciones desde Configuración → Apariencia o el menú superior: Salto, Campana, Latido, Destello, Onda expansiva y Bamboleo (o dejarlo sin animación). Incluye vista previa en vivo y selector de frecuencia, pausándose al entrar a leer la app.",
+                    summaryEN: "When an app receives a notification (such as a red badge on Slack, WhatsApp, Mail, or web PWAs), detection now combines the macOS Dock, LaunchServices, and unread title counters for PWAs/messaging apps. Choose from 6 animations in Taskbar Settings → Appearance or the top menu: Bounce, Bell Shake, Heartbeat, Glow Flash, Ripple Wave, and Swing Float (or None), with live previews and configurable cadence that pauses automatically when you focus the app."
+                ),
+                ReleaseNoteItem(
+                    id: "alttab-window-switcher-full-preview",
+                    icon: "rectangle.stack.fill",
+                    titleES: "Selector de ventanas AltTab en el nuevo menú superior «AltTab»",
+                    titleEN: "AltTab Window Switcher in New Top Menu «AltTab»",
+                    summaryES: "Ahora podés activar un selector ultrarrápido estilo Alt+Tab de Windows desde su propio menú superior «AltTab» (desactivado de fábrica). Muestra cada ventana abierta por separado incluso si son de la misma app, incluye minimizadas, ocultas y de otros escritorios (Spaces) con etiquetas claras, ofrece vista previa a tamaño completo encima del resto, 3 estilos (Miniaturas, Íconos o Lista de títulos) con tamaño automático, búsqueda rápida y hasta 5 atajos personalizables (⌥⇥ y ⌥` por defecto).",
+                    summaryEN: "Enable an ultra-fast Windows-style Alt+Tab switcher from its own top menu «AltTab» (off by default). Lists every individual open window even within the same app, includes minimized, hidden, and other-Space windows with clear badges, displays a full-size preview above other windows, supports 3 auto-sized styles (Thumbnails, App Icons, or Compact Titles List), instant search, and up to 5 customizable shortcuts (⌥⇥ and ⌥` by default)."
+                ),
+                ReleaseNoteItem(
+                    id: "taskbar-window-buttons-and-start-menu",
+                    icon: "dock.rectangle",
+                    titleES: "Barra de tareas estilo Windows en el nuevo menú superior «Barra de tareas»",
+                    titleEN: "Windows-Style Taskbar in New Top Menu «Taskbar»",
+                    summaryES: "Ahora podés activar o desactivar desde el menú superior una barra inferior con un botón individual por cada ventana abierta, apertura y cambio de foco al instante (incluyendo WhatsApp y apps web PWA), miniaturas en vivo al pasar el cursor, aplicaciones fijadas y un Menú Inicio con buscador, recientes y lista alfabética. Viene desactivada de fábrica, podés elegir si arranca encendida por defecto y evita que macOS duerma la app mientras la barra esté activa.",
+                    summaryEN: "Turn on an optional Windows-style bottom bar from the new top menu with one button per open window, instant app switching (including WhatsApp and web PWAs), live hover thumbnails, pinned apps, and a searchable alphabetical Start Menu. Starts disabled by default with a setting to enable on launch, and prevents macOS App Nap from pausing the bar."
+                ),
+                ReleaseNoteItem(
+                    id: "taskbar-multimonitor-spaces-mouse-controls",
+                    icon: "display.2",
+                    titleES: "Multimonitor (hasta 5 pantallas), Spaces, reordenamiento y controles rápidos",
+                    titleEN: "Multi-Monitor (up to 5 Displays), Spaces, Reordering & Mouse Controls",
+                    summaryES: "Muestra una barra independiente en cada monitor conectado (o unifica todas las ventanas en una sola barra), se actualiza automáticamente al cambiar de escritorio virtual (Spaces), permite arrastrar botones para reordenarlos o agruparlos por app, minimiza al volver a hacer clic en la ventana activa, cierra con clic central y redimensiona ventanas que tapen la barra.",
+                    summaryEN: "Displays an independent bar on each connected screen (or unifies all windows into one bar), stays in sync with macOS Spaces, supports drag-to-reorder or grouping by app, minimizes on clicking the active window, closes on middle-click, and auto-resizes overlapping windows."
+                ),
+                ReleaseNoteItem(
+                    id: "taskbar-safe-dock-and-emergency-restore",
+                    icon: "arrow.uturn.backward.circle.fill",
+                    titleES: "Personalización visual, 12 íconos de Inicio (incluidos monocromáticos nativos) y gestión segura del Dock",
+                    titleEN: "Visual Customization, 12 Start Icons (Including Native Monochrome Variants) & Safe Dock Management",
+                    summaryES: "Elegí el ícono del botón Inicio entre 12 opciones predefinidas (cuadrícula estilo Windows, Apps de macOS, Apple, MacFileExplorer color y 3 estilos modernos en blanco con espacio negativo, EmonkBrain color y 2 estilos monocromáticos tipo macOS, cuadrícula 3×3 y Comando ⌘) con animación táctil de zoom al pasar el cursor, desde Apariencia, el menú superior o con clic derecho sobre el botón. Además podés ajustar tamaño, fuente, transparencia, tema claro/oscuro, solo íconos y apps excluidas, manteniendo tu Dock original intacto con botón de restauración de emergencia.",
+                    summaryEN: "Pick your Start button icon from 12 built-in presets (Windows-style grid, official macOS Apps, Apple, MacFileExplorer full color plus 3 modern monochrome negative-space styles, EmonkBrain full color plus 2 native-style monochrome variants, 3×3 grid, and Command ⌘) with a subtle hover scale animation, from Settings, the top menu, or by right-clicking the Start button. Also customize height, font, transparency, light/dark theme, icon-only mode, and excluded apps, while keeping your original macOS Dock untouched with Emergency Restore."
+                )
+            ]
+        ),
+        ReleaseNoteSection(
             id: "v1.7.0-ocr-cache-manager-help",
             versionLabelES: "Versión 1.7.0 — Índice OCR en Background, Gestor de Caché y Ayuda",
             versionLabelEN: "Version 1.7.0 — Background OCR Index, Cache Manager & Help Guide",
