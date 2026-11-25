@@ -409,8 +409,8 @@ public struct TaskbarStartIconGraphicView: View {
                 macOSAppsVectorFallback
             }
 
-        case .emonkBrain:
-            if let brainImage = FileIconProvider.shared.bundledResourceImage(named: "StartIcon-EmonkBrain") {
+        case .brain:
+            if let brainImage = FileIconProvider.shared.bundledResourceImage(named: "StartIcon-Brain") {
                 Image(nsImage: brainImage)
                     .resizable()
                     .interpolation(.high)
@@ -458,17 +458,17 @@ public struct TaskbarStartIconGraphicView: View {
                 isHighlighted: isHighlighted
             )
 
-        case .emonkBrainMono:
+        case .brainMono:
             TaskbarCustomMonochromeGlyphView(
-                glyph: .emonkBrainMono,
+                glyph: .brainMono,
                 size: size,
                 effectiveDark: effectiveDark,
                 isHighlighted: isHighlighted
             )
 
-        case .emonkBrainSquircle:
+        case .brainSquircle:
             TaskbarCustomMonochromeGlyphView(
-                glyph: .emonkBrainSquircle,
+                glyph: .brainSquircle,
                 size: size,
                 effectiveDark: effectiveDark,
                 isHighlighted: isHighlighted
@@ -567,8 +567,8 @@ public struct TaskbarStartIconGraphicView: View {
                 copy.size = targetSize
                 return copy
             }
-        case .emonkBrain:
-            if let copy = FileIconProvider.shared.bundledResourceImage(named: "StartIcon-EmonkBrain")?.copy() as? NSImage {
+        case .brain:
+            if let copy = FileIconProvider.shared.bundledResourceImage(named: "StartIcon-Brain")?.copy() as? NSImage {
                 copy.size = targetSize
                 return copy
             }
@@ -583,10 +583,10 @@ public struct TaskbarStartIconGraphicView: View {
             return TaskbarCustomMonochromeGlyphView.renderMenuImage(for: .macFileExplorerLayers, pointSize: 16, effectiveDark: isDark)
         case .macFileExplorerSquircle:
             return TaskbarCustomMonochromeGlyphView.renderMenuImage(for: .macFileExplorerSquircle, pointSize: 16, effectiveDark: isDark)
-        case .emonkBrainMono:
-            return TaskbarCustomMonochromeGlyphView.renderMenuImage(for: .emonkBrainMono, pointSize: 16, effectiveDark: isDark)
-        case .emonkBrainSquircle:
-            return TaskbarCustomMonochromeGlyphView.renderMenuImage(for: .emonkBrainSquircle, pointSize: 16, effectiveDark: isDark)
+        case .brainMono:
+            return TaskbarCustomMonochromeGlyphView.renderMenuImage(for: .brainMono, pointSize: 16, effectiveDark: isDark)
+        case .brainSquircle:
+            return TaskbarCustomMonochromeGlyphView.renderMenuImage(for: .brainSquircle, pointSize: 16, effectiveDark: isDark)
         default:
             break
         }
@@ -1427,6 +1427,48 @@ private enum TaskbarContextMenuBuilder {
         iconParent.image = LocalizationManager.symbolImage(named: "sparkles.square.filled.on.square")
         iconParent.submenu = iconSubmenu
         menu.addItem(iconParent)
+
+        // Submenú rápido para elegir la animación y velocidad del Menú Inicio (8 estilos + 0 ms instantáneo)
+        let animSubmenu = NSMenu(title: loc.text(es: "Animación del Menú Inicio", en: "Start Menu Animation"))
+        animSubmenu.autoenablesItems = false
+        for animOption in TaskbarStartMenuAnimation.allCases {
+            let badge = animOption.category.localizedBadge(using: loc)
+            let label = badge.map { "\(animOption.localizedTitle(using: loc)) · \($0)" } ?? animOption.localizedTitle(using: loc)
+            let optItem = makeItem(
+                title: label,
+                symbol: animOption.symbolName
+            ) {
+                TaskbarPreferences.shared.startMenuAnimation = animOption
+            }
+            optItem.state = (TaskbarPreferences.shared.startMenuAnimation == animOption) ? .on : .off
+            animSubmenu.addItem(optItem)
+        }
+        animSubmenu.addItem(.separator())
+        let speedPresets: [(seconds: Double, es: String, en: String, symbol: String)] = [
+            (0.00, "Instantáneo (0 ms)", "Instant (0 ms)", "bolt.fill"),
+            (0.15, "Rápido (150 ms)", "Fast (150 ms)", "hare"),
+            (0.22, "Normal (220 ms)", "Normal (220 ms)", "gauge.with.needle"),
+            (0.42, "Suave (420 ms)", "Smooth (420 ms)", "tortoise")
+        ]
+        let currentDuration = TaskbarPreferences.shared.startMenuAnimationDuration
+        for preset in speedPresets {
+            let speedItem = makeItem(
+                title: loc.text(es: preset.es, en: preset.en),
+                symbol: preset.symbol
+            ) {
+                TaskbarPreferences.shared.startMenuAnimationDuration = preset.seconds
+            }
+            speedItem.state = (abs(currentDuration - preset.seconds) < 0.013) ? .on : .off
+            animSubmenu.addItem(speedItem)
+        }
+        let animParent = NSMenuItem(
+            title: loc.text(es: "Animación del Menú Inicio", en: "Start Menu Animation"),
+            action: nil,
+            keyEquivalent: ""
+        )
+        animParent.image = LocalizationManager.symbolImage(named: "sparkles.rectangle.stack")
+        animParent.submenu = animSubmenu
+        menu.addItem(animParent)
 
         menu.addItem(.separator())
         appendCommonBarItems(to: menu, displayID: displayID)

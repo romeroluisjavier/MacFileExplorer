@@ -88,6 +88,10 @@ public final class HelpWindowController {
         self.window = createdWindow
     }
 
+    public func refreshLocalizedTitle() {
+        window?.title = LocalizationManager.shared.text(es: "Ayuda de MacFileExplorer", en: "MacFileExplorer Help")
+    }
+
     public func close() {
         window?.close()
     }
@@ -282,7 +286,7 @@ public struct HelpGuideView: View {
                     UpdateWindowController.shared.showAndCheck()
                 } label: {
                     Label(
-                        loc.text(es: "Buscar actualizaciones…", en: "Check Upgrades…"),
+                        loc.text(es: "Buscar actualizaciones…", en: "Check for Updates…"),
                         systemImage: "arrow.down.circle"
                     )
                     .font(.system(size: 11.5))
@@ -762,7 +766,7 @@ extension HelpGuideView {
             badgeEN: "v1.4 – v1.6",
             titleES: "Quick Actions: Eliminar fondo (PNG transparente), Privacy Stripper y Media",
             titleEN: "Quick Actions: Remove Background (Transparent PNG), Privacy Stripper & Media",
-            bodyES: "Desde clic derecho → Quick Actions podés quitar el fondo de imágenes creando un PNG transparente sin pisar el original, limpiar metadatos privados (GPS, cámara, autor) en fotos/videos/PDF, convertir JPG/PNG con calidad/DPI/peso máximo, rotar 90°/180°, convertir MOV→MP4, recortar (Trim) o silenciar video.",
+            bodyES: "Desde clic derecho → Acciones rápidas podés quitar el fondo de imágenes creando un PNG transparente sin pisar el original, limpiar metadatos privados (GPS, cámara, autor) en fotos/videos/PDF, convertir JPG/PNG con calidad/DPI/peso máximo, rotar 90°/180°, convertir MOV→MP4, recortar (Trim) o silenciar video.",
             bodyEN: "From right-click → Quick Actions you can remove image backgrounds into a new transparent PNG, strip private metadata (GPS, camera, author) from photos/videos/PDFs, convert JPG/PNG with quality/DPI/max MB targets, rotate 90°/180°, convert MOV→MP4, trim, or mute videos."
         ),
         HelpTopicCard(
@@ -800,8 +804,8 @@ extension HelpGuideView {
             icon: "arrow.down.circle.fill",
             badgeES: "v1.0 – v1.5.1",
             badgeEN: "v1.0 – v1.5.1",
-            titleES: "Pestañas nativas, Google Workspace aislado y Check Upgrades desde GitHub",
-            titleEN: "Native Tabs, Isolated Google Accounts & GitHub Check Upgrades",
+            titleES: "Pestañas nativas, Google Workspace aislado y actualizaciones desde GitHub",
+            titleEN: "Native Tabs, Isolated Google Accounts & GitHub Updates",
             bodyES: "Abrí múltiples pestañas de carpetas (⌘T) y cuentas independientes de Gmail, Drive y Calendar sin mezclar cookies. Además, desde Acerca de / menú de la app podés verificar y descargar nuevas versiones directamente desde GitHub.",
             bodyEN: "Open multiple folder tabs (⌘T) alongside isolated Gmail, Drive, and Calendar accounts. Plus, check GitHub and automatically download new installer versions from About or the App menu."
         )
@@ -1021,7 +1025,7 @@ extension HelpGuideView {
             titleES: "Mantenimiento de caché oculta (.macfileexplorer) y Actualizaciones",
             titleEN: "Hidden Cache (.macfileexplorer) Maintenance & GitHub Updates",
             bodyES: "Desde Archivo → Caché oculta (.macfileexplorer)… inspeccioná cuántos archivos .macfileexplorer_dir.cache, .macfileexplorer_thumbs.cache y .macfileexplorer_ocr.cache hay y cuánto ocupan, o borralos para regenerarlos. Desde MacFileExplorer → Buscar actualizaciones… comprobá y descargá nuevas versiones desde GitHub.",
-            bodyEN: "Under File → Hidden Cache (.macfileexplorer)… inspect total file count and disk usage of .macfileexplorer_*.cache files and wipe them to regenerate cleanly. Under MacFileExplorer → Check Upgrades… check GitHub and download newer versions."
+            bodyEN: "Under File → Hidden Cache (.macfileexplorer)… inspect total file count and disk usage of .macfileexplorer_*.cache files and wipe them to regenerate cleanly. Under MacFileExplorer → Check for Updates… check GitHub and download newer versions."
         )
     ]
 }

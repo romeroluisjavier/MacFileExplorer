@@ -61,9 +61,9 @@ public struct QuickActionImageConvertModalView: View {
                     Text(loc.text(es: "Resolución (PPP / DPI):", en: "Resolution (DPI):"))
                     Spacer()
                     Picker("", selection: $options.dpi) {
-                        Text("72 PPP (Pantalla)").tag(72)
-                        Text("150 PPP (Web/Doc)").tag(150)
-                        Text("300 PPP (Impresión)").tag(300)
+                        Text(loc.text(es: "72 PPP (Pantalla)", en: "72 DPI (Screen)")).tag(72)
+                        Text(loc.text(es: "150 PPP (Web/Doc)", en: "150 DPI (Web/Doc)")).tag(150)
+                        Text(loc.text(es: "300 PPP (Impresión)", en: "300 DPI (Print)")).tag(300)
                     }
                     .frame(width: 190)
                 }

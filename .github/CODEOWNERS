@@ -1,0 +1,10 @@
+# Every change in this repository requires review & approval from @romeroluisjavier.
+# Paired with GitHub's "Require review from Code Owners" rule on `main`,
+# nobody else can merge changes into the app, releases, workflows, or website.
+
+*                               @romeroluisjavier
+/GithubPages/                   @romeroluisjavier
+/releases/                      @romeroluisjavier
+/.github/                       @romeroluisjavier
+/Sources/                       @romeroluisjavier
+/README.md                      @romeroluisjavier

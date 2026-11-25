@@ -25,7 +25,7 @@ public final class AboutWindowController {
         }
 
         let createdWindow = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 540, height: 660),
+            contentRect: NSRect(x: 0, y: 0, width: 540, height: 720),
             styleMask: [.titled, .closable, .fullSizeContentView],
             backing: .buffered,
             defer: false
@@ -44,6 +44,13 @@ public final class AboutWindowController {
         createdWindow.makeKeyAndOrderFront(nil)
         NSApplication.shared.activate(ignoringOtherApps: true)
         self.window = createdWindow
+    }
+
+    public func refreshLocalizedTitle() {
+        window?.title = LocalizationManager.shared.text(
+            es: "Acerca de MacFileExplorer",
+            en: "About MacFileExplorer"
+        )
     }
 
     public func close() {
@@ -78,12 +85,19 @@ public struct AboutAppView: View {
 
             Divider()
 
+            legalDisclaimerSection
+                .padding(.horizontal, 24)
+                .padding(.vertical, 10)
+                .background(Color.primary.opacity(0.025))
+
+            Divider()
+
             footerSection
                 .padding(.horizontal, 24)
                 .padding(.vertical, 12)
                 .background(Color(nsColor: .windowBackgroundColor).opacity(0.6))
         }
-        .frame(width: 540, height: 660)
+        .frame(width: 540, height: 720)
         .background(Color(nsColor: .windowBackgroundColor))
         .onExitCommand {
             closeWindow()
@@ -250,6 +264,34 @@ public struct AboutAppView: View {
         }
     }
 
+    private var legalDisclaimerSection: some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: "shield.lefthalf.filled")
+                .font(.system(size: 11.5, weight: .semibold))
+                .foregroundStyle(.secondary)
+                .padding(.top, 1)
+
+            VStack(alignment: .leading, spacing: 2.5) {
+                Text(loc.text(
+                    es: "Aviso legal y exención de responsabilidad",
+                    en: "Legal Disclaimer & Limitation of Liability"
+                ))
+                .font(.system(size: 10.5, weight: .semibold))
+                .foregroundStyle(.secondary)
+
+                Text(loc.text(
+                    es: "MacFileExplorer se ofrece de forma gratuita «TAL CUAL» («AS IS»), sin garantías de ningún tipo. Su uso corre bajo tu propia responsabilidad. El autor no se hace responsable por errores del sistema, pérdida de información, borrado o modificación de archivos ni daños directos o indirectos derivados de su uso. Mantené siempre copias de seguridad de tus archivos importantes. Proyecto independiente no afiliado a Apple Inc. ni a Microsoft Corporation.",
+                    en: "MacFileExplorer is provided free of charge \"AS IS\", without warranty of any kind, express or implied. You use this software entirely at your own risk. The author shall not be liable for any system errors, data loss, accidental file deletion or modification, or any direct or indirect damages arising from its use. Always keep regular backups of your important files. Independent project not affiliated with Apple Inc. or Microsoft Corporation."
+                ))
+                .font(.system(size: 10))
+                .foregroundStyle(.tertiary)
+                .fixedSize(horizontal: false, vertical: true)
+                .lineSpacing(1.5)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
     private var footerSection: some View {
         HStack {
             Text(loc.text(
@@ -305,11 +347,11 @@ public struct AboutAppView: View {
                             .foregroundStyle(.green)
                         Text(loc.text(
                             es: "Actualización v\(info.versionString) lista",
-                            en: "Upgrade v\(info.versionString) Ready"
+                            en: "Update v\(info.versionString) Ready"
                         ))
                     default:
                         Image(systemName: "arrow.down.circle")
-                        Text(loc.text(es: "Buscar actualizaciones", en: "Check Upgrades"))
+                        Text(loc.text(es: "Buscar actualizaciones", en: "Check for Updates"))
                     }
                 }
             }

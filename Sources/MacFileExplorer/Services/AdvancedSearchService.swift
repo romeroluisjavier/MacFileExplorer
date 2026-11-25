@@ -186,8 +186,8 @@ public enum AdvancedSearchService {
         }
     }
 
-    /// Precalienta el motor OCR `.accurate` de Vision en segundo plano tras iniciar la app
-    /// para que la primera búsqueda dentro de imágenes responda en milisegundos.
+    /// Precalienta el motor OCR `.fast` de Vision en segundo plano (~50 ms, sin provocar compilaciones
+    /// pesadas del Neural Engine al arrancar la app) para búsquedas instantáneas dentro de imágenes.
     public static func prewarmOCRInBackground() {
         let shouldRun = prewarmClaimedLock.withLock { claimed in
             if claimed { return false }
@@ -197,7 +197,7 @@ public enum AdvancedSearchService {
         guard shouldRun else { return }
 
         Task.detached(priority: .background) {
-            try? await Task.sleep(for: .seconds(5))
+            try? await Task.sleep(for: .seconds(4))
             if Task.isCancelled || ProcessInfo.processInfo.isLowPowerModeEnabled { return }
             autoreleasepool {
                 let width = 96
@@ -214,7 +214,7 @@ public enum AdvancedSearchService {
                 let cgImage = ctx.makeImage() else {
                     return
                 }
-                let request = makeAccurateOCRRequest()
+                let request = makeFastOCRRequest()
                 let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
                 try? handler.perform([request])
             }
@@ -357,7 +357,7 @@ public enum AdvancedSearchService {
         let totalCount = queue.count
         onProgress?(0, totalCount)
 
-        let maxConcurrency = 4
+        let maxConcurrency = max(2, min(ProcessInfo.processInfo.activeProcessorCount / 2, 4))
         var nextIndex = 0
         var completedCount = 0
         var lastStreamEmitCount = results.count
@@ -498,12 +498,20 @@ public enum AdvancedSearchService {
         return false
     }
 
+    private static func makeFastOCRRequest() -> VNRecognizeTextRequest {
+        let request = VNRecognizeTextRequest()
+        request.recognitionLevel = .fast
+        request.usesLanguageCorrection = false
+        request.recognitionLanguages = ["es-ES", "en-US"]
+        return request
+    }
+
     private static func makeAccurateOCRRequest() -> VNRecognizeTextRequest {
         let request = VNRecognizeTextRequest()
         request.recognitionLevel = .accurate
         request.usesLanguageCorrection = true
         request.recognitionLanguages = ["es-ES", "en-US"]
-        request.minimumTextHeight = 0.005
+        request.minimumTextHeight = 0.015
         return request
     }
 
@@ -531,10 +539,10 @@ public enum AdvancedSearchService {
         return containsQuery(transcript, query: query)
     }
 
-    /// Extrae todo el texto legible de una imagen usando Vision.
-    /// - `isBackgroundIndex == true`: ruta optimizada para Apple Silicon (decodificación ImageIO reescalada a máx. 1400 px
-    ///   y una sola pasada rápida sin reescalado 2× ni sobrecarga de CPU/RAM en segundo plano).
-    /// - `isBackgroundIndex == false`: búsqueda explícita del usuario con máxima precisión (`.accurate` + respaldo 2×).
+    /// Extrae todo el texto legible de una imagen usando Vision optimizado para Apple Silicon:
+    /// - `isBackgroundIndex == true`: decodificación ImageIO reescalada a máx. 1400 px y pasada `.fast` en E-cores.
+    /// - `isBackgroundIndex == false`: estrategia en 2 etapas — pasada `.fast` (~15–50 ms sin compilación ANE en frío)
+    ///   con respaldo `.accurate` + reescalado 2× únicamente si `.fast` no detecta texto legible.
     public static func extractOCRTranscript(at url: URL, isBackgroundIndex: Bool = false) -> String {
         autoreleasepool {
             let source = CGImageSourceCreateWithURL(url as CFURL, nil)
@@ -550,10 +558,7 @@ public enum AdvancedSearchService {
                 guard let downsampled = CGImageSourceCreateThumbnailAtIndex(source, 0, thumbOptions as CFDictionary) else {
                     return ""
                 }
-                let request = VNRecognizeTextRequest()
-                request.recognitionLevel = .fast
-                request.usesLanguageCorrection = false
-                request.recognitionLanguages = ["es-ES", "en-US"]
+                let request = makeFastOCRRequest()
                 let handler = VNImageRequestHandler(cgImage: downsampled, options: [:])
                 if (try? handler.perform([request])) != nil,
                    let observations = request.results,
@@ -565,19 +570,20 @@ public enum AdvancedSearchService {
 
             let orientation = readImageOrientation(from: source)
 
+            // Etapa 1: pasada `.fast` (~15–50 ms, evita bloqueos de compilación ANE en frío de 60s+ en Apple Silicon)
             var primaryTranscript = ""
-            let primaryRequest = makeAccurateOCRRequest()
-            let urlHandler = VNImageRequestHandler(url: url, orientation: orientation, options: [:])
-            if (try? urlHandler.perform([primaryRequest])) != nil,
-               let observations = primaryRequest.results,
+            let fastRequest = makeFastOCRRequest()
+            let fastHandler = VNImageRequestHandler(url: url, orientation: orientation, options: [:])
+            if (try? fastHandler.perform([fastRequest])) != nil,
+               let observations = fastRequest.results,
                !observations.isEmpty {
                 primaryTranscript = buildTranscript(from: observations)
-                if primaryTranscript.count >= 12 {
+                if !primaryTranscript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                     return primaryTranscript
                 }
             }
 
-            // Respaldo vía CGImage y reescalado 2x para capturas chicas/medianas o perfiles de color particulares
+            // Etapa 2: respaldo `.accurate` (solo si `.fast` no logró extraer texto, p. ej. texto inclinado o muy chico)
             if let source,
                let cgImage = CGImageSourceCreateImageAtIndex(source, 0, nil) {
                 let fallbackImage: CGImage

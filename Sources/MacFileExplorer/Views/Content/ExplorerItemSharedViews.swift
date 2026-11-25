@@ -310,7 +310,10 @@ public struct ExplorerItemContextMenu: View {
                 Button {
                     viewModel.openInNativePreviewApp(item)
                 } label: {
-                    Label("Open in Preview", systemImage: "arrow.up.forward.app.fill")
+                    Label(
+                        loc.text(es: "Abrir en Vista Previa", en: "Open in Preview"),
+                        systemImage: "arrow.up.forward.app.fill"
+                    )
                 }
             }
 
@@ -590,7 +593,10 @@ public struct ExplorerItemContextMenu: View {
                         }
                     }
                 } label: {
-                    Label("Quick Actions", systemImage: "wand.and.stars")
+                    Label(
+                        loc.text(es: "Acciones rápidas", en: "Quick Actions"),
+                        systemImage: "wand.and.stars"
+                    )
                 }
             }
 

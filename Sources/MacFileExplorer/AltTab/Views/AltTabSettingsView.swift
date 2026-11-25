@@ -66,6 +66,10 @@ public final class AltTabSettingsWindowController {
         created.makeKeyAndOrderFront(nil)
         self.window = created
     }
+
+    public func refreshLocalizedTitle() {
+        window?.title = LocalizationManager.shared.text(es: "Configuración de AltTab", en: "AltTab Settings")
+    }
 }
 
 public struct AltTabSettingsView: View {
@@ -236,7 +240,7 @@ public struct AltTabSettingsView: View {
                 Divider()
 
                 permissionRow(
-                    title: loc.text(es: "Grabación de pantalla (Opcional — Miniaturas y Preview)", en: "Screen Recording (Optional — Thumbnails & Full Preview)"),
+                    title: loc.text(es: "Grabación de pantalla (Opcional — Miniaturas y vista previa)", en: "Screen Recording (Optional — Thumbnails & Full Preview)"),
                     subtitle: loc.text(
                         es: "Compartido con Barra de tareas: habilita miniaturas en vivo y vista previa a tamaño completo.",
                         en: "Shared with Taskbar: enables live thumbnails and full-size window previews."
@@ -387,7 +391,7 @@ public struct AltTabSettingsView: View {
                 }
                 .font(.system(size: 11.5))
 
-                Picker(loc.text(es: "Spaces:", en: "Spaces:"), selection: bindingForProfile(index: index, keyPath: \.spacesScope)) {
+                Picker(loc.text(es: "Espacios (Spaces):", en: "Spaces:"), selection: bindingForProfile(index: index, keyPath: \.spacesScope)) {
                     ForEach(AltTabWindowScopeSpaces.allCases) { scope in
                         Text(scope.localizedTitle(using: loc)).tag(scope)
                     }
@@ -479,7 +483,7 @@ public struct AltTabSettingsView: View {
                 if prefs.showFullSizePreview {
                     VStack(alignment: .leading, spacing: 4) {
                         HStack {
-                            Text(loc.text(es: "Retardo antes de mostrar preview completo", en: "Delay before showing full preview"))
+                            Text(loc.text(es: "Retardo antes de mostrar vista previa completa", en: "Delay before showing full preview"))
                             Spacer()
                             Text(prefs.fullSizePreviewDelayMs == 0
                                  ? loc.text(es: "Instantáneo (0 ms)", en: "Instant (0 ms)")

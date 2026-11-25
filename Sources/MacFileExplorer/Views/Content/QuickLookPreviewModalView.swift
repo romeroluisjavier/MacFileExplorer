@@ -526,7 +526,7 @@ public struct QuickLookPreviewModalView: View {
                     HStack(spacing: 5) {
                         Image(systemName: "arrow.up.forward.app.fill")
                             .font(.system(size: 12, weight: .medium))
-                        Text("Open in Preview")
+                        Text(loc.text(es: "Abrir en Vista Previa", en: "Open in Preview"))
                             .font(.system(size: 12, weight: .medium))
                     }
                     .padding(.horizontal, 10)

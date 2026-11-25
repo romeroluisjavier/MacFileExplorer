@@ -74,6 +74,10 @@ public final class TaskbarSettingsWindowController: NSObject, NSWindowDelegate {
         self.window = created
     }
 
+    public func refreshLocalizedTitle() {
+        window?.title = LocalizationManager.shared.text(es: "Configuración de la Barra de tareas", en: "Taskbar Settings")
+    }
+
     public func windowWillClose(_ notification: Notification) {
         // Destruir el árbol SwiftUI (y cualquier TimelineView de previsualización) al cerrar la ventana
         window?.contentView = nil
@@ -90,6 +94,7 @@ public struct TaskbarSettingsView: View {
     @ViewState private var selectedTab: TaskbarSettingsTab
     @ViewState private var dockFeedbackMessage: String?
     @ViewState private var sampleNotificationAppIcon: NSImage = TaskbarNotificationAnimationPreviewCard.samplePreviewAppIcon()
+    @ViewState private var previewTimelineAnchor: Date = Date()
 
     public init(initialTab: TaskbarSettingsTab = .general) {
         _selectedTab = ViewState(initialValue: initialTab)
@@ -424,6 +429,127 @@ public struct TaskbarSettingsView: View {
                 .padding(.top, 2)
             }
 
+            sectionCard(title: loc.text(es: "Animación y velocidad del Menú Inicio", en: "Start Menu Animation & Speed")) {
+                HStack(alignment: .center, spacing: 10) {
+                    Text(loc.text(
+                        es: "Elegí entre 8 animaciones de despliegue (4 clásicas, 2 profesionales y 2 divertidas) y ajustá la duración. Si elegís 0 ms, el Menú Inicio se abre instantáneamente.",
+                        en: "Choose from 8 opening animations (4 classic, 2 professional, and 2 fun) and adjust the speed. Choosing 0 ms opens the Start Menu instantaneously."
+                    ))
+                    .font(.system(size: 11.5))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                    Spacer(minLength: 4)
+
+                    Button {
+                        TaskbarStartMenuController.shared.showLivePreviewFromSettings()
+                    } label: {
+                        Label(
+                            loc.text(es: "Probar ahora", en: "Test Now"),
+                            systemImage: "play.fill"
+                        )
+                        .font(.system(size: 11.5, weight: .semibold))
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.small)
+                }
+
+                VStack(alignment: .leading, spacing: 6) {
+                    let isInstant = prefs.startMenuAnimationDuration <= 0.001
+                    let durationMs = Int((prefs.startMenuAnimationDuration * 1000.0).rounded())
+
+                    HStack {
+                        Text(loc.text(es: "Duración / retraso del despliegue", en: "Opening duration / delay"))
+                        Spacer()
+                        if isInstant {
+                            Text(loc.text(es: "0 ms · Instantáneo", en: "0 ms · Instant"))
+                                .font(.system(size: 11.5, weight: .semibold))
+                                .monospacedDigit()
+                                .foregroundStyle(.green)
+                                .padding(.horizontal, 7)
+                                .padding(.vertical, 2)
+                                .background(Color.green.opacity(0.14), in: Capsule())
+                        } else {
+                            Text("\(durationMs) ms")
+                                .font(.system(size: 12, weight: .medium))
+                                .monospacedDigit()
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+
+                    Slider(
+                        value: $prefs.startMenuAnimationDuration,
+                        in: TaskbarPreferences.minStartMenuAnimationDuration...TaskbarPreferences.maxStartMenuAnimationDuration,
+                        step: 0.025
+                    )
+
+                    HStack(spacing: 6) {
+                        let presets: [(seconds: Double, es: String, en: String)] = [
+                            (0.00, "0 ms · Instantáneo", "0 ms · Instant"),
+                            (0.15, "150 ms · Rápido", "150 ms · Fast"),
+                            (0.22, "220 ms · Normal", "220 ms · Normal"),
+                            (0.42, "420 ms · Suave", "420 ms · Smooth")
+                        ]
+
+                        ForEach(presets, id: \.seconds) { preset in
+                            let isActive = abs(prefs.startMenuAnimationDuration - preset.seconds) < 0.013
+                            let isZero = preset.seconds <= 0.001
+                            Button {
+                                prefs.startMenuAnimationDuration = preset.seconds
+                            } label: {
+                                Text(loc.text(es: preset.es, en: preset.en))
+                                    .font(.system(size: 10.5, weight: isActive ? .semibold : .medium))
+                                    .foregroundStyle(
+                                        isActive
+                                            ? (isZero ? Color.green : Color.accentColor)
+                                            : Color.secondary
+                                    )
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(
+                                        Capsule()
+                                            .fill(
+                                                isActive
+                                                    ? (isZero ? Color.green.opacity(0.15) : Color.accentColor.opacity(0.14))
+                                                    : Color.primary.opacity(0.05)
+                                            )
+                                    )
+                                    .overlay(
+                                        Capsule()
+                                            .stroke(
+                                                isActive
+                                                    ? (isZero ? Color.green.opacity(0.55) : Color.accentColor.opacity(0.55))
+                                                    : Color.primary.opacity(0.08),
+                                                lineWidth: isActive ? 1.1 : 0.7
+                                            )
+                                    )
+                            }
+                            .buttonStyle(.plain)
+                        }
+
+                        Spacer(minLength: 0)
+                    }
+                }
+                .padding(.top, 2)
+
+                TimelineView(.periodic(from: previewTimelineAnchor, by: 1.0 / 30.0)) { context in
+                    LazyVGrid(columns: iconColumns, spacing: 10) {
+                        ForEach(TaskbarStartMenuAnimation.allCases) { option in
+                            TaskbarStartMenuAnimationCard(
+                                style: option,
+                                duration: prefs.startMenuAnimationDuration,
+                                isSelected: prefs.startMenuAnimation == option,
+                                previewDark: previewDark,
+                                timelineDate: context.date
+                            ) {
+                                prefs.startMenuAnimation = option
+                            }
+                        }
+                    }
+                }
+                .padding(.top, 4)
+            }
+
             sectionCard(title: loc.text(es: "Estilo y dimensiones de la barra", en: "Bar Style & Dimensions")) {
                 Picker(loc.text(es: "Tema:", en: "Theme:"), selection: $prefs.themeMode) {
                     ForEach(TaskbarThemeMode.allCases) { mode in
@@ -499,7 +625,7 @@ public struct TaskbarSettingsView: View {
                     .font(.system(size: 11.5))
                     .foregroundStyle(.secondary)
 
-                    TimelineView(.periodic(from: .now, by: 1.0 / 30.0)) { context in
+                    TimelineView(.periodic(from: previewTimelineAnchor, by: 1.0 / 30.0)) { context in
                         LazyVGrid(columns: iconColumns, spacing: 10) {
                             ForEach(TaskbarNotificationAnimation.allCases) { option in
                                 TaskbarNotificationAnimationPreviewCard(
@@ -578,7 +704,7 @@ public struct TaskbarSettingsView: View {
                     .font(.system(size: 11.5))
                     .foregroundStyle(.secondary)
 
-                    TimelineView(.periodic(from: .now, by: 1.0 / 30.0)) { context in
+                    TimelineView(.periodic(from: previewTimelineAnchor, by: 1.0 / 30.0)) { context in
                         LazyVGrid(columns: iconColumns, spacing: 10) {
                             ForEach(TaskbarHoverPreviewAnimation.allCases) { option in
                                 TaskbarHoverPreviewAnimationCard(

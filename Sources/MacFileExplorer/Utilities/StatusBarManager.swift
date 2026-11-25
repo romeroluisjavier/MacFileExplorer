@@ -256,7 +256,7 @@ public final class StatusBarManager: NSObject, NSMenuDelegate {
         statusMenu.addItem(aboutItem)
 
         let checkUpgradesItem = NSMenuItem(
-            title: loc.text(es: "Buscar actualizaciones…", en: "Check Upgrades…"),
+            title: loc.text(es: "Buscar actualizaciones…", en: "Check for Updates…"),
             action: #selector(handleCheckUpgrades(_:)),
             keyEquivalent: ""
         )
@@ -268,7 +268,7 @@ public final class StatusBarManager: NSObject, NSMenuDelegate {
 
         // 10. Cerrar / Salir de MacFileExplorer
         let quitItem = NSMenuItem(
-            title: loc.text(es: "Cerrar MacFileExplorer", en: "Quit MacFileExplorer"),
+            title: loc.text(es: "Salir de MacFileExplorer", en: "Quit MacFileExplorer"),
             action: #selector(handleQuitApp(_:)),
             keyEquivalent: "q"
         )

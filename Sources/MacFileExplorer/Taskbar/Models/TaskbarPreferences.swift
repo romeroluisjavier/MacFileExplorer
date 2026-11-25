@@ -30,6 +30,10 @@ public final class TaskbarPreferences {
     public static let maxHoverDelay: Double = 1.00
     public static let defaultHoverDelay: Double = 0.30
 
+    public static let minStartMenuAnimationDuration: Double = 0.00
+    public static let maxStartMenuAnimationDuration: Double = 0.60
+    public static let defaultStartMenuAnimationDuration: Double = 0.22
+
     public static let defaultExcludedSystemBundleIDs: Set<String> = [
         "com.apple.dock",
         "com.apple.controlcenter",
@@ -54,6 +58,8 @@ public final class TaskbarPreferences {
         static let opacity = "com.macfileexplorer.taskbar.opacity"
         static let themeMode = "com.macfileexplorer.taskbar.themeMode"
         static let startButtonIcon = "com.macfileexplorer.taskbar.startButtonIcon"
+        static let startMenuAnimation = "com.macfileexplorer.taskbar.startMenuAnimation"
+        static let startMenuAnimationDuration = "com.macfileexplorer.taskbar.startMenuAnimationDuration"
         static let alignment = "com.macfileexplorer.taskbar.alignment"
         static let showWindowTitles = "com.macfileexplorer.taskbar.showWindowTitles"
         static let showMinimizedIndicator = "com.macfileexplorer.taskbar.showMinimizedIndicator"
@@ -168,6 +174,26 @@ public final class TaskbarPreferences {
             guard !isBootstrapping, startButtonIcon != oldValue else { return }
             defaults.set(startButtonIcon.rawValue, forKey: Keys.startButtonIcon)
             onAppearanceOrLayoutChanged?()
+        }
+    }
+
+    public var startMenuAnimation: TaskbarStartMenuAnimation {
+        didSet {
+            guard !isBootstrapping, startMenuAnimation != oldValue else { return }
+            defaults.set(startMenuAnimation.rawValue, forKey: Keys.startMenuAnimation)
+        }
+    }
+
+    /// Duración/retardo de despliegue del Menú Inicio en segundos (`0.0` = apertura instantánea sin animación).
+    public var startMenuAnimationDuration: Double {
+        didSet {
+            let clamped = min(max(startMenuAnimationDuration, Self.minStartMenuAnimationDuration), Self.maxStartMenuAnimationDuration)
+            if clamped != startMenuAnimationDuration {
+                startMenuAnimationDuration = clamped
+                return
+            }
+            guard !isBootstrapping, clamped != oldValue else { return }
+            defaults.set(clamped, forKey: Keys.startMenuAnimationDuration)
         }
     }
 
@@ -391,7 +417,23 @@ public final class TaskbarPreferences {
         self.opacity = min(max(savedOpacity, Self.minOpacity), Self.maxOpacity)
 
         self.themeMode = (defaults.string(forKey: Keys.themeMode).flatMap(TaskbarThemeMode.init(rawValue:))) ?? .system
-        self.startButtonIcon = (defaults.string(forKey: Keys.startButtonIcon).flatMap(TaskbarStartButtonIcon.init(rawValue:))) ?? .windowsGrid
+        let savedStartIconRaw = defaults.string(forKey: Keys.startButtonIcon)
+        let resolvedStartIcon: TaskbarStartButtonIcon = savedStartIconRaw.flatMap { raw in
+            if let direct = TaskbarStartButtonIcon(rawValue: raw) {
+                return direct
+            }
+            if raw.hasSuffix("Brain") { return .brain }
+            if raw.hasSuffix("BrainMono") { return .brainMono }
+            if raw.hasSuffix("BrainSquircle") { return .brainSquircle }
+            return nil
+        } ?? .windowsGrid
+        self.startButtonIcon = resolvedStartIcon
+        if let savedStartIconRaw, savedStartIconRaw != resolvedStartIcon.rawValue {
+            defaults.set(resolvedStartIcon.rawValue, forKey: Keys.startButtonIcon)
+        }
+        self.startMenuAnimation = (defaults.string(forKey: Keys.startMenuAnimation).flatMap(TaskbarStartMenuAnimation.init(rawValue:))) ?? .riseFromBar
+        let savedStartDuration = defaults.object(forKey: Keys.startMenuAnimationDuration) as? Double ?? Self.defaultStartMenuAnimationDuration
+        self.startMenuAnimationDuration = min(max(savedStartDuration, Self.minStartMenuAnimationDuration), Self.maxStartMenuAnimationDuration)
         self.alignment = (defaults.string(forKey: Keys.alignment).flatMap(TaskbarAlignment.init(rawValue:))) ?? .left
         self.showWindowTitles = defaults.object(forKey: Keys.showWindowTitles) as? Bool ?? true
         self.showMinimizedIndicator = defaults.object(forKey: Keys.showMinimizedIndicator) as? Bool ?? true
@@ -559,6 +601,8 @@ public final class TaskbarPreferences {
         opacity = Self.defaultOpacity
         themeMode = .system
         startButtonIcon = .windowsGrid
+        startMenuAnimation = .riseFromBar
+        startMenuAnimationDuration = Self.defaultStartMenuAnimationDuration
         alignment = .left
         showWindowTitles = true
         showMinimizedIndicator = true

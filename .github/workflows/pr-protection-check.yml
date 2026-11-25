@@ -1,0 +1,42 @@
+name: Protect Releases & Website on PRs
+
+on:
+  pull_request:
+    branches: ["main"]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  guard-protected-paths:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR head
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check protected release, website & workflow paths
+        env:
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          if [ "$PR_AUTHOR" = "romeroluisjavier" ]; then
+            echo "PR opened by repository owner (@romeroluisjavier). Check passed."
+            exit 0
+          fi
+
+          git fetch --no-tags origin "$BASE_REF"
+          CHANGED=$(git diff --name-only "origin/$BASE_REF...HEAD")
+          PROTECTED=$(echo "$CHANGED" | grep -E '^(releases/|GithubPages/|\.github/)' || true)
+
+          if [ -n "$PROTECTED" ]; then
+            echo "::error::External Pull Requests cannot modify protected release, website, or workflow files:"
+            echo "$PROTECTED"
+            echo ""
+            echo "Please revert changes to releases/, GithubPages/, and .github/ so @romeroluisjavier can review your feature PR."
+            exit 1
+          fi
+
+          echo "No protected release/website/workflow files modified. Ready for @romeroluisjavier review."

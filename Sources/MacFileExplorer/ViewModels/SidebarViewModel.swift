@@ -54,6 +54,7 @@ public final class SidebarViewModel {
     /// Monitores de sistema de archivos para detectar cambios externos o en otras pestañas sobre carpetas cacheadas del árbol lateral.
     private var directoryWatchers: [URL: DirectoryWatcher] = [:]
     private var watchDebounceTasks: [URL: Task<Void, Never>] = [:]
+    private var quickAccessRefreshTask: Task<Void, Never>?
 
     /// Estado actual del filtro de archivos ocultos usado al reaccionar a eventos del sistema de archivos.
     private var latestIncludeHidden: Bool = false
@@ -70,10 +71,20 @@ public final class SidebarViewModel {
         self.isQuickAccessExpanded = sections.quickAccessExpanded
         self.isVolumesExpanded = sections.volumesExpanded
         self.expandedNodeIDs = PersistenceService.shared.loadExpandedSidebarNodes()
-        self.quickAccessNodes = fileSystemService.fetchQuickAccessNodes(
-            visibleFolders: QuickAccessPreferences.shared.visibleFolders,
-            customFolderURLs: QuickAccessPreferences.shared.customFolderURLs
-        )
+        // Poblar nodos base de Acceso Rápido sin enumerar subcarpetas en el hilo principal al abrir ventana/pestaña;
+        // los estados `isExpandable` reales se resuelven inmediatamente en segundo plano.
+        let visible = QuickAccessPreferences.shared.visibleFolders
+        self.quickAccessNodes = QuickAccessFolder.allCases.compactMap { folder in
+            guard visible.contains(folder), let url = folder.directoryURL else { return nil }
+            return NavigationNode(
+                url: url,
+                title: folder.defaultTitle,
+                systemImage: folder.systemImage,
+                section: .quickAccess,
+                isExpandable: true
+            )
+        }
+        refreshQuickAccessNodes(includeHidden: false)
     }
 
     // MARK: - Carga Inicial, Volúmenes y Restauración del Árbol Expandido
@@ -85,11 +96,21 @@ public final class SidebarViewModel {
     }
 
     private func refreshQuickAccessNodes(includeHidden: Bool) {
-        quickAccessNodes = fileSystemService.fetchQuickAccessNodes(
-            includeHidden: includeHidden,
-            visibleFolders: QuickAccessPreferences.shared.visibleFolders,
-            customFolderURLs: QuickAccessPreferences.shared.customFolderURLs
-        )
+        let visible = QuickAccessPreferences.shared.visibleFolders
+        let custom = QuickAccessPreferences.shared.customFolderURLs
+        quickAccessRefreshTask?.cancel()
+        quickAccessRefreshTask = Task(priority: .utility) { [weak self] in
+            guard let self else { return }
+            let updated = await self.fileSystemService.fetchQuickAccessNodesAsync(
+                includeHidden: includeHidden,
+                visibleFolders: visible,
+                customFolderURLs: custom
+            )
+            guard !Task.isCancelled else { return }
+            if self.quickAccessNodes != updated {
+                self.quickAccessNodes = updated
+            }
+        }
     }
 
     /// Carga la lista de volúmenes montados y restaura las subcarpetas de todos los nodos que quedaron expandidos al cerrar la app.

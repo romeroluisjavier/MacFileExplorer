@@ -98,7 +98,7 @@ struct MacFileExplorerApp: App {
                 Button {
                     UpdateWindowController.shared.showAndCheck()
                 } label: {
-                    Label(loc.text(es: "Buscar actualizaciones…", en: "Check Upgrades…"), systemImage: "arrow.down.circle")
+                    Label(loc.text(es: "Buscar actualizaciones…", en: "Check for Updates…"), systemImage: "arrow.down.circle")
                 }
 
                 Menu {
@@ -847,6 +847,61 @@ struct MacFileExplorerApp: App {
                         Label(
                             loc.text(es: "Animación de vista previa", en: "Hover Preview Animation"),
                             systemImage: "rectangle.on.rectangle.angled"
+                        )
+                    }
+
+                    Menu {
+                        Picker(
+                            loc.text(es: "Animación del Menú Inicio", en: "Start Menu Animation"),
+                            selection: $taskbarPrefs.startMenuAnimation
+                        ) {
+                            ForEach(TaskbarStartMenuAnimation.allCases) { animOption in
+                                let badge = animOption.category.localizedBadge(using: loc)
+                                let title = badge.map { "\(animOption.localizedTitle(using: loc)) (\($0))" } ?? animOption.localizedTitle(using: loc)
+                                Label(title, systemImage: animOption.symbolName)
+                                    .tag(animOption)
+                            }
+                        }
+                        .pickerStyle(.inline)
+
+                        Divider()
+
+                        Button {
+                            taskbarPrefs.startMenuAnimationDuration = 0.0
+                        } label: {
+                            Label(
+                                loc.text(es: "Velocidad: Instantáneo (0 ms)", en: "Speed: Instant (0 ms)"),
+                                systemImage: taskbarPrefs.startMenuAnimationDuration <= 0.001 ? "checkmark.circle.fill" : "bolt.fill"
+                            )
+                        }
+                        Button {
+                            taskbarPrefs.startMenuAnimationDuration = 0.15
+                        } label: {
+                            Label(
+                                loc.text(es: "Velocidad: Rápido (150 ms)", en: "Speed: Fast (150 ms)"),
+                                systemImage: abs(taskbarPrefs.startMenuAnimationDuration - 0.15) < 0.013 ? "checkmark.circle.fill" : "hare"
+                            )
+                        }
+                        Button {
+                            taskbarPrefs.startMenuAnimationDuration = 0.22
+                        } label: {
+                            Label(
+                                loc.text(es: "Velocidad: Normal (220 ms)", en: "Speed: Normal (220 ms)"),
+                                systemImage: abs(taskbarPrefs.startMenuAnimationDuration - 0.22) < 0.013 ? "checkmark.circle.fill" : "gauge.with.needle"
+                            )
+                        }
+                        Button {
+                            taskbarPrefs.startMenuAnimationDuration = 0.42
+                        } label: {
+                            Label(
+                                loc.text(es: "Velocidad: Suave (420 ms)", en: "Speed: Smooth (420 ms)"),
+                                systemImage: abs(taskbarPrefs.startMenuAnimationDuration - 0.42) < 0.013 ? "checkmark.circle.fill" : "tortoise"
+                            )
+                        }
+                    } label: {
+                        Label(
+                            loc.text(es: "Animación del Menú Inicio", en: "Start Menu Animation"),
+                            systemImage: "sparkles.rectangle.stack"
                         )
                     }
 

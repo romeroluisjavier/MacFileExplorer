@@ -14,9 +14,9 @@ public enum TaskbarStartButtonIcon: String, CaseIterable, Identifiable, Codable,
     case macFileExplorerMono
     case macFileExplorerLayers
     case macFileExplorerSquircle
-    case emonkBrain
-    case emonkBrainMono
-    case emonkBrainSquircle
+    case brain
+    case brainMono
+    case brainSquircle
     case commandKey
 
     public var id: String { rawValue }
@@ -32,9 +32,9 @@ public enum TaskbarStartButtonIcon: String, CaseIterable, Identifiable, Codable,
         case .macFileExplorerMono: return "Explorer Mono"
         case .macFileExplorerLayers: return loc.text(es: "Explorer Capas", en: "Explorer Layers")
         case .macFileExplorerSquircle: return loc.text(es: "Explorer Sello", en: "Explorer Badge")
-        case .emonkBrain: return "EmonkBrain"
-        case .emonkBrainMono: return "EmonkBrain Mono"
-        case .emonkBrainSquircle: return loc.text(es: "EmonkBrain Sello", en: "EmonkBrain Badge")
+        case .brain: return "Brain"
+        case .brainMono: return "Brain Mono"
+        case .brainSquircle: return loc.text(es: "Brain Sello", en: "Brain Badge")
         case .commandKey: return loc.text(es: "Comando (⌘)", en: "Command (⌘)")
         }
     }
@@ -49,9 +49,9 @@ public enum TaskbarStartButtonIcon: String, CaseIterable, Identifiable, Codable,
         case .macFileExplorerMono: return "sidebar.left"
         case .macFileExplorerLayers: return "rectangle.stack.fill"
         case .macFileExplorerSquircle: return "folder.badge.gearshape"
-        case .emonkBrain: return "brain.head.profile"
-        case .emonkBrainMono: return "brain"
-        case .emonkBrainSquircle: return "cpu.fill"
+        case .brain: return "brain.head.profile"
+        case .brainMono: return "brain"
+        case .brainSquircle: return "cpu.fill"
         case .commandKey: return "command.square.fill"
         }
     }
@@ -321,6 +321,241 @@ public enum TaskbarHoverPreviewAnimation: String, CaseIterable, Identifiable, Co
         case .riseFromBar: return "dock.arrow.up.rectangle"
         case .springPop: return "arrow.up.left.and.arrow.down.right"
         case .flipReveal: return "cube.transparent"
+        }
+    }
+}
+
+/// Categoría visual de cada animación de apertura del Menú Inicio.
+public enum TaskbarStartMenuAnimationCategory: String, Sendable {
+    case classic
+    case professional
+    case fun
+
+    @MainActor
+    public func localizedBadge(using loc: LocalizationManager = .shared) -> String? {
+        switch self {
+        case .classic: return nil
+        case .professional: return loc.text(es: "Pro", en: "Pro")
+        case .fun: return loc.text(es: "Divertida", en: "Fun")
+        }
+    }
+}
+
+/// Fotograma paramétrico unificado de despliegue del Menú Inicio (compartido entre el panel real y las vistas previas).
+public struct TaskbarStartMenuMotionFrame: Equatable, Sendable {
+    public let opacity: Double
+    public let scaleX: CGFloat
+    public let scaleY: CGFloat
+    public let offsetX: CGFloat
+    public let offsetY: CGFloat
+    public let rotationX: Double
+    public let rotationZ: Double
+    /// Fracción oculta desde arriba (`0` = totalmente visible, `1` = totalmente recortado hacia abajo).
+    public let clipTopFraction: CGFloat
+    public let blurRadius: CGFloat
+
+    public static let identity = TaskbarStartMenuMotionFrame(
+        opacity: 1.0,
+        scaleX: 1.0,
+        scaleY: 1.0,
+        offsetX: 0.0,
+        offsetY: 0.0,
+        rotationX: 0.0,
+        rotationZ: 0.0,
+        clipTopFraction: 0.0,
+        blurRadius: 0.0
+    )
+
+    public init(
+        opacity: Double,
+        scaleX: CGFloat = 1.0,
+        scaleY: CGFloat = 1.0,
+        offsetX: CGFloat = 0.0,
+        offsetY: CGFloat = 0.0,
+        rotationX: Double = 0.0,
+        rotationZ: Double = 0.0,
+        clipTopFraction: CGFloat = 0.0,
+        blurRadius: CGFloat = 0.0
+    ) {
+        self.opacity = opacity
+        self.scaleX = scaleX
+        self.scaleY = scaleY
+        self.offsetX = offsetX
+        self.offsetY = offsetY
+        self.rotationX = rotationX
+        self.rotationZ = rotationZ
+        self.clipTopFraction = clipTopFraction
+        self.blurRadius = blurRadius
+    }
+}
+
+/// 8 animaciones de despliegue del Menú Inicio:
+/// 4 clásicas (misma familia que la vista previa de la barra), 2 profesionales y 2 divertidas.
+public enum TaskbarStartMenuAnimation: String, CaseIterable, Identifiable, Codable, Sendable {
+    // 4 Clásicas (similares a la barra de tareas)
+    case fadeLift
+    case riseFromBar
+    case springPop
+    case flipReveal
+    // 2 Profesionales
+    case executiveCurtain
+    case spotlightFocus
+    // 2 Divertidas
+    case jellyBounce
+    case twirlGenie
+
+    public var id: String { rawValue }
+
+    public var category: TaskbarStartMenuAnimationCategory {
+        switch self {
+        case .fadeLift, .riseFromBar, .springPop, .flipReveal:
+            return .classic
+        case .executiveCurtain, .spotlightFocus:
+            return .professional
+        case .jellyBounce, .twirlGenie:
+            return .fun
+        }
+    }
+
+    @MainActor
+    public func localizedTitle(using loc: LocalizationManager = .shared) -> String {
+        switch self {
+        case .fadeLift: return loc.text(es: "Suave", en: "Smooth Fade")
+        case .riseFromBar: return loc.text(es: "Desde la barra", en: "Rise from Bar")
+        case .springPop: return loc.text(es: "Rebote elástico", en: "Elastic Pop")
+        case .flipReveal: return loc.text(es: "Giro 3D", en: "3D Hinge")
+        case .executiveCurtain: return loc.text(es: "Cortina ejecutiva", en: "Executive Curtain")
+        case .spotlightFocus: return loc.text(es: "Enfoque Spotlight", en: "Spotlight Focus")
+        case .jellyBounce: return loc.text(es: "Gelatina", en: "Jelly Bounce")
+        case .twirlGenie: return loc.text(es: "Genio giratorio", en: "Genie Twirl")
+        }
+    }
+
+    @MainActor
+    public func localizedSubtitle(using loc: LocalizationManager = .shared) -> String {
+        switch self {
+        case .fadeLift: return loc.text(es: "Fundido y elevación", en: "Soft fade & lift")
+        case .riseFromBar: return loc.text(es: "Emerge de la barra", en: "Slides out of bar")
+        case .springPop: return loc.text(es: "Zoom con resorte", en: "Bouncy spring")
+        case .flipReveal: return loc.text(es: "Bisagra en 3D", en: "3D hinge reveal")
+        case .executiveCurtain: return loc.text(es: "Despliegue sobrio Pro", en: "Crisp curtain unfold")
+        case .spotlightFocus: return loc.text(es: "Micro-enfoque Pro", en: "Precision focus zoom")
+        case .jellyBounce: return loc.text(es: "Estiramiento gomoso", en: "Squash & stretch")
+        case .twirlGenie: return loc.text(es: "Giro desde Inicio", en: "Playful swoop twirl")
+        }
+    }
+
+    public var symbolName: String {
+        switch self {
+        case .fadeLift: return "sparkles"
+        case .riseFromBar: return "dock.arrow.up.rectangle"
+        case .springPop: return "arrow.up.left.and.arrow.down.right"
+        case .flipReveal: return "cube.transparent"
+        case .executiveCurtain: return "rectangle.topthird.inset.filled"
+        case .spotlightFocus: return "viewfinder"
+        case .jellyBounce: return "water.waves"
+        case .twirlGenie: return "wand.and.stars"
+        }
+    }
+
+    /// Evalúa de forma pura y determinista el estado visual para `progress ∈ [0, 1]`.
+    /// En `progress >= 0.999` devuelve exactamente `.identity` (sin residuos de escala/rotación/blur).
+    /// `motionScale` permite reutilizar la misma curva tanto en el panel real (`1.0`) como en mini-tarjetas (`0.42`).
+    public func evaluate(progress rawProgress: Double, motionScale: CGFloat = 1.0) -> TaskbarStartMenuMotionFrame {
+        let p = max(0.0, min(1.0, rawProgress))
+        if p >= 0.999 {
+            return .identity
+        }
+
+        switch self {
+        case .fadeLift:
+            let e = 1.0 - pow(1.0 - p, 3.0)
+            return TaskbarStartMenuMotionFrame(
+                opacity: e,
+                scaleX: CGFloat(0.95 + 0.05 * e),
+                scaleY: CGFloat(0.95 + 0.05 * e),
+                offsetY: CGFloat(14.0 * (1.0 - e)) * motionScale
+            )
+
+        case .riseFromBar:
+            let e = 1.0 - pow(1.0 - p, 3.2)
+            return TaskbarStartMenuMotionFrame(
+                opacity: min(1.0, p / 0.25),
+                scaleX: CGFloat(0.985 + 0.015 * e),
+                scaleY: CGFloat(0.985 + 0.015 * e),
+                offsetY: CGFloat(58.0 * (1.0 - e)) * motionScale
+            )
+
+        case .springPop:
+            let s = 1.0 - exp(-6.8 * p) * cos(11.5 * p)
+            let scale = CGFloat(0.78 + 0.22 * s)
+            return TaskbarStartMenuMotionFrame(
+                opacity: min(1.0, p / 0.22),
+                scaleX: scale,
+                scaleY: scale,
+                offsetY: CGFloat(22.0 * (1.0 - min(1.12, s))) * motionScale
+            )
+
+        case .flipReveal:
+            let e = 1.0 - pow(1.0 - p, 3.0)
+            let scale = CGFloat(0.93 + 0.07 * e)
+            return TaskbarStartMenuMotionFrame(
+                opacity: min(1.0, p / 0.28),
+                scaleX: scale,
+                scaleY: scale,
+                offsetY: CGFloat(18.0 * (1.0 - e)) * motionScale,
+                rotationX: 40.0 * (1.0 - e)
+            )
+
+        case .executiveCurtain:
+            let e = 1.0 - pow(1.0 - p, 4.0)
+            let scale = CGFloat(0.992 + 0.008 * e)
+            return TaskbarStartMenuMotionFrame(
+                opacity: 0.35 + 0.65 * min(1.0, p / 0.35),
+                scaleX: scale,
+                scaleY: scale,
+                offsetY: CGFloat(14.0 * (1.0 - e)) * motionScale,
+                clipTopFraction: CGFloat(max(0.0, 1.0 - e))
+            )
+
+        case .spotlightFocus:
+            let e = 1.0 - pow(1.0 - p, 3.5)
+            let fade = 1.0 - pow(1.0 - min(1.0, p / 0.72), 2.6)
+            let scale = CGFloat(1.055 - 0.055 * e)
+            return TaskbarStartMenuMotionFrame(
+                opacity: fade,
+                scaleX: scale,
+                scaleY: scale,
+                offsetY: CGFloat(-6.0 * (1.0 - e)) * motionScale,
+                blurRadius: CGFloat(5.5 * (1.0 - e)) * max(0.45, motionScale)
+            )
+
+        case .jellyBounce:
+            let rise = 1.0 - exp(-6.0 * p) * cos(9.0 * p)
+            let wobble = exp(-5.0 * p) * sin(16.5 * p)
+            let base = min(1.05, rise)
+            let sx = CGFloat((0.72 + 0.28 * base) - 0.14 * wobble)
+            let sy = CGFloat((0.68 + 0.32 * base) + 0.18 * wobble)
+            return TaskbarStartMenuMotionFrame(
+                opacity: min(1.0, p / 0.18),
+                scaleX: max(0.55, sx),
+                scaleY: max(0.55, sy),
+                offsetY: CGFloat(38.0 * (1.0 - min(1.08, rise))) * motionScale
+            )
+
+        case .twirlGenie:
+            let e = 1.0 - pow(1.0 - p, 3.0)
+            let spring = 1.0 - exp(-6.2 * p) * cos(10.0 * p)
+            let scale = CGFloat(max(0.42, 0.46 + 0.54 * spring))
+            let rotZ = -13.0 * (1.0 - e) + 4.5 * exp(-5.5 * p) * sin(12.0 * p)
+            return TaskbarStartMenuMotionFrame(
+                opacity: min(1.0, p / 0.20),
+                scaleX: scale,
+                scaleY: scale,
+                offsetX: CGFloat(-52.0 * (1.0 - e)) * motionScale,
+                offsetY: CGFloat(44.0 * (1.0 - e)) * motionScale,
+                rotationZ: rotZ
+            )
         }
     }
 }

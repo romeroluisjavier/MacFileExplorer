@@ -13,13 +13,13 @@ public enum AppVersionInfo {
     public static var currentVersion: String {
         (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String)
             .flatMap { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : $0 }
-            ?? "1.8.1"
+            ?? "2.0.0"
     }
 
     public static var currentBuild: String {
         (Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String)
             .flatMap { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : $0 }
-            ?? "12"
+            ?? "13"
     }
 }
 
@@ -899,11 +899,14 @@ private final class DownloadDelegateBridge: NSObject, URLSessionDownloadDelegate
             let attrs = try fm.attributesOfItem(atPath: location.path)
             let downloadedSize = (attrs[.size] as? NSNumber)?.int64Value ?? 0
             guard downloadedSize > 1024 else {
+                let isES = LocalizationManager.currentLanguageIsSpanish()
                 let corruptError = NSError(
                     domain: "AppUpdateManager.Download",
                     code: -2,
                     userInfo: [
-                        NSLocalizedDescriptionKey: "El archivo descargado está vacío o incompleto."
+                        NSLocalizedDescriptionKey: isES
+                            ? "El archivo descargado está vacío o incompleto."
+                            : "The downloaded update file is empty or incomplete."
                     ]
                 )
                 finishOnce(.failure(corruptError))
@@ -936,10 +939,15 @@ private final class DownloadDelegateBridge: NSObject, URLSessionDownloadDelegate
         if let error {
             finishOnce(.failure(error))
         } else {
+            let isES = LocalizationManager.currentLanguageIsSpanish()
             let unknownError = NSError(
                 domain: "AppUpdateManager.Download",
                 code: -1,
-                userInfo: [NSLocalizedDescriptionKey: "La descarga finalizó sin entregar el archivo."]
+                userInfo: [
+                    NSLocalizedDescriptionKey: isES
+                        ? "La descarga finalizó sin entregar el archivo."
+                        : "The download finished without delivering the file."
+                ]
             )
             finishOnce(.failure(unknownError))
         }

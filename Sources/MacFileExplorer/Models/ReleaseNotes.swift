@@ -77,6 +77,63 @@ public struct ReleaseNoteSection: Identifiable, Sendable {
 public enum ReleaseNotesCatalog {
     public static let sections: [ReleaseNoteSection] = [
         ReleaseNoteSection(
+            id: "v2.0.0-start-menu-animations-instant-navigation-bilingual",
+            versionLabelES: "Versión 2.0.0 — 8 animaciones en el Menú Inicio, carpetas instantáneas y traducción total",
+            versionLabelEN: "Version 2.0.0 — 8 Start Menu Animations, Instant Folder Switching & Full Bilingual Polish",
+            dateLabelES: "25 nov 2026",
+            dateLabelEN: "Nov 25, 2026",
+            items: [
+                ReleaseNoteItem(
+                    id: "start-menu-8-animations-and-instant-delay",
+                    icon: "sparkles.rectangle.stack",
+                    titleES: "8 animaciones y velocidad ajustable para el Menú Inicio (incluye modo 0 ms instantáneo)",
+                    titleEN: "8 Start Menu Opening Animations & Adjustable Speed (Including 0 ms Instant Mode)",
+                    summaryES: "Ahora podés elegir entre 8 formas distintas de desplegar el Menú Inicio: 4 estilos clásicos iguales a las vistas previas de la barra (Suave, Desde la barra, Rebote elástico y Giro 3D), 2 estilos profesionales (Cortina ejecutiva y Enfoque Spotlight) y 2 divertidos (Gelatina y Genio giratorio). Además podés regular la duración del despliegue con un control deslizante o elegir 0 ms para que abra al instante sin animación, con vista previa en vivo y botón «Probar ahora» desde Configuración de la barra o haciendo clic derecho sobre el botón Inicio.",
+                    summaryEN: "Choose from 8 different ways to open the Start Menu: 4 classic styles matching the taskbar hover previews (Smooth Fade, Rise from Bar, Elastic Pop, and 3D Hinge), 2 professional styles (Executive Curtain and Spotlight Focus), and 2 fun styles (Jelly Bounce and Genie Twirl). You can also fine-tune the opening speed with a slider or pick 0 ms for an instant opening with zero animation — complete with live preview cards and a Test Now button in Taskbar Settings or by right-clicking the Start button."
+                ),
+                ReleaseNoteItem(
+                    id: "instant-cached-folder-switching-no-loading-flash",
+                    icon: "bolt.horizontal.circle.fill",
+                    titleES: "Cambio instantáneo entre carpetas ya visitadas (sin pantalla de carga)",
+                    titleEN: "Instant Switching Between Revisited Folders (Zero Loading Flash)",
+                    summaryES: "Al moverte entre carpetas que ya habías abierto, ahora se muestran al instante sin que parpadee el indicador de «Cargando…» ni la pantalla de espera. Además se mejoró el arranque, se aceleró la búsqueda de duplicados y se optimizó el reconocimiento de texto en fotos para responder en milisegundos en cualquier Mac con Apple Silicon (M1, M2, M3 y M4).",
+                    summaryEN: "Switching back to folders you already visited now renders instantaneously with zero 'Loading…' spinner flash. Startup, duplicate detection, and image text search were also tuned to respond in milliseconds across all Apple Silicon Macs (M1, M2, M3, and M4)."
+                ),
+                ReleaseNoteItem(
+                    id: "bilingual-menus-context-menus-polish",
+                    icon: "globe",
+                    titleES: "Traducción completa Español / Inglés en todos los menús, submenús y menús contextuales",
+                    titleEN: "Complete Spanish / English Localization Across All Menus, Submenus & Context Menus",
+                    summaryES: "Se revisaron y tradujeron todos los menús superiores nuevos (Ícono de la aplicación, Barra de tareas, Animaciones, AltTab y Portapapeles), los menús contextuales (Abrir en Vista Previa, Acciones rápidas y opciones de resolución), los mensajes de error de archivos y los títulos de ventanas abiertas para que cambien en vivo entre Español e Inglés.",
+                    summaryEN: "Audited and translated all new top-bar menus and submenus (App Icon, Taskbar, Animations, AltTab, and Clipboard), context menus (Open in Preview, Quick Actions, and resolution options), file operation error messages, and open window titles so everything updates live between Spanish and English."
+                ),
+                ReleaseNoteItem(
+                    id: "fix-taskbar-notification-badge-animations",
+                    icon: "bell.badge.fill",
+                    titleES: "Corrección en las animaciones de notificaciones de la barra de tareas",
+                    titleEN: "Fixed Taskbar Notification Badge Animations",
+                    summaryES: "Se corrigió un problema que hacía que los globos rojos de notificaciones (como Slack, Mail o WhatsApp) aparecieran fijos sin reproducir su animación elegida. Ahora los 6 estilos (Salto, Campana, Latido, Destello, Onda expansiva y Bamboleo) vuelven a animarse con fluidez en las tres frecuencias (Periódica, Continua y Solo al llegar) manteniendo 0% de CPU en reposo.",
+                    summaryEN: "Fixed an issue where red notification badges (such as Slack, Mail, or WhatsApp) appeared static instead of playing their selected animation. All 6 animation styles (Bounce, Bell Shake, Heartbeat, Glow Flash, Ripple Wave, and Swing Float) now animate smoothly across all three cadences (Periodic, Continuous, and Once on arrival) while keeping idle CPU usage at 0%."
+                ),
+                ReleaseNoteItem(
+                    id: "start-button-brain-icon-names",
+                    icon: "brain.head.profile",
+                    titleES: "Íconos Brain simplificados para el botón Inicio",
+                    titleEN: "Simplified Brain Icons for the Start Button",
+                    summaryES: "Las tres opciones de ícono de cerebro para el botón Inicio de la barra de tareas ahora aparecen de forma más clara y directa como Brain, Brain Mono y Brain Sello tanto en Configuración → Apariencia como en el menú superior y el menú contextual.",
+                    summaryEN: "The three brain icon options for the taskbar Start button now appear cleanly and directly as Brain, Brain Mono, and Brain Badge across Appearance settings, the top menu, and the right-click context menu."
+                ),
+                ReleaseNoteItem(
+                    id: "legal-disclaimer-about-notice",
+                    icon: "shield.lefthalf.filled",
+                    titleES: "Aviso legal en «Acerca de MacFileExplorer»",
+                    titleEN: "Legal Disclaimer in About MacFileExplorer",
+                    summaryES: "Se incorporó un aviso legal breve y claro en la ventana «Acerca de MacFileExplorer» detallando los términos de uso bajo responsabilidad propia y la exención de responsabilidad ante errores del sistema, pérdida de datos o daños.",
+                    summaryEN: "Added a concise, clear legal disclaimer inside the About MacFileExplorer window outlining the as-is terms of use and limitation of liability regarding system errors, data loss, or damages."
+                )
+            ]
+        ),
+        ReleaseNoteSection(
             id: "v1.8.1-apple-silicon-performance-and-app-icons",
             versionLabelES: "Versión 1.8.1 — Optimización Apple Silicon y 5 íconos seleccionables",
             versionLabelEN: "Version 1.8.1 — Apple Silicon Optimization & 5 Selectable App Icons",
@@ -169,8 +226,8 @@ public enum ReleaseNotesCatalog {
                     icon: "arrow.uturn.backward.circle.fill",
                     titleES: "Personalización visual, 12 íconos de Inicio (incluidos monocromáticos nativos) y gestión segura del Dock",
                     titleEN: "Visual Customization, 12 Start Icons (Including Native Monochrome Variants) & Safe Dock Management",
-                    summaryES: "Elegí el ícono del botón Inicio entre 12 opciones predefinidas (cuadrícula estilo Windows, Apps de macOS, Apple, MacFileExplorer color y 3 estilos modernos en blanco con espacio negativo, EmonkBrain color y 2 estilos monocromáticos tipo macOS, cuadrícula 3×3 y Comando ⌘) con animación táctil de zoom al pasar el cursor, desde Apariencia, el menú superior o con clic derecho sobre el botón. Además podés ajustar tamaño, fuente, transparencia, tema claro/oscuro, solo íconos y apps excluidas, manteniendo tu Dock original intacto con botón de restauración de emergencia.",
-                    summaryEN: "Pick your Start button icon from 12 built-in presets (Windows-style grid, official macOS Apps, Apple, MacFileExplorer full color plus 3 modern monochrome negative-space styles, EmonkBrain full color plus 2 native-style monochrome variants, 3×3 grid, and Command ⌘) with a subtle hover scale animation, from Settings, the top menu, or by right-clicking the Start button. Also customize height, font, transparency, light/dark theme, icon-only mode, and excluded apps, while keeping your original macOS Dock untouched with Emergency Restore."
+                    summaryES: "Elegí el ícono del botón Inicio entre 12 opciones predefinidas (cuadrícula estilo Windows, Apps de macOS, Apple, MacFileExplorer color y 3 estilos modernos en blanco con espacio negativo, Brain color y 2 estilos monocromáticos tipo macOS, cuadrícula 3×3 y Comando ⌘) con animación táctil de zoom al pasar el cursor, desde Apariencia, el menú superior o con clic derecho sobre el botón. Además podés ajustar tamaño, fuente, transparencia, tema claro/oscuro, solo íconos y apps excluidas, manteniendo tu Dock original intacto con botón de restauración de emergencia.",
+                    summaryEN: "Pick your Start button icon from 12 built-in presets (Windows-style grid, official macOS Apps, Apple, MacFileExplorer full color plus 3 modern monochrome negative-space styles, Brain full color plus 2 native-style monochrome variants, 3×3 grid, and Command ⌘) with a subtle hover scale animation, from Settings, the top menu, or by right-clicking the Start button. Also customize height, font, transparency, light/dark theme, icon-only mode, and excluded apps, while keeping your original macOS Dock untouched with Emergency Restore."
                 )
             ]
         ),

@@ -391,7 +391,7 @@ public struct CommandBarView: View {
                 UpdateWindowController.shared.showAndCheck()
             } label: {
                 Label(
-                    loc.text(es: "Buscar actualizaciones…", en: "Check Upgrades…"),
+                    loc.text(es: "Buscar actualizaciones…", en: "Check for Updates…"),
                     systemImage: "arrow.down.circle"
                 )
             }

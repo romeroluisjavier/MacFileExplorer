@@ -2,13 +2,13 @@ import AppKit
 import SwiftUI
 
 /// Variantes vectoriales monocromáticas modernas (estilo SF Symbol nativo de macOS con recortes en espacio negativo)
-/// para el botón Inicio de la barra de tareas: 3 opciones de MacFileExplorer y 2 opciones de EmonkBrain.
+/// para el botón Inicio de la barra de tareas: 3 opciones de MacFileExplorer y 2 opciones de Brain.
 public enum TaskbarCustomMonochromeGlyph: String, CaseIterable, Sendable {
     case macFileExplorerMono
     case macFileExplorerLayers
     case macFileExplorerSquircle
-    case emonkBrainMono
-    case emonkBrainSquircle
+    case brainMono
+    case brainSquircle
 }
 
 /// Renderizador vectorial de precisión infinita en Retina con soporte automático de tema claro/oscuro,
@@ -66,10 +66,10 @@ public struct TaskbarCustomMonochromeGlyphView: View {
                 Self.drawMacFileExplorerLayers(in: &ctx, fill: shading)
             case .macFileExplorerSquircle:
                 Self.drawMacFileExplorerSquircle(in: &ctx, fill: shading)
-            case .emonkBrainMono:
-                Self.drawEmonkBrainMono(in: &ctx, fill: shading)
-            case .emonkBrainSquircle:
-                Self.drawEmonkBrainSquircle(in: &ctx, fill: shading)
+            case .brainMono:
+                Self.drawBrainMono(in: &ctx, fill: shading)
+            case .brainSquircle:
+                Self.drawBrainSquircle(in: &ctx, fill: shading)
             }
         }
         .compositingGroup()
@@ -186,10 +186,10 @@ public struct TaskbarCustomMonochromeGlyphView: View {
         ctx.fill(Path(roundedRect: CGRect(x: 45, y: 55.5, width: 17.5, height: 5.0), cornerRadius: 2.5, style: .continuous), with: fill)
     }
 
-    // MARK: - 4. EmonkBrain Mono (Cerebro sólido blanco con hendidura y circuitos neuronales calados)
+    // MARK: - 4. Brain Mono (Cerebro sólido blanco con hendidura y circuitos neuronales calados)
 
-    private static func drawEmonkBrainMono(in ctx: inout GraphicsContext, fill: GraphicsContext.Shading) {
-        // Dos hemisferios orgánicos simétricos fieles al logo de EmonkBrain
+    private static func drawBrainMono(in ctx: inout GraphicsContext, fill: GraphicsContext.Shading) {
+        // Dos hemisferios orgánicos simétricos fieles al ícono Brain
         let leftLobe = brainHemispherePath(isRight: false)
         let rightLobe = brainHemispherePath(isRight: true)
         ctx.fill(leftLobe, with: fill)
@@ -206,9 +206,9 @@ public struct TaskbarCustomMonochromeGlyphView: View {
         drawBrainCircuitOverlay(in: &ctx, shading: cut, isRight: true, lineWidth: 4.2, nodeRadius: 4.3)
     }
 
-    // MARK: - 5. EmonkBrain Sello (Squircle nativo estilo ⌘ con cerebro calado y nodos sinápticos limpios)
+    // MARK: - 5. Brain Sello (Squircle nativo estilo ⌘ con cerebro calado y nodos sinápticos limpios)
 
-    private static func drawEmonkBrainSquircle(in ctx: inout GraphicsContext, fill: GraphicsContext.Shading) {
+    private static func drawBrainSquircle(in ctx: inout GraphicsContext, fill: GraphicsContext.Shading) {
         let squircle = Path(roundedRect: CGRect(x: 10, y: 10, width: 80, height: 80), cornerRadius: 21, style: .continuous)
         ctx.fill(squircle, with: fill)
 
@@ -265,7 +265,7 @@ public struct TaskbarCustomMonochromeGlyphView: View {
 
     // MARK: - Primitivas Geométricas Compartidas (Artboard 100×100)
 
-    /// Silueta orgánica de un hemisferio cerebral lobulado fiel a `StartIcon-EmonkBrain.png`.
+    /// Silueta orgánica de un hemisferio cerebral lobulado fiel a `StartIcon-Brain.png`.
     private static func brainHemispherePath(isRight: Bool) -> Path {
         var path = Path()
         // Lóbulos construidos en el hemisferio izquierdo (x: 10...47, y: 10...90) y espejados si `isRight`
@@ -286,7 +286,7 @@ public struct TaskbarCustomMonochromeGlyphView: View {
         }
 
         // Recortar borde recto interno limpio contra la fisura central
-        // (se refuerza también con el rectángulo central en `drawEmonkBrainMono`)
+        // (se refuerza también con el rectángulo central en `drawBrainMono`)
         if isRight {
             let mirror = CGAffineTransform(translationX: 100, y: 0).scaledBy(x: -1, y: 1)
             return path.applying(mirror)
@@ -294,7 +294,7 @@ public struct TaskbarCustomMonochromeGlyphView: View {
         return path
     }
 
-    /// Trazos y nodos circulares sinápticos inspirados en el patrón neuronal de `StartIcon-EmonkBrain.png`,
+    /// Trazos y nodos circulares sinápticos inspirados en el patrón neuronal de `StartIcon-Brain.png`,
     /// calibrados con grosor óptico para máxima nitidez en tamaños de 18–44 px.
     private static func drawBrainCircuitOverlay(
         in ctx: inout GraphicsContext,

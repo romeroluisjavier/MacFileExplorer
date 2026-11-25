@@ -10,11 +10,18 @@ public final class UpdateWindowController {
 
     private init() {}
 
+    public func refreshLocalizedTitle() {
+        window?.title = LocalizationManager.shared.text(
+            es: "Buscar actualizaciones",
+            en: "Check for Updates"
+        )
+    }
+
     /// Muestra la ventana de actualizaciones (sin reiniciar si ya está comprobando o descargando).
     public func show() {
         let title = LocalizationManager.shared.text(
             es: "Buscar actualizaciones",
-            en: "Check Upgrades"
+            en: "Check for Updates"
         )
 
         NSApplication.shared.activate(ignoringOtherApps: true)
@@ -353,7 +360,7 @@ public struct UpdateCheckerView: View {
                 Button(loc.text(es: "Cerrar", en: "Close")) {
                     onClose()
                 }
-                Button(loc.text(es: "Buscar actualizaciones", en: "Check Upgrades")) {
+                Button(loc.text(es: "Buscar actualizaciones", en: "Check for Updates")) {
                     manager.checkForUpgrades(autoDownload: true)
                 }
                 .buttonStyle(.borderedProminent)
@@ -451,7 +458,7 @@ public struct UpdateCheckerView: View {
     private var headerTitle: String {
         switch manager.state {
         case .idle:
-            return loc.text(es: "Buscar actualizaciones", en: "Check Upgrades")
+            return loc.text(es: "Buscar actualizaciones", en: "Check for Updates")
         case .checking:
             return loc.text(es: "Buscando actualizaciones…", en: "Checking for Upgrades…")
         case .upToDate:
@@ -469,7 +476,7 @@ public struct UpdateCheckerView: View {
         case .downloaded(let info, _, _):
             return loc.text(
                 es: "Actualización v\(info.versionString) lista",
-                en: "Upgrade v\(info.versionString) Ready"
+                en: "Update v\(info.versionString) Ready"
             )
         case .updateAvailableNoInstaller(let info):
             return loc.text(

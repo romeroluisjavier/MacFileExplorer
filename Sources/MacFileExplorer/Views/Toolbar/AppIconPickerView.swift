@@ -49,6 +49,13 @@ public final class AppIconPickerWindowController: NSObject, NSWindowDelegate {
         self.window = created
     }
 
+    public func refreshLocalizedTitle() {
+        window?.title = LocalizationManager.shared.text(
+            es: "Ícono de MacFileExplorer",
+            en: "MacFileExplorer App Icon"
+        )
+    }
+
     public func close() {
         window?.close()
     }

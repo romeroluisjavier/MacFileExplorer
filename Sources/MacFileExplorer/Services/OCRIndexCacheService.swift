@@ -378,6 +378,7 @@ public actor OCRIndexCacheService {
                 try encoded.write(to: localCacheURL, options: [.atomic])
             }
             try? localCacheURL.setResourceValues(resourceValues)
+            DirectoryIndexCacheService.shared.recordInternalCacheWrite(in: dir)
         } catch {
             try? FileManager.default.removeItem(at: tempCacheURL)
             let fallbackURL = fallbackCacheFileURL(for: dir)

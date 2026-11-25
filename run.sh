@@ -24,7 +24,8 @@ cp Sources/MacFileExplorer/Resources/AppIcon-MacOS.png MacFileExplorer.app/Conte
 cp Sources/MacFileExplorer/Resources/AppIcon-MonoDark.png MacFileExplorer.app/Contents/Resources/AppIcon-MonoDark.png
 cp Sources/MacFileExplorer/Resources/AppIcon-MonoLight.png MacFileExplorer.app/Contents/Resources/AppIcon-MonoLight.png
 cp Sources/MacFileExplorer/Resources/AppIcon-GlassLayers.png MacFileExplorer.app/Contents/Resources/AppIcon-GlassLayers.png
-cp Sources/MacFileExplorer/Resources/StartIcon-EmonkBrain.png MacFileExplorer.app/Contents/Resources/StartIcon-EmonkBrain.png
+find MacFileExplorer.app/Contents/Resources -maxdepth 1 -name 'StartIcon-*.png' -delete
+cp Sources/MacFileExplorer/Resources/StartIcon-Brain.png MacFileExplorer.app/Contents/Resources/StartIcon-Brain.png
 
 mkdir -p MacFileExplorer.app/Contents/Resources/en.lproj
 mkdir -p MacFileExplorer.app/Contents/Resources/es.lproj

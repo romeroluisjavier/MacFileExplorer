@@ -54,6 +54,13 @@ public final class LocalizationManager: NSObject, NSMenuDelegate {
             applyLanguageToMainMenu()
             StatusBarManager.shared.refreshTooltipAndMenu()
             TaskbarManager.shared.refreshLocalizedUI()
+            AppIconPickerWindowController.shared.refreshLocalizedTitle()
+            TaskbarSettingsWindowController.shared.refreshLocalizedTitle()
+            TaskbarSetupWizardWindowController.shared.refreshLocalizedTitle()
+            AltTabSettingsWindowController.shared.refreshLocalizedTitle()
+            AboutWindowController.shared.refreshLocalizedTitle()
+            HelpWindowController.shared.refreshLocalizedTitle()
+            UpdateWindowController.shared.refreshLocalizedTitle()
         }
     }
 
@@ -88,6 +95,15 @@ public final class LocalizationManager: NSObject, NSMenuDelegate {
     /// Detecta si el idioma preferido global de macOS es español o inglés.
     public nonisolated static func detectSystemLanguage() -> EffectiveLanguage {
         initialSystemLanguage
+    }
+
+    /// Consulta thread-safe del idioma activo para mensajes de error generados fuera de `@MainActor`.
+    public nonisolated static func currentLanguageIsSpanish() -> Bool {
+        if let raw = UserDefaults.standard.string(forKey: "com.macfileexplorer.languagePreference") {
+            if raw == AppLanguagePreference.spanish.rawValue { return true }
+            if raw == AppLanguagePreference.english.rawValue { return false }
+        }
+        return initialSystemLanguage == .spanish
     }
 
     /// Devuelve la cadena localizada según el idioma efectivo activo.
@@ -227,7 +243,24 @@ public final class LocalizationManager: NSObject, NSMenuDelegate {
             ("Habla", "Speech"),
             (" Voz", "Speech"),
             ("Mover y redimensionar", "Move & Resize"),
-            ("Mosaico en pantalla completa", "Full Screen Tile")
+            ("Mosaico en pantalla completa", "Full Screen Tile"),
+            ("Ícono de la aplicación", "App Icon"),
+            ("Iconos en vista Lista", "List View Icons"),
+            ("Tamaño de iconos (Cuadrícula)", "Grid Icon Size"),
+            ("Abrir marcadores web en...", "Open web bookmarks in..."),
+            ("Carpetas en Acceso rápido", "Quick Access Folders"),
+            ("Tiempo de guardado", "Retention Time"),
+            ("Cantidad máxima", "Maximum Items"),
+            ("Elementos en menú desplegable (últimos 10)", "Items in Quick Dropdown (Last 10)"),
+            ("Configuración de atajos (Shortcuts)", "Shortcuts Configuration"),
+            ("Monitores y Espacios", "Displays & Spaces"),
+            ("Tema y tamaño", "Theme & Size"),
+            ("Ícono del botón Inicio", "Start Button Icon"),
+            ("Animación de notificaciones", "Notification Animation"),
+            ("Animación de vista previa", "Hover Preview Animation"),
+            ("Gestión del Dock de macOS", "macOS Dock Management"),
+            ("Estilo de visualización", "Display Style"),
+            ("Etiquetas y controles", "Badges & Controls")
         ]
         for pair in pairs {
             if rawTitle.caseInsensitiveCompare(pair.es) == .orderedSame ||
@@ -334,8 +367,75 @@ public final class LocalizationManager: NSObject, NSMenuDelegate {
 
         let exactPairs: [(es: String, en: String)] = [
             ("Acerca de MacFileExplorer", "About MacFileExplorer"),
+            ("Buscar actualizaciones…", "Check for Updates…"),
+            ("Buscar actualizaciones", "Check for Updates"),
             ("Buscar actualizaciones…", "Check Upgrades…"),
             ("Buscar actualizaciones", "Check Upgrades"),
+            ("Ícono de la aplicación", "App Icon"),
+            ("Elegir ícono con vista previa…", "Choose Icon with Preview…"),
+            ("Idioma", "Language"),
+            ("Nueva pestaña de carpetas", "New Folder Tab"),
+            ("Cerrar pestaña actual", "Close Current Tab"),
+            ("Mostrar barra de marcadores", "Show Bookmarks Bar"),
+            ("Mostrar botón Nuevo", "Show New Button"),
+            ("Iconos en vista Lista", "List View Icons"),
+            ("Tamaño de iconos (Cuadrícula)", "Grid Icon Size"),
+            ("Pequeño (48 px)", "Small (48 px)"),
+            ("Mediano (64 px - Predeterminado)", "Medium (64 px - Default)"),
+            ("Grande (96 px)", "Large (96 px)"),
+            ("Muy grande (144 px)", "Extra Large (144 px)"),
+            ("Máximo (192 px)", "Maximum (192 px)"),
+            ("Restablecer tamaño predeterminado", "Reset to Default Size"),
+            ("Abrir marcadores web en...", "Open web bookmarks in..."),
+            ("Modificados hoy (24h)", "Modified Today (24h)"),
+            ("Restablecer predeterminadas", "Reset to Defaults"),
+            ("Carpetas en Acceso rápido", "Quick Access Folders"),
+            ("Acercar página web", "Zoom In Web Page"),
+            ("Alejar página web", "Zoom Out Web Page"),
+            ("Restablecer zoom web (100%)", "Reset Web Zoom (100%)"),
+            ("Activar Historial del Portapapeles", "Enable Clipboard History"),
+            ("Tiempo de guardado", "Retention Time"),
+            ("Cantidad máxima", "Maximum Items"),
+            ("Elementos en menú desplegable (últimos 10)", "Items in Quick Dropdown (Last 10)"),
+            ("Personalizar todos los atajos de teclado…", "Customize All Keyboard Shortcuts…"),
+            ("Restablecer atajos predeterminados (Maccy)", "Reset Shortcuts to Defaults (Maccy)"),
+            ("Configuración de atajos (Shortcuts)", "Shortcuts Configuration"),
+            ("Abrir panel de atajos y ajustes…", "Open Shortcuts & Settings Panel…"),
+            ("Pegar automáticamente al elegir del menú desplegable", "Auto-paste on dropdown selection"),
+            ("Activar barra de tareas", "Enable Taskbar"),
+            ("Activar por defecto al iniciar MacFileExplorer", "Enable by Default on Launch"),
+            ("Abrir Menú Inicio", "Open Start Menu"),
+            ("Configuración de la barra de tareas…", "Taskbar Settings…"),
+            ("Asistente de permisos y configuración…", "Setup & Permissions Assistant…"),
+            ("Vista previa al pasar el cursor", "Hover Window Previews"),
+            ("Agrupar ventanas por aplicación", "Group Windows by Application"),
+            ("Mostrar títulos de ventanas", "Show Window Titles"),
+            ("Redimensionar ventanas superpuestas", "Auto-Resize Overlapping Windows"),
+            ("Sincronizar con Espacios (Spaces)", "Sync with macOS Spaces"),
+            ("Mostrar todas las pantallas ocultas", "Show All Hidden Displays"),
+            ("Monitores y Espacios", "Displays & Spaces"),
+            ("Tema y tamaño", "Theme & Size"),
+            ("Ícono del botón Inicio", "Start Button Icon"),
+            ("Animación de notificaciones", "Notification Animation"),
+            ("Animación de vista previa", "Hover Preview Animation"),
+            ("Tamaño Compacto (36 px)", "Compact Size (36 px)"),
+            ("Tamaño Normal (42 px)", "Normal Size (42 px)"),
+            ("Tamaño Grande (50 px)", "Large Size (50 px)"),
+            ("Tamaño Extra grande (58 px)", "Extra Large Size (58 px)"),
+            ("Gestión del Dock de macOS", "macOS Dock Management"),
+            ("Emergencia: Restaurar Dock original de macOS", "Emergency: Restore Original macOS Dock"),
+            ("Forzar Dock de fábrica (Abajo y visible)", "Force Factory macOS Dock (Bottom & Visible)"),
+            ("Probar selector de ventanas ahora", "Test Window Switcher Now"),
+            ("Configuración de AltTab…", "AltTab Settings…"),
+            ("Estilo de visualización", "Display Style"),
+            ("Ajuste de tamaño automático", "Automatic Sizing"),
+            ("Vista previa a tamaño completo", "Full-Size Window Preview"),
+            ("Mostrar buscador en el selector", "Show Search Bar in Switcher"),
+            ("Personalizar atajos y filtros…", "Customize Shortcuts & Filters…"),
+            ("Mostrar etiquetas de Spaces (Space 2, 3…)", "Show Space Badges (Space 2, 3…)"),
+            ("Mostrar etiquetas de minimizadas y ocultas", "Show Minimized & Hidden Badges"),
+            ("Botones rápidos al pasar el mouse", "Hover Quick Actions"),
+            ("Etiquetas y controles", "Badges & Controls"),
             ("Ajustes…", "Settings…"),
             ("Preferencias…", "Preferences…"),
             ("Servicios", "Services"),
@@ -574,7 +674,7 @@ public final class LocalizationManager: NSObject, NSMenuDelegate {
         // App
         case "acerca de macfileexplorer", "about macfileexplorer":
             return "info.circle"
-        case "buscar actualizaciones…", "buscar actualizaciones", "check upgrades…", "check upgrades":
+        case "buscar actualizaciones…", "buscar actualizaciones", "check for updates…", "check for updates", "check upgrades…", "check upgrades":
             return "arrow.down.circle"
         case "ajustes…", "preferencias…", "settings…", "preferences…":
             return "gearshape"

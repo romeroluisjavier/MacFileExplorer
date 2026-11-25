@@ -282,4 +282,83 @@ final class TaskbarTests: XCTestCase {
         let dedupC = TaskbarTabGroupDeduplicator.deduplicate([chrome1, chrome2])
         XCTAssertEqual(dedupC.map(\.id), ["483-3279", "483-3280"])
     }
+
+    // MARK: - 7. 8 Animaciones del Menú Inicio y Duración / Modo Instantáneo 0 ms
+
+    @MainActor
+    func testStartMenuAnimationsAndInstantZeroDelayPreferences() {
+        let all = TaskbarStartMenuAnimation.allCases
+        XCTAssertEqual(all.count, 8, "Deben existir exactamente 8 animaciones del Menú Inicio")
+        XCTAssertEqual(all.filter { $0.category == .classic }.count, 4, "4 estilos clásicos iguales a la barra")
+        XCTAssertEqual(all.filter { $0.category == .professional }.count, 2, "2 estilos profesionales")
+        XCTAssertEqual(all.filter { $0.category == .fun }.count, 2, "2 estilos divertidos")
+
+        let loc = LocalizationManager.shared
+        let originalLang = loc.language
+        defer { loc.language = originalLang }
+
+        for style in all {
+            // Al completar la animación (progress = 1.0), toda animación debe asentarse exactamente en .identity
+            let finalFrame = style.evaluate(progress: 1.0)
+            XCTAssertEqual(finalFrame, .identity, "La animación \(style.rawValue) debe finalizar en .identity")
+
+            // En el inicio y en mitad del despliegue todos los valores deben ser finitos y no triviales
+            let startFrame = style.evaluate(progress: 0.0)
+            let midFrame = style.evaluate(progress: 0.45)
+            XCTAssertNotEqual(startFrame, .identity, "La animación \(style.rawValue) debe arrancar distinta a .identity")
+            XCTAssertTrue(midFrame.opacity.isFinite && midFrame.scaleX.isFinite && midFrame.scaleY.isFinite)
+            XCTAssertTrue(midFrame.offsetX.isFinite && midFrame.offsetY.isFinite && midFrame.rotationX.isFinite && midFrame.rotationZ.isFinite)
+            XCTAssertTrue(midFrame.blurRadius.isFinite && midFrame.clipTopFraction.isFinite)
+
+            // Localización ES y EN no vacía
+            loc.language = .spanish
+            XCTAssertFalse(style.localizedTitle(using: loc).isEmpty)
+            XCTAssertFalse(style.localizedSubtitle(using: loc).isEmpty)
+            loc.language = .english
+            XCTAssertFalse(style.localizedTitle(using: loc).isEmpty)
+            XCTAssertFalse(style.localizedSubtitle(using: loc).isEmpty)
+        }
+
+        // Rasgos distintivos de los estilos nuevos (2 profesionales + 2 divertidos + 3D)
+        XCTAssertGreaterThan(TaskbarStartMenuAnimation.executiveCurtain.evaluate(progress: 0.0).clipTopFraction, 0.8)
+        let spotlightStart = TaskbarStartMenuAnimation.spotlightFocus.evaluate(progress: 0.0)
+        XCTAssertGreaterThan(spotlightStart.blurRadius, 4.0)
+        XCTAssertGreaterThan(spotlightStart.scaleX, 1.03)
+        XCTAssertGreaterThan(abs(TaskbarStartMenuAnimation.twirlGenie.evaluate(progress: 0.25).rotationZ), 1.0)
+        XCTAssertGreaterThan(abs(TaskbarStartMenuAnimation.flipReveal.evaluate(progress: 0.0).rotationX), 15.0)
+        let jellyMid = TaskbarStartMenuAnimation.jellyBounce.evaluate(progress: 0.35)
+        XCTAssertNotEqual(jellyMid.scaleX, jellyMid.scaleY, "Gelatina debe aplicar squash & stretch asimétrico")
+
+        // Persistencia aislada, clamping y soporte real de 0 ms instantáneo
+        let suiteName = "com.macfileexplorer.tests.startmenu.\(UUID().uuidString)"
+        guard let testDefaults = UserDefaults(suiteName: suiteName) else {
+            XCTFail("Failed to create isolated UserDefaults suite")
+            return
+        }
+        defer { testDefaults.removePersistentDomain(forName: suiteName) }
+
+        let prefs = TaskbarPreferences(defaults: testDefaults)
+        XCTAssertEqual(prefs.startMenuAnimation, .riseFromBar)
+        XCTAssertEqual(prefs.startMenuAnimationDuration, TaskbarPreferences.defaultStartMenuAnimationDuration, accuracy: 0.0001)
+
+        // Elegir 0 ms (instantáneo) debe guardarse exactamente en 0.0 y persistir tras recargar
+        prefs.startMenuAnimation = .twirlGenie
+        prefs.startMenuAnimationDuration = 0.0
+        XCTAssertEqual(prefs.startMenuAnimationDuration, 0.0, accuracy: 0.0001)
+
+        let reloadedInstant = TaskbarPreferences(defaults: testDefaults)
+        XCTAssertEqual(reloadedInstant.startMenuAnimation, .twirlGenie)
+        XCTAssertEqual(reloadedInstant.startMenuAnimationDuration, 0.0, accuracy: 0.0001, "0 ms instantáneo debe persistir sin volver al default")
+
+        // Clamping de extremos
+        reloadedInstant.startMenuAnimationDuration = -0.25
+        XCTAssertEqual(reloadedInstant.startMenuAnimationDuration, 0.0, accuracy: 0.0001)
+        reloadedInstant.startMenuAnimationDuration = 2.0
+        XCTAssertEqual(reloadedInstant.startMenuAnimationDuration, TaskbarPreferences.maxStartMenuAnimationDuration, accuracy: 0.0001)
+
+        // Restablecer valores visuales vuelve al default
+        reloadedInstant.resetVisualDefaults()
+        XCTAssertEqual(reloadedInstant.startMenuAnimation, .riseFromBar)
+        XCTAssertEqual(reloadedInstant.startMenuAnimationDuration, TaskbarPreferences.defaultStartMenuAnimationDuration, accuracy: 0.0001)
+    }
 }

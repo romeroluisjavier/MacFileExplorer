@@ -1,4 +1,5 @@
 import AppKit
+import QuartzCore
 import SwiftUI
 
 // MARK: - Fotograma Calculado y Motor Matemático de Animaciones de Notificación
@@ -242,18 +243,17 @@ public struct TaskbarNotificationAnimatedSlot<Content: View>: View {
     public let maxJumpUp: CGFloat
     @ViewBuilder public let content: (TaskbarNotificationAnimationFrame) -> Content
 
-    @ViewState private var burstStartTime: TimeInterval?
+    @ViewState private var currentFrame: TaskbarNotificationAnimationFrame = .identity
     @ViewState private var lastAlertedBadgeForOnce: String?
     @ViewState private var lastAlertedStyleForOnce: TaskbarNotificationAnimation?
-    @ViewState private var badgeArrivalToken: Int = 0
-    @ViewState private var previousBadge: String?
+    @ViewState private var lastAlertedCadenceForOnce: TaskbarNotificationAnimationCadence?
+    @ViewState private var lastObservedBadge: String = ""
 
     private struct ScheduleKey: Equatable {
         let badge: String
         let style: TaskbarNotificationAnimation
         let cadence: TaskbarNotificationAnimationCadence
         let isFocused: Bool
-        let arrivalToken: Int
     }
 
     public init(
@@ -281,37 +281,15 @@ public struct TaskbarNotificationAnimatedSlot<Content: View>: View {
             badge: normalizedBadge,
             style: style,
             cadence: cadence,
-            isFocused: isFocused,
-            arrivalToken: badgeArrivalToken
+            isFocused: isFocused
         )
     }
 
     public var body: some View {
-        Group {
-            // Cero suscripciones CVDisplayLink / TimelineView cuando no hay una ráfaga activa
-            if let start = burstStartTime, style != .none, style.burstDuration > 0 {
-                TimelineView(.periodic(from: .now, by: 1.0 / 30.0)) { context in
-                    let elapsed = context.date.timeIntervalSinceReferenceDate - start
-                    let progress = elapsed / style.burstDuration
-                    let frame = TaskbarNotificationAnimationEngine.frame(
-                        for: style,
-                        progress: progress,
-                        maxJumpUp: maxJumpUp
-                    )
-                    content(frame)
-                }
-            } else {
-                content(.identity)
-            }
-        }
-        .onChange(of: normalizedBadge) { oldVal, newVal in
-            if newVal.isEmpty {
-                lastAlertedBadgeForOnce = nil
-                burstStartTime = nil
-            } else if newVal != oldVal {
-                badgeArrivalToken &+= 1
-            }
-            previousBadge = newVal.isEmpty ? nil : newVal
+        // Contenedor concreto único: nunca recrea la jerarquía ni duplica `.task(id:)`,
+        // y mantiene 0% CPU y cero suscripciones CVDisplayLink / TimelineView cuando no hay ráfaga activa.
+        ZStack {
+            content(currentFrame)
         }
         .task(id: scheduleKey) {
             await runAnimationLoop()
@@ -321,58 +299,98 @@ public struct TaskbarNotificationAnimatedSlot<Content: View>: View {
     @MainActor
     private func runAnimationLoop() async {
         let badge = normalizedBadge
-        guard !badge.isEmpty, style != .none, style.burstDuration > 0 else {
-            burstStartTime = nil
+        if badge.isEmpty {
+            currentFrame = .identity
+            lastObservedBadge = ""
+            lastAlertedBadgeForOnce = nil
+            lastAlertedStyleForOnce = nil
+            lastAlertedCadenceForOnce = nil
             return
         }
 
-        let burstMs = Int((style.burstDuration * 1000).rounded()) + 35
+        let badgeChanged = (badge != lastObservedBadge)
+        let hadPreviousBadge = !lastObservedBadge.isEmpty
+        lastObservedBadge = badge
+
+        guard style != .none, style.burstDuration > 0 else {
+            currentFrame = .identity
+            return
+        }
 
         switch cadence {
         case .onceOnArrival:
-            let needsAlert = (lastAlertedBadgeForOnce != badge) || (lastAlertedStyleForOnce != style)
+            let styleOrCadenceChanged = (lastAlertedStyleForOnce != style) || (lastAlertedCadenceForOnce != cadence)
+            let needsAlert = (lastAlertedBadgeForOnce != badge) || styleOrCadenceChanged
             guard needsAlert else {
-                burstStartTime = nil
+                currentFrame = .identity
                 return
             }
+            // Si el usuario simplemente enfocó la ventana sin que cambiara la notificación ni el estilo, no distraer.
+            if isFocused && !badgeChanged && !styleOrCadenceChanged {
+                currentFrame = .identity
+                return
+            }
+
             lastAlertedBadgeForOnce = badge
             lastAlertedStyleForOnce = style
+            lastAlertedCadenceForOnce = cadence
 
             // 2 ráfagas limpias al llegar una notificación o al probar un estilo nuevo
             for burstIndex in 0..<2 {
                 guard !Task.isCancelled else { break }
-                burstStartTime = Date.timeIntervalSinceReferenceDate
-                try? await Task.sleep(for: .milliseconds(burstMs))
-                burstStartTime = nil
+                await playBurst(duration: style.burstDuration)
                 if burstIndex == 0 && !Task.isCancelled {
                     try? await Task.sleep(for: .milliseconds(220))
                 }
             }
-            burstStartTime = nil
+            currentFrame = .identity
 
         case .periodic, .continuous:
-            // Si la ventana está enfocada, solo hacemos un aviso puntual si acaba de cambiar el globo;
+            // Si la ventana está enfocada, solo hacemos un aviso puntual si acaba de llegar un globo nuevo;
             // de lo contrario respetamos el foco para no distraer mientras el usuario lee.
             if isFocused {
-                let justChanged = (previousBadge != nil && badgeArrivalToken > 0 && lastAlertedBadgeForOnce != badge)
-                if justChanged {
+                if hadPreviousBadge && badgeChanged && lastAlertedBadgeForOnce != badge {
                     lastAlertedBadgeForOnce = badge
-                    burstStartTime = Date.timeIntervalSinceReferenceDate
-                    try? await Task.sleep(for: .milliseconds(burstMs))
+                    await playBurst(duration: style.burstDuration)
                 }
-                burstStartTime = nil
+                currentFrame = .identity
                 return
             }
 
             let restMs = (cadence == .periodic) ? 2400 : 420
             while !Task.isCancelled {
-                burstStartTime = Date.timeIntervalSinceReferenceDate
-                try? await Task.sleep(for: .milliseconds(burstMs))
-                burstStartTime = nil
+                await playBurst(duration: style.burstDuration)
                 guard !Task.isCancelled else { break }
-                try? await Task.sleep(for: .milliseconds(restMs))
+                do {
+                    try await Task.sleep(for: .milliseconds(restMs))
+                } catch {
+                    break
+                }
             }
-            burstStartTime = nil
+            currentFrame = .identity
+        }
+    }
+
+    @MainActor
+    private func playBurst(duration: TimeInterval) async {
+        defer { currentFrame = .identity }
+        let start = CACurrentMediaTime()
+        while !Task.isCancelled {
+            let elapsed = CACurrentMediaTime() - start
+            if elapsed >= duration {
+                break
+            }
+            let progress = max(0.001, elapsed / duration)
+            currentFrame = TaskbarNotificationAnimationEngine.frame(
+                for: style,
+                progress: progress,
+                maxJumpUp: maxJumpUp
+            )
+            do {
+                try await Task.sleep(for: .milliseconds(22))
+            } catch {
+                break
+            }
         }
     }
 }

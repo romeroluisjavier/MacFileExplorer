@@ -103,7 +103,8 @@ public final class InternalErrorLogger: @unchecked Sendable {
         timer.setEventHandler { [weak self] in
             guard let self else { return }
             let semaphore = DispatchSemaphore(value: 0)
-            let checkStart = Date()
+            let checkStartUptime = ProcessInfo.processInfo.systemUptime
+            let checkStartWall = Date()
             DispatchQueue.main.async {
                 self.lock.lock()
                 self.lastMainThreadHeartbeat = Date()
@@ -112,10 +113,15 @@ public final class InternalErrorLogger: @unchecked Sendable {
             }
             let waitResult = semaphore.wait(timeout: .now() + 3.0)
             if waitResult == .timedOut {
-                let elapsed = Date().timeIntervalSince(checkStart)
+                let awakeElapsed = ProcessInfo.processInfo.systemUptime - checkStartUptime
+                let wallElapsed = Date().timeIntervalSince(checkStartWall)
+                // Ignorar falsos positivos producidos por suspensión/reactivación del sistema (sleep/wake).
+                guard awakeElapsed >= 2.8, abs(wallElapsed - awakeElapsed) < 2.0 else {
+                    return
+                }
                 self.logError(
                     category: "MAIN_THREAD_HANG",
-                    message: String(format: "El hilo principal tardó más de %.2fs en responder (posible cuelgue / freeze).", elapsed),
+                    message: String(format: "El hilo principal tardó más de %.2fs en responder (posible cuelgue / freeze).", awakeElapsed),
                     includeStackTrace: false
                 )
             }

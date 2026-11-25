@@ -19,6 +19,8 @@ concurrency:
 
 jobs:
   build:
+    # Only allow the repository owner on `main` to publish updates to the website
+    if: github.ref == 'refs/heads/main' && github.actor == 'romeroluisjavier'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository

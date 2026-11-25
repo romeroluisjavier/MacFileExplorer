@@ -5,17 +5,18 @@ Un explorador de archivos nativo, ágil y moderno para macOS, inspirado en la pr
 ![macOS 14+](https://img.shields.io/badge/macOS-14.0%2B-blue?logo=apple)
 ![Swift 6](https://img.shields.io/badge/Swift-6.0-orange?logo=swift)
 ![Architecture](https://img.shields.io/badge/Architecture-Universal%20(Apple%20Silicon%20%2B%20Intel)-brightgreen)
-![Release](https://img.shields.io/badge/Release-v1.8.1-blueviolet)
+![Release](https://img.shields.io/badge/Release-v2.0.0-blueviolet)
 
 🌐 **Sitio web oficial con demos en vivo e instalación paso a paso:** [romeroluisjavier.github.io/MacFileExplorer](https://romeroluisjavier.github.io/MacFileExplorer/)
 
 ---
 
-## ✨ Novedades recientes (v1.8.1)
+## ✨ Novedades recientes (v2.0.0)
 
-- ⚡ **Optimización integral de CPU y energía para Apple Silicon (M1/M2/M3/M4)**: consumo en reposo reducido a **`~0,0% – 0,2%` CPU** y **`0–1` Idle Wake Ups** (OCR en segundo plano sobre núcleos de eficiencia sin bucles de recarga del watcher, cierre limpio de vistas previas animadas en Configuración, cero `CVDisplayLink` en reposo en la Barra de tareas, `isAppRunning` en caché O(1) y timers coalescidos).
-- 🎨 **4 nuevos íconos para MacFileExplorer + selector en macOS (5 diseños en total)**: elegí entre **Clásico**, **Estilo macOS**, **Mono Oscuro**, **Mono Claro** y **Capas Cristal** desde `MacFileExplorer → Ícono de la aplicación`, *Acerca de MacFileExplorer* o *Configuración de la Barra de tareas → Apariencia* con aplicación inmediata en Dock, `⌘+Tab`, Barra de tareas y AltTab.
-- 🖥️ **Barra de tareas estilo Windows, Menú Inicio y Selector AltTab (`v1.8.0` incluido)**: todo opcional (activable/desactivable a gusto) con 12 íconos de Inicio, 6 animaciones de notificaciones, 4 animaciones de vista previa (*Suave*, *Desde la barra*, *Rebote elástico* y *Giro 3D*) y selector rápido `⌥ + Tab`.
+- 🪄 **8 animaciones de despliegue y velocidad ajustable para el Menú Inicio (con modo `0 ms` instantáneo)**: elegí entre **4 estilos clásicos** (*Suave*, *Desde la barra*, *Rebote elástico* y *Giro 3D*), **2 estilos Pro** (*Cortina ejecutiva* y *Enfoque Spotlight*) y **2 divertidos** (*Gelatina* y *Genio giratorio*). Regulá la duración de `0 ms` a `600 ms` — con `0 ms` el Menú Inicio abre al instante sin animación — con tarjetas animadas en vivo y botón **Probar ahora** desde Configuración o clic derecho sobre el botón Inicio.
+- ⚡ **Cambio instantáneo entre carpetas ya visitadas y mayor velocidad en Apple Silicon (M1–M4)**: volvé a carpetas abiertas anteriormente sin que parpadee ninguna pantalla de carga, junto con arranque más ágil, detección paralela de duplicados y búsqueda de texto en imágenes más veloz manteniendo `~0%` CPU en reposo.
+- 🌐 **Traducción completa Español / Inglés y corrección de avisos animados**: todos los menús, submenús, menús contextuales y ventanas abiertas cambian en vivo entre español e inglés; se corrigieron las 6 animaciones de globos rojos de notificaciones en la barra de tareas, se simplificaron los íconos *Brain* y se sumó el aviso legal en *Acerca de MacFileExplorer*.
+- 🎨 **Web renovada y 5 íconos seleccionables (`v1.8.1` incluido)**: sitio web actualizado con resumen animado automático, nuevos GIFs (borrado `⌘+Delete`, Acciones rápidas de imagen/video con recorte, visor JSON/XML), 4 temas (*Light*, *Dark*, *Windows 98* y *macOS 98*) y reporte directo de errores a GitHub.
 
 ---
 
@@ -52,12 +53,12 @@ Un explorador de archivos nativo, ágil y moderno para macOS, inspirado en la pr
 
 ### 1. Descargar el instalador
 Descarga la versión más reciente en formato `.dmg` directamente desde este repositorio:
-- 👉 **[Descargar MacFileExplorer-1.8.1.dmg](https://github.com/romeroluisjavier/MacFileExplorer/raw/main/releases/MacFileExplorer-1.8.1.dmg)** *(ubicado en la carpeta [`releases/`](./releases) — también podés ver el historial en [`releases/README.md`](./releases/README.md))*
+- 👉 **[Descargar MacFileExplorer-2.0.0.dmg](https://github.com/romeroluisjavier/MacFileExplorer/raw/main/releases/MacFileExplorer-2.0.0.dmg)** *(ubicado en la carpeta [`releases/`](./releases) — también podés ver el historial en [`releases/README.md`](./releases/README.md))*
 
 ---
 
 ### 2. Instalación en tu Mac
-1. Haz doble clic en el archivo descargado **`MacFileExplorer-1.8.1.dmg`**.
+1. Haz doble clic en el archivo descargado **`MacFileExplorer-2.0.0.dmg`**.
 2. Arrastra el icono de **MacFileExplorer** a la carpeta **Applications** (Aplicaciones).
 
 ---

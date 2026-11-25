@@ -1,6 +1,22 @@
 # MacFileExplorer Releases
 
-## Versión 1.8.1 (Versión Actual)
+## Versión 2.0.0 (Versión Actual)
+
+- **Instalador:** [`MacFileExplorer-2.0.0.dmg`](./MacFileExplorer-2.0.0.dmg)
+- **Tamaño:** ~22 MB
+- **Arquitectura:** Binario Universal (`arm64` Apple Silicon + `x86_64` Intel)
+- **Requisitos del sistema:** macOS 14.0 (Sonoma) o posterior
+
+### Novedades principales en la v2.0.0:
+1. **8 animaciones y velocidad ajustable para el Menú Inicio (incluye modo `0 ms` instantáneo)**: elegí entre 4 estilos clásicos (*Suave*, *Desde la barra*, *Rebote elástico*, *Giro 3D*), 2 estilos Pro (*Cortina ejecutiva*, *Enfoque Spotlight*) y 2 divertidos (*Gelatina*, *Genio giratorio*). Incluye deslizador de duración (`0 ms` a `600 ms`), accesos rápidos (`0 ms`, `150 ms`, `220 ms`, `420 ms`), previsualización en vivo y botón **Probar ahora** en Configuración, menú superior y clic derecho sobre el botón Inicio.
+2. **Cambio instantáneo entre carpetas ya visitadas (sin parpadeo de carga)**: volver a carpetas recientes ahora es inmediato, junto con mejoras de arranque, búsqueda de duplicados más rápida y búsqueda de texto en fotos optimizada para Apple Silicon (M1–M4).
+3. **Traducción completa Español / Inglés en toda la app**: revisión integral de menús superiores, submenús, menús contextuales, mensajes de error y títulos de ventanas con cambio en vivo.
+4. **Corrección de animaciones de notificaciones en la Barra de tareas**: los 6 estilos de globo rojo (Slack, Mail, WhatsApp, PWAs) vuelven a animarse con fluidez manteniendo `0%` CPU en reposo.
+5. **Íconos *Brain* simplificados y aviso legal en *Acerca de MacFileExplorer***: nombres más claros (*Brain*, *Brain Mono*, *Brain Sello*) y aviso legal visible en la ventana *Acerca de*.
+
+---
+
+## Versión 1.8.1
 
 - **Instalador:** [`MacFileExplorer-1.8.1.dmg`](./MacFileExplorer-1.8.1.dmg)
 - **Tamaño:** ~22 MB

@@ -47,10 +47,10 @@ actor ThumbnailDiskCoordinator {
     /// Tareas de guardado diferido (debounce) por carpeta para agrupar escrituras.
     private var saveTasks: [URL: Task<Void, Never>] = [:]
 
-    /// Semáforo ligero de concurrencia para limitar decodificaciones simultáneas en carpetas con cientos de fotos.
+    /// Semáforo ligero de concurrencia adaptativo al número de núcleos (escala limpio desde M1/M2 Air hasta M3/M4 Max/Ultra).
     private var activeGenerationCount: Int = 0
     private var generationWaiters: [CheckedContinuation<Void, Never>] = []
-    private let maxConcurrentGenerations: Int = 6
+    private let maxConcurrentGenerations: Int = max(2, min(ProcessInfo.processInfo.activeProcessorCount / 2, 6))
 
     // MARK: - Carga de Caché de Carpeta
 
@@ -175,6 +175,7 @@ actor ThumbnailDiskCoordinator {
                 try encoded.write(to: localCacheURL, options: [.atomic])
             }
             try? localCacheURL.setResourceValues(resourceValues)
+            DirectoryIndexCacheService.shared.recordInternalCacheWrite(in: dir)
         } catch {
             try? FileManager.default.removeItem(at: tempCacheURL)
             // Si la carpeta no tiene permisos de escritura (ej. volumen de solo lectura), guardar en ~/Library/Caches

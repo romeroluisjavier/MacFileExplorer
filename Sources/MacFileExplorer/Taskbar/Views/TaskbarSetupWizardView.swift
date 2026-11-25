@@ -45,6 +45,13 @@ public final class TaskbarSetupWizardWindowController: NSObject, NSWindowDelegat
         self.window = created
     }
 
+    public func refreshLocalizedTitle() {
+        window?.title = LocalizationManager.shared.text(
+            es: "Configuración inicial de la Barra de tareas",
+            en: "Taskbar Setup & Permissions"
+        )
+    }
+
     public func close() {
         window?.close()
     }

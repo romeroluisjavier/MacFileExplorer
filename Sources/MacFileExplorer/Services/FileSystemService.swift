@@ -9,15 +9,25 @@ public enum FileSystemError: LocalizedError, Sendable {
     case operationFailed(String)
 
     public var errorDescription: String? {
+        let isES = LocalizationManager.currentLanguageIsSpanish()
         switch self {
         case .invalidDirectory(let url):
-            return "La ruta '\(url.path(percentEncoded: false))' no es una carpeta válida o no existe."
+            let path = url.path(percentEncoded: false)
+            return isES
+                ? "La ruta '\(path)' no es una carpeta válida o no existe."
+                : "The path '\(path)' is not a valid folder or does not exist."
         case .invalidFileName(let name):
-            return "El nombre '\(name)' no es válido. No puede estar vacío ni contener los caracteres '/' o ':'."
+            return isES
+                ? "El nombre '\(name)' no es válido. No puede estar vacío ni contener los caracteres '/' o ':'."
+                : "The name '\(name)' is not valid. It cannot be empty or contain '/' or ':'."
         case .itemAlreadyExists(let name):
-            return "Ya existe un elemento llamado '\(name)' en esta ubicación."
+            return isES
+                ? "Ya existe un elemento llamado '\(name)' en esta ubicación."
+                : "An item named '\(name)' already exists in this location."
         case .cannotMoveIntoSubfolder(let source, _):
-            return "No se puede mover '\(source.lastPathComponent)' dentro de una subcarpeta de sí misma."
+            return isES
+                ? "No se puede mover '\(source.lastPathComponent)' dentro de una subcarpeta de sí misma."
+                : "Cannot move '\(source.lastPathComponent)' inside a subfolder of itself."
         case .operationFailed(let reason):
             return reason
         }
@@ -224,6 +234,22 @@ public final class FileSystemService: Sendable {
         return nodes
     }
 
+    /// Versión asíncrona fuera del hilo principal para refrescar nodos de "Acceso Rápido" sin bloquear `@MainActor`
+    /// (especialmente en volúmenes externos o carpetas sincronizadas con iCloud).
+    public func fetchQuickAccessNodesAsync(
+        includeHidden: Bool = false,
+        visibleFolders: Set<QuickAccessFolder> = QuickAccessFolder.defaultFolders,
+        customFolderURLs: [URL] = []
+    ) async -> [NavigationNode] {
+        (try? await performAsyncIO {
+            self.fetchQuickAccessNodes(
+                includeHidden: includeHidden,
+                visibleFolders: visibleFolders,
+                customFolderURLs: customFolderURLs
+            )
+        }) ?? []
+    }
+
     /// Descubre los volúmenes montados en el sistema ("Este Equipo / Volúmenes").
     public func fetchMountedVolumeNodes() async -> [NavigationNode] {
         (try? await performAsyncIO {
@@ -383,8 +409,11 @@ public final class FileSystemService: Sendable {
                 }
 
                 guard fm.fileExists(atPath: source.path(percentEncoded: false)) else {
+                    let isES = LocalizationManager.currentLanguageIsSpanish()
                     throw FileSystemError.operationFailed(
-                        "No se encontró '\(source.lastPathComponent)' para completar la acción."
+                        isES
+                            ? "No se encontró '\(source.lastPathComponent)' para completar la acción."
+                            : "Could not find '\(source.lastPathComponent)' to complete the operation."
                     )
                 }
 

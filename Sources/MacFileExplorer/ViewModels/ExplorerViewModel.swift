@@ -363,9 +363,14 @@ public final class ExplorerViewModel {
 
     /// Tarea de carga de directorio en curso, cancelable si el usuario cambia rápido de carpeta.
     private var directoryLoadTask: Task<Void, Never>?
+    private var statusBarLoadingTask: Task<Void, Never>?
     private var slowLoadingOverlayTask: Task<Void, Never>?
     private var backgroundVerifyTask: Task<Void, Never>?
     private var thumbnailPreloadTask: Task<Void, Never>?
+
+    /// Índices O(1) perezosos por instantánea: 0 ms de asignación al cambiar de carpeta y lookup O(1) al seleccionar.
+    @ObservationIgnored private var cachedAllItemsByID: [FileItem.ID: FileItem]?
+    @ObservationIgnored private var cachedDisplayedItemsByID: [FileItem.ID: FileItem]?
 
     /// Carpeta a la que pertenecen los `allItems` actualmente visibles en pantalla.
     private var loadedDirectoryURL: URL?
@@ -456,20 +461,44 @@ public final class ExplorerViewModel {
 
     private func setAllItems(_ items: [FileItem], precomputedDisplayed: [FileItem]? = nil) {
         self.allItems = items
-        self.displayedItems = precomputedDisplayed ?? Self.computeDisplayedItems(
+        self.cachedAllItemsByID = nil
+        let resolvedDisplayed = precomputedDisplayed ?? Self.computeDisplayedItems(
             from: items,
             showHiddenFiles: showHiddenFiles,
             searchQuery: searchQuery,
             sortField: sortField,
             sortAscending: sortAscending
         )
+        self.displayedItems = resolvedDisplayed
+        self.cachedDisplayedItemsByID = nil
     }
 
     private func rebuildDisplayedItems() {
-        self.displayedItems = Self.computeDisplayedItems(
+        let resolvedDisplayed = Self.computeDisplayedItems(
             from: allItems,
             showHiddenFiles: showHiddenFiles,
             searchQuery: searchQuery,
+            sortField: sortField,
+            sortAscending: sortAscending
+        )
+        self.displayedItems = resolvedDisplayed
+        self.cachedDisplayedItemsByID = nil
+        if searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+           !isShowingRecent24Hours,
+           !isAdvancedSearchActive,
+           let loadedURL = loadedDirectoryURL {
+            DirectoryIndexCacheService.shared.storeInSynchronousMemoryCache(
+                allItems,
+                sortedItems: resolvedDisplayed,
+                sortKey: currentSortCacheKey,
+                for: loadedURL
+            )
+        }
+    }
+
+    private var currentSortCacheKey: DirectorySortCacheKey {
+        DirectorySortCacheKey(
+            showHiddenFiles: showHiddenFiles,
             sortField: sortField,
             sortAscending: sortAscending
         )
@@ -523,14 +552,27 @@ public final class ExplorerViewModel {
         )
     }
 
-    /// Diccionario rápido de elementos visibles indexados por su `id` (`URL`).
+    /// Diccionario rápido O(1) perezoso de elementos visibles indexados por su `id` (`URL`).
     public var displayedItemsByID: [FileItem.ID: FileItem] {
-        Dictionary(uniqueKeysWithValues: displayedItems.map { ($0.id, $0) })
+        if let cached = cachedDisplayedItemsByID {
+            return cached
+        }
+        let built = Dictionary(displayedItems.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        cachedDisplayedItemsByID = built
+        return built
     }
 
-    /// Modelos completos de los elementos actualmente seleccionados.
+    /// Modelos completos de los elementos actualmente seleccionados (lookup O(1) sin reasignaciones).
     public var selectedItems: [FileItem] {
-        let map = Dictionary(uniqueKeysWithValues: allItems.map { ($0.id, $0) })
+        guard !selectedItemIDs.isEmpty else { return [] }
+        let map: [FileItem.ID: FileItem]
+        if let cached = cachedAllItemsByID {
+            map = cached
+        } else {
+            let built = Dictionary(allItems.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+            cachedAllItemsByID = built
+            map = built
+        }
         return selectedItemIDs.compactMap { map[$0] }
     }
 
@@ -2152,10 +2194,11 @@ public final class ExplorerViewModel {
         }
     }
 
-    // MARK: - Carga Asíncrona de Directorio
+    // MARK: - Carga Asíncrona de Directorio (3 Niveles: RAM Síncrona 0ms -> Disco Caché -> Disco Frío)
 
     private func loadCurrentDirectory(preservingSelection: Bool = false) {
         directoryLoadTask?.cancel()
+        statusBarLoadingTask?.cancel()
         slowLoadingOverlayTask?.cancel()
         backgroundVerifyTask?.cancel()
         thumbnailPreloadTask?.cancel()
@@ -2165,15 +2208,123 @@ public final class ExplorerViewModel {
         let isChangingFolder = (loadedDirectoryURL?.standardizedFileURL != targetURL)
 
         installCurrentDirectoryWatcher(for: targetURL)
-
-        isLoading = true
-        isSlowLoadingOverlayVisible = false
         errorMessage = nil
 
-        // Si la lectura tarda más de 160ms (carpeta muy grande o disco lento), mostrar indicador de carga centrado.
+        // NIVEL 1 (0 ms, SÍNCRONO en @MainActor): si la carpeta ya fue abierta en esta sesión,
+        // pintamos de inmediato desde la caché caliente en RAM sin activar `isLoading` ni parpadeos.
+        if let hotHit = DirectoryIndexCacheService.shared.synchronousMemorySnapshot(for: targetURL) {
+            let trimmedQuery = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+            let sortKey = currentSortCacheKey
+
+            if trimmedQuery.isEmpty,
+               let preSorted = hotHit.sortedItems,
+               hotHit.sortKey == sortKey {
+                applyDirectorySnapshot(
+                    hotHit.items,
+                    sortedItems: preSorted,
+                    for: targetURL,
+                    preservingSelection: preservingSelection,
+                    previousSelection: previousSelection,
+                    saveToDiskCache: false,
+                    isFromCache: true
+                )
+                scheduleBackgroundDirectoryVerification(
+                    for: targetURL,
+                    baselineItems: hotHit.items,
+                    preservingSelection: preservingSelection,
+                    previousSelection: previousSelection,
+                    initialDelayMs: hotHit.isFolderTimestampFresh ? 260 : 0
+                )
+                return
+            }
+
+            if hotHit.items.count <= 800 {
+                let sortedNow = Self.computeDisplayedItems(
+                    from: hotHit.items,
+                    showHiddenFiles: showHiddenFiles,
+                    searchQuery: searchQuery,
+                    sortField: sortField,
+                    sortAscending: sortAscending
+                )
+                if trimmedQuery.isEmpty {
+                    DirectoryIndexCacheService.shared.storeInSynchronousMemoryCache(
+                        hotHit.items,
+                        sortedItems: sortedNow,
+                        sortKey: sortKey,
+                        for: targetURL
+                    )
+                }
+                applyDirectorySnapshot(
+                    hotHit.items,
+                    sortedItems: sortedNow,
+                    for: targetURL,
+                    preservingSelection: preservingSelection,
+                    previousSelection: previousSelection,
+                    saveToDiskCache: false,
+                    isFromCache: true
+                )
+                scheduleBackgroundDirectoryVerification(
+                    for: targetURL,
+                    baselineItems: hotHit.items,
+                    preservingSelection: preservingSelection,
+                    previousSelection: previousSelection,
+                    initialDelayMs: hotHit.isFolderTimestampFresh ? 260 : 0
+                )
+                return
+            }
+
+            // Carpeta masiva (>800 ítems) ya en RAM pero con ordenamiento cambiado: ordenar fuera del hilo principal
+            // sin mostrar el indicador de carga salvo que supere el umbral de cortesía.
+            isLoading = false
+            isSlowLoadingOverlayVisible = false
+            directoryLoadTask = Task { [weak self] in
+                guard let self else { return }
+                let sortedNow = await self.computeDisplayedItemsOffMainThread(from: hotHit.items)
+                guard !Task.isCancelled else { return }
+                if trimmedQuery.isEmpty {
+                    DirectoryIndexCacheService.shared.storeInSynchronousMemoryCache(
+                        hotHit.items,
+                        sortedItems: sortedNow,
+                        sortKey: sortKey,
+                        for: targetURL
+                    )
+                }
+                self.applyDirectorySnapshot(
+                    hotHit.items,
+                    sortedItems: sortedNow,
+                    for: targetURL,
+                    preservingSelection: preservingSelection,
+                    previousSelection: previousSelection,
+                    saveToDiskCache: false,
+                    isFromCache: true
+                )
+                self.scheduleBackgroundDirectoryVerification(
+                    for: targetURL,
+                    baselineItems: hotHit.items,
+                    preservingSelection: preservingSelection,
+                    previousSelection: previousSelection,
+                    initialDelayMs: hotHit.isFolderTimestampFresh ? 260 : 0
+                )
+            }
+            return
+        }
+
+        // NIVEL 2 / 3 (Caché en disco `.macfileexplorer_dir.cache` o primera carga fría):
+        // Diferimos el indicador `isLoading` 110ms y el overlay centrado 240ms para que las carpetas
+        // cacheadas en disco (1–5ms) o carpetas chicas en SSD nunca produzcan parpadeos de «Cargando…».
+        isLoading = false
+        isSlowLoadingOverlayVisible = false
+
+        statusBarLoadingTask = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(110))
+            guard !Task.isCancelled, let self else { return }
+            self.isLoading = true
+        }
+
         slowLoadingOverlayTask = Task { [weak self] in
-            try? await Task.sleep(for: .milliseconds(160))
-            guard !Task.isCancelled, let self, self.isLoading else { return }
+            try? await Task.sleep(for: .milliseconds(240))
+            guard !Task.isCancelled, let self else { return }
+            self.isLoading = true
             if isChangingFolder {
                 self.loadedDirectoryURL = nil
                 self.setAllItems([], precomputedDisplayed: [])
@@ -2184,9 +2335,10 @@ public final class ExplorerViewModel {
         directoryLoadTask = Task { [weak self] in
             guard let self else { return }
             do {
-                // 1. Intentar carga instantánea desde caché en RAM o archivo oculto `.macfileexplorer_dir.cache`
-                if let cached = await DirectoryIndexCacheService.shared.loadCachedSnapshot(for: targetURL),
-                   cached.isFolderTimestampFresh {
+                // NIVEL 2: Intentar carga rápida desde el archivo oculto `.macfileexplorer_dir.cache` en disco.
+                // Incluso si el mtime cambió externamente, mostramos el contenido cacheado de inmediato sin
+                // pantalla de carga y reconciliamos las diferencias en segundo plano al instante.
+                if let cached = await DirectoryIndexCacheService.shared.loadCachedSnapshot(for: targetURL) {
                     let cachedItems = cached.items
                     let sortedCached = await self.computeDisplayedItemsOffMainThread(from: cachedItems)
                     guard !Task.isCancelled else { return }
@@ -2197,20 +2349,21 @@ public final class ExplorerViewModel {
                         for: targetURL,
                         preservingSelection: preservingSelection,
                         previousSelection: previousSelection,
-                        saveToDiskCache: false
+                        saveToDiskCache: false,
+                        isFromCache: true
                     )
 
-                    // Verificación silenciosa en segundo plano por si cambió tamaño/fecha de un archivo sin alterar el mtime de la carpeta
                     self.scheduleBackgroundDirectoryVerification(
                         for: targetURL,
                         baselineItems: cachedItems,
                         preservingSelection: preservingSelection,
-                        previousSelection: previousSelection
+                        previousSelection: previousSelection,
+                        initialDelayMs: cached.isFolderTimestampFresh ? 260 : 0
                     )
                     return
                 }
 
-                // 2. Lectura completa desde disco en segundo plano + ordenamiento fuera del hilo principal
+                // NIVEL 3: Primera lectura completa desde disco en segundo plano + ordenamiento fuera del hilo principal
                 let fetchedItems = try await fileSystemService.fetchDirectoryContents(at: targetURL)
                 guard !Task.isCancelled else { return }
 
@@ -2223,12 +2376,14 @@ public final class ExplorerViewModel {
                     for: targetURL,
                     preservingSelection: preservingSelection,
                     previousSelection: previousSelection,
-                    saveToDiskCache: true
+                    saveToDiskCache: true,
+                    isFromCache: false
                 )
             } catch is CancellationError {
                 // Cancelación esperada al cambiar rápido de carpeta
             } catch {
                 guard !Task.isCancelled else { return }
+                self.statusBarLoadingTask?.cancel()
                 self.slowLoadingOverlayTask?.cancel()
                 self.isSlowLoadingOverlayVisible = false
                 self.isLoading = false
@@ -2273,8 +2428,10 @@ public final class ExplorerViewModel {
         for targetURL: URL,
         preservingSelection: Bool,
         previousSelection: Set<FileItem.ID>,
-        saveToDiskCache: Bool
+        saveToDiskCache: Bool,
+        isFromCache: Bool = false
     ) {
+        statusBarLoadingTask?.cancel()
         slowLoadingOverlayTask?.cancel()
         isSlowLoadingOverlayVisible = false
         isLoading = false
@@ -2286,13 +2443,32 @@ public final class ExplorerViewModel {
             let validIDs = Set(items.map(\.id))
             selectedItemIDs = previousSelection.intersection(validIDs)
         }
-        sidebarViewModel.refreshSubdirectoriesIfNeeded(at: targetURL, includeHidden: showHiddenFiles)
+
+        let trimmedQuery = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+        let sortKey = trimmedQuery.isEmpty ? currentSortCacheKey : nil
+        let sortedForCache = trimmedQuery.isEmpty ? sortedItems : nil
+        // Actualizar la caché caliente en RAM inmediatamente en @MainActor (0ms al volver).
+        DirectoryIndexCacheService.shared.storeInSynchronousMemoryCache(
+            items,
+            sortedItems: sortedForCache,
+            sortKey: sortKey,
+            for: targetURL
+        )
+
+        if !isFromCache {
+            sidebarViewModel.refreshSubdirectoriesIfNeeded(at: targetURL, includeHidden: showHiddenFiles)
+        }
         scheduleThumbnailPreload(for: targetURL, items: items)
         scheduleBackgroundOCRIndexing(for: targetURL, items: items)
 
         if saveToDiskCache {
             Task.detached(priority: .utility) {
-                await DirectoryIndexCacheService.shared.saveSnapshot(items, for: targetURL)
+                await DirectoryIndexCacheService.shared.saveSnapshot(
+                    items,
+                    sortedItems: sortedForCache,
+                    sortKey: sortKey,
+                    for: targetURL
+                )
             }
         }
 
@@ -2306,11 +2482,14 @@ public final class ExplorerViewModel {
         for targetURL: URL,
         baselineItems: [FileItem],
         preservingSelection: Bool,
-        previousSelection: Set<FileItem.ID>
+        previousSelection: Set<FileItem.ID>,
+        initialDelayMs: Int = 220
     ) {
         backgroundVerifyTask?.cancel()
         backgroundVerifyTask = Task(priority: .utility) { [weak self] in
-            try? await Task.sleep(for: .milliseconds(120))
+            if initialDelayMs > 0 {
+                try? await Task.sleep(for: .milliseconds(initialDelayMs))
+            }
             guard !Task.isCancelled, let self else { return }
             guard self.currentDirectoryURL.standardizedFileURL == targetURL else { return }
 
@@ -2320,7 +2499,11 @@ public final class ExplorerViewModel {
                 return
             }
 
-            guard freshItems != baselineItems else { return }
+            if freshItems == baselineItems {
+                // Aún si el contenido no cambió, aseguramos que la caché en disco exista y su mtime esté al día.
+                DirectoryIndexCacheService.shared.recordInternalCacheWrite(in: targetURL)
+                return
+            }
 
             let sortedFresh = await self.computeDisplayedItemsOffMainThread(from: freshItems, priority: .utility)
             guard !Task.isCancelled, self.currentDirectoryURL.standardizedFileURL == targetURL else { return }
@@ -2332,7 +2515,8 @@ public final class ExplorerViewModel {
                 for: targetURL,
                 preservingSelection: !activeSelection.isEmpty,
                 previousSelection: activeSelection,
-                saveToDiskCache: true
+                saveToDiskCache: true,
+                isFromCache: false
             )
         }
     }
@@ -2375,6 +2559,10 @@ public final class ExplorerViewModel {
             return
         }
         let targetURL = currentDirectoryURL.standardizedFileURL
+        let resolvedPath = targetURL.resolvingSymlinksInPath().standardizedFileURL.path(percentEncoded: false)
+        if DirectoryWatcher.isInternallySuppressed(path: resolvedPath) {
+            return
+        }
         let currentMtime = Self.directoryModificationTimestamp(for: targetURL)
         let mtimeChanged: Bool
         if let currentMtime, let lastObservedFolderMtime {
@@ -2382,7 +2570,7 @@ public final class ExplorerViewModel {
         } else {
             mtimeChanged = (currentMtime != lastObservedFolderMtime)
         }
-        let staleInterval = Date().timeIntervalSince(lastDirectoryScanDate) >= 1.5
+        let staleInterval = Date().timeIntervalSince(lastDirectoryScanDate) >= 4.0
         guard mtimeChanged || staleInterval else { return }
         runCoalescedWatcherScan(for: targetURL)
     }
@@ -2398,7 +2586,7 @@ public final class ExplorerViewModel {
             return
         }
 
-        watcherScanTask = Task { [weak self] in
+        watcherScanTask = Task(priority: .utility) { [weak self] in
             guard let self else { return }
             defer {
                 if !Task.isCancelled {
@@ -2423,20 +2611,36 @@ public final class ExplorerViewModel {
                     }
 
                     if fetchedItems != self.allItems {
-                        let sorted = await self.computeDisplayedItemsOffMainThread(from: fetchedItems)
+                        let sorted = await self.computeDisplayedItemsOffMainThread(from: fetchedItems, priority: .utility)
                         guard Self.isSameDirectory(self.currentDirectoryURL, watchedURL), !Task.isCancelled else { return }
 
                         let validIDs = Set(fetchedItems.map(\.id))
                         self.loadedDirectoryURL = watchedURL
                         self.setAllItems(fetchedItems, precomputedDisplayed: sorted)
                         self.selectedItemIDs = self.selectedItemIDs.intersection(validIDs)
+
+                        let trimmedQuery = self.searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+                        let sortKey = trimmedQuery.isEmpty ? self.currentSortCacheKey : nil
+                        let sortedForCache = trimmedQuery.isEmpty ? sorted : nil
+                        DirectoryIndexCacheService.shared.storeInSynchronousMemoryCache(
+                            fetchedItems,
+                            sortedItems: sortedForCache,
+                            sortKey: sortKey,
+                            for: watchedURL
+                        )
+
                         self.scheduleThumbnailPreload(for: watchedURL, items: fetchedItems)
                         self.scheduleBackgroundOCRIndexing(for: watchedURL, items: fetchedItems)
                         Task.detached(priority: .utility) {
-                            await DirectoryIndexCacheService.shared.saveSnapshot(fetchedItems, for: watchedURL)
+                            await DirectoryIndexCacheService.shared.saveSnapshot(
+                                fetchedItems,
+                                sortedItems: sortedForCache,
+                                sortKey: sortKey,
+                                for: watchedURL
+                            )
                         }
+                        self.sidebarViewModel.refreshSubdirectoriesIfNeeded(at: watchedURL, includeHidden: self.showHiddenFiles)
                     }
-                    self.sidebarViewModel.refreshSubdirectoriesIfNeeded(at: watchedURL, includeHidden: self.showHiddenFiles)
                 }
             } else {
                 await self.finishDeletingItems([watchedURL])
@@ -2448,13 +2652,30 @@ public final class ExplorerViewModel {
         do {
             let targetURL = currentDirectoryURL.standardizedFileURL
             let fetchedItems = try await fileSystemService.fetchDirectoryContents(at: targetURL)
+            guard Self.isSameDirectory(currentDirectoryURL, targetURL) else { return }
             let sorted = await computeDisplayedItemsOffMainThread(from: fetchedItems)
+            guard Self.isSameDirectory(currentDirectoryURL, targetURL) else { return }
             self.loadedDirectoryURL = targetURL
             self.lastDirectoryScanDate = Date()
             self.lastObservedFolderMtime = Self.directoryModificationTimestamp(for: targetURL)
             self.setAllItems(fetchedItems, precomputedDisplayed: sorted)
+
+            let trimmedQuery = self.searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+            let sortKey = trimmedQuery.isEmpty ? self.currentSortCacheKey : nil
+            let sortedForCache = trimmedQuery.isEmpty ? sorted : nil
+            DirectoryIndexCacheService.shared.storeInSynchronousMemoryCache(
+                fetchedItems,
+                sortedItems: sortedForCache,
+                sortKey: sortKey,
+                for: targetURL
+            )
             Task.detached(priority: .utility) {
-                await DirectoryIndexCacheService.shared.saveSnapshot(fetchedItems, for: targetURL)
+                await DirectoryIndexCacheService.shared.saveSnapshot(
+                    fetchedItems,
+                    sortedItems: sortedForCache,
+                    sortKey: sortKey,
+                    for: targetURL
+                )
             }
 
             let selectPaths = Set(urlsToSelect.map { Self.normalizedDirectoryPath($0) })
