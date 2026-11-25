@@ -34,8 +34,9 @@ public final class WindowServicesKeepAlive {
         guard wasEmpty else { return }
 
         if antiAppNapActivity == nil {
+            // Evitar App Nap sin `.latencyCritical` para permitir timer coalescing y núcleos de eficiencia en Apple Silicon
             antiAppNapActivity = ProcessInfo.processInfo.beginActivity(
-                options: [.userInitiatedAllowingIdleSystemSleep, .latencyCritical],
+                options: [.userInitiatedAllowingIdleSystemSleep],
                 reason: "MacFileExplorer active window management (Taskbar / AltTab)"
             )
         }

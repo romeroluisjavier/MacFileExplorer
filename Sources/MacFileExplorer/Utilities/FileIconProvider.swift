@@ -1,22 +1,94 @@
 import AppKit
-import SwiftUI
 import Foundation
+import Observation
+import SwiftUI
 import UniformTypeIdentifiers
 
-/// Caché en memoria (`@MainActor`) de iconos del sistema y proveedor del icono oficial de la aplicación
-/// con soporte dinámico para modo Claro (`AppIcon-Light.png`) y modo Oscuro (`AppIcon-Dark.png`).
+/// Variantes seleccionables del ícono oficial de `MacFileExplorer` en macOS (Dock, `⌘+Tab`, Barra de tareas, AltTab y ventanas).
+public enum MacFileExplorerAppIcon: String, CaseIterable, Identifiable, Codable, Sendable {
+    case classic
+    case macosNative
+    case monoDark
+    case monoLight
+    case glassLayers
+
+    public var id: String { rawValue }
+
+    @MainActor
+    public func localizedTitle(using loc: LocalizationManager = .shared) -> String {
+        switch self {
+        case .classic: return loc.text(es: "Clásico", en: "Classic")
+        case .macosNative: return loc.text(es: "Estilo macOS", en: "macOS Style")
+        case .monoDark: return loc.text(es: "Mono Oscuro", en: "Dark Mono")
+        case .monoLight: return loc.text(es: "Mono Claro", en: "Light Mono")
+        case .glassLayers: return loc.text(es: "Capas Cristal", en: "Glass Layers")
+        }
+    }
+
+    @MainActor
+    public func localizedSubtitle(using loc: LocalizationManager = .shared) -> String {
+        switch self {
+        case .classic: return loc.text(es: "Original a color", en: "Original color")
+        case .macosNative: return loc.text(es: "Azul nativo Apple", en: "Native Apple blue")
+        case .monoDark: return loc.text(es: "Blanco sobre negro", en: "White on obsidian")
+        case .monoLight: return loc.text(es: "Negro sobre blanco", en: "Black on ceramic")
+        case .glassLayers: return loc.text(es: "Cristal nocturno", en: "Midnight glass")
+        }
+    }
+
+    public var menuSymbolName: String {
+        switch self {
+        case .classic: return "folder.fill"
+        case .macosNative: return "macwindow"
+        case .monoDark: return "moon.fill"
+        case .monoLight: return "sun.max.fill"
+        case .glassLayers: return "square.2.layers.3d.top.filled"
+        }
+    }
+
+    public var resourceBaseName: String? {
+        switch self {
+        case .classic: return nil
+        case .macosNative: return "AppIcon-MacOS"
+        case .monoDark: return "AppIcon-MonoDark"
+        case .monoLight: return "AppIcon-MonoLight"
+        case .glassLayers: return "AppIcon-GlassLayers"
+        }
+    }
+}
+
+/// Caché en memoria (`@MainActor` + `@Observable`) de iconos del sistema y proveedor del icono de la aplicación
+/// con soporte para 5 diseños seleccionables (Clásico Light/Dark + 4 variantes modernas estilo macOS/Start Button).
 @MainActor
+@Observable
 public final class FileIconProvider {
 
     public static let shared = FileIconProvider()
+
+    private static let selectedAppIconDefaultsKey = "com.macfileexplorer.selectedAppIcon"
 
     private let cache = NSCache<NSString, NSImage>()
     private var cachedLightAppIcon: NSImage?
     private var cachedDarkAppIcon: NSImage?
     private var cachedResourceImages: [String: NSImage] = [:]
 
+    /// Estilo de ícono de la aplicación actualmente elegido por el usuario (persistido entre reinicios).
+    public var selectedAppIcon: MacFileExplorerAppIcon {
+        didSet {
+            guard selectedAppIcon != oldValue else { return }
+            UserDefaults.standard.set(selectedAppIcon.rawValue, forKey: Self.selectedAppIconDefaultsKey)
+            applySelectedAppIconToSystem()
+        }
+    }
+
     private init() {
         cache.countLimit = 1024
+        if let raw = UserDefaults.standard.string(forKey: Self.selectedAppIconDefaultsKey),
+           let stored = MacFileExplorerAppIcon(rawValue: raw) {
+            selectedAppIcon = stored
+        } else {
+            selectedAppIcon = .classic
+        }
         cachedLightAppIcon = loadBundledImage(named: "AppIcon-Light")
         cachedDarkAppIcon = loadBundledImage(named: "AppIcon-Dark")
     }
@@ -49,25 +121,42 @@ public final class FileIconProvider {
         return found
     }
 
-    /// Obtiene el icono de la aplicación adaptado al esquema de color de SwiftUI (Claro u Oscuro).
-    public func appIcon(for colorScheme: ColorScheme) -> NSImage? {
+    /// Devuelve la imagen de vista previa para cualquiera de los 5 íconos seleccionables.
+    public func previewImage(for style: MacFileExplorerAppIcon, colorScheme: ColorScheme = .dark) -> NSImage? {
+        if let resourceName = style.resourceBaseName,
+           let custom = bundledResourceImage(named: resourceName) {
+            return custom
+        }
         switch colorScheme {
         case .dark:
             return cachedDarkAppIcon ?? cachedLightAppIcon
         case .light:
             return cachedLightAppIcon ?? cachedDarkAppIcon
         @unknown default:
-            return cachedLightAppIcon
+            return cachedLightAppIcon ?? cachedDarkAppIcon
         }
     }
 
-    /// Obtiene el icono de la aplicación detectando la apariencia efectiva actual de `NSApp` (Claro u Oscuro).
-    public var currentAppIcon: NSImage? {
-        let isDark = NSApp?.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
-        return isDark ? (cachedDarkAppIcon ?? cachedLightAppIcon) : (cachedLightAppIcon ?? cachedDarkAppIcon)
+    /// Obtiene el icono activo de la aplicación adaptado al esquema de color de SwiftUI (Claro u Oscuro).
+    public func appIcon(for colorScheme: ColorScheme) -> NSImage? {
+        previewImage(for: selectedAppIcon, colorScheme: colorScheme)
     }
 
-    /// Actualiza dinámicamente el icono del Dock de macOS según el tema activo (Claro / Oscuro).
+    /// Obtiene el icono activo de la aplicación detectando la apariencia efectiva actual de `NSApp` (Claro u Oscuro).
+    public var currentAppIcon: NSImage? {
+        let isDark = NSApp?.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+        return previewImage(for: selectedAppIcon, colorScheme: isDark ? .dark : .light)
+    }
+
+    /// Aplica inmediatamente el ícono elegido en el Dock de macOS, `⌘+Tab`, Barra de tareas y AltTab.
+    public func applySelectedAppIconToSystem() {
+        if let icon = currentAppIcon {
+            NSApplication.shared.applicationIconImage = icon
+        }
+        TaskbarAppCatalogService.shared.invalidateSelfIconCache()
+    }
+
+    /// Actualiza dinámicamente el icono del Dock de macOS según el tema activo (Claro / Oscuro) y la preferencia elegida.
     public func syncApplicationDockIcon(for colorScheme: ColorScheme) {
         if let icon = appIcon(for: colorScheme) {
             NSApplication.shared.applicationIconImage = icon
@@ -139,24 +228,10 @@ public final class FileIconProvider {
     // MARK: - Carga Segura de Recursos del Bundle (.app y SwiftPM)
 
     private func loadBundledImage(named name: String) -> NSImage? {
-        // 1. Buscar primero en Bundle.main (MacFileExplorer.app/Contents/Resources/)
-        if let url = Bundle.main.url(forResource: name, withExtension: "png"),
-           let image = NSImage(contentsOf: url) {
-            return image
+        if let found = bundledResourceImage(named: name) {
+            return found
         }
-        if let resourceURL = Bundle.main.resourceURL?.appendingPathComponent("\(name).png"),
-           FileManager.default.fileExists(atPath: resourceURL.path(percentEncoded: false)),
-           let image = NSImage(contentsOf: resourceURL) {
-            return image
-        }
-        // 2. Buscar en el sub-bundle generado por SwiftPM dentro de Contents/Resources
-        if let subBundleURL = Bundle.main.resourceURL?.appendingPathComponent("MacFileExplorer_MacFileExplorer.bundle"),
-           let subBundle = Bundle(url: subBundleURL),
-           let url = subBundle.url(forResource: name, withExtension: "png"),
-           let image = NSImage(contentsOf: url) {
-            return image
-        }
-        // 3. Buscar en AppIcon.icns si se solicita un icono general
+        // Respaldo final en AppIcon.icns si se solicita un icono general
         if let icnsURL = Bundle.main.url(forResource: "AppIcon", withExtension: "icns"),
            let image = NSImage(contentsOf: icnsURL) {
             return image

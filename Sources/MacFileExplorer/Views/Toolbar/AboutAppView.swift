@@ -57,6 +57,7 @@ public struct AboutAppView: View {
     @Environment(\.colorScheme) private var colorScheme
     @Bindable private var loc = LocalizationManager.shared
     @Bindable private var updateManager = AppUpdateManager.shared
+    @Bindable private var iconProvider = FileIconProvider.shared
 
     private let onClose: (() -> Void)?
 
@@ -96,7 +97,7 @@ public struct AboutAppView: View {
     private var headerSection: some View {
         VStack(spacing: 8) {
             Group {
-                if let appIcon = FileIconProvider.shared.appIcon(for: colorScheme) {
+                if let appIcon = iconProvider.appIcon(for: colorScheme) {
                     Image(nsImage: appIcon)
                         .resizable()
                         .interpolation(.high)
@@ -109,6 +110,22 @@ public struct AboutAppView: View {
                         .frame(width: 78, height: 78)
                 }
             }
+            .onTapGesture {
+                AppIconPickerWindowController.shared.show()
+            }
+            .help(loc.text(es: "Clic para cambiar el ícono de MacFileExplorer", en: "Click to change the MacFileExplorer app icon"))
+
+            Button {
+                AppIconPickerWindowController.shared.show()
+            } label: {
+                Label(
+                    loc.text(es: "Cambiar ícono…", en: "Change Icon…"),
+                    systemImage: "app.badge.checkmark"
+                )
+                .font(.system(size: 11, weight: .medium))
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
 
             VStack(spacing: 5) {
                 Text("MacFileExplorer")

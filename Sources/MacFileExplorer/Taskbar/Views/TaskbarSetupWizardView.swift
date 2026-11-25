@@ -2,13 +2,16 @@ import AppKit
 import SwiftUI
 
 /// Controlador singleton del Asistente Inicial y de Permisos de la Barra de tareas.
+/// Libera el `NSHostingView` y su timer de permisos al cerrarse para mantener 0% CPU en reposo.
 @MainActor
-public final class TaskbarSetupWizardWindowController {
+public final class TaskbarSetupWizardWindowController: NSObject, NSWindowDelegate {
     public static let shared = TaskbarSetupWizardWindowController()
 
     private var window: NSWindow?
 
-    private init() {}
+    private override init() {
+        super.init()
+    }
 
     public func show() {
         let loc = LocalizationManager.shared
@@ -30,6 +33,7 @@ public final class TaskbarSetupWizardWindowController {
             backing: .buffered,
             defer: false
         )
+        created.delegate = self
         created.title = title
         created.isReleasedWhenClosed = false
         created.tabbingMode = .disallowed
@@ -43,6 +47,10 @@ public final class TaskbarSetupWizardWindowController {
 
     public func close() {
         window?.close()
+    }
+
+    public func windowWillClose(_ notification: Notification) {
+        window?.contentView = nil
     }
 }
 

@@ -878,6 +878,10 @@ public final class LocalizationManager: NSObject, NSMenuDelegate {
             return "display.2"
         case "tema y tamaño", "theme & size":
             return "paintbrush"
+        case "ícono de la aplicación":
+            return "app.badge.checkmark"
+        case "elegir ícono con vista previa…", "choose icon with preview…":
+            return "app.dashed"
         case "ícono del botón inicio", "start button icon":
             return "sparkles.square.filled.on.square"
         case "animación de notificaciones", "notification animation":

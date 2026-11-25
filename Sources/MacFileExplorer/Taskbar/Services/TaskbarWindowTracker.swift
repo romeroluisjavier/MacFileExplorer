@@ -137,8 +137,14 @@ private func taskbarAXObserverCallback(
     let isGeometryChange = (notifName == (kAXWindowMovedNotification as String)) ||
         (notifName == (kAXWindowResizedNotification as String)) ||
         (notifName == (kAXWindowCreatedNotification as String))
+    let isHighFrequency = (notifName == (kAXWindowMovedNotification as String)) ||
+        (notifName == (kAXWindowResizedNotification as String)) ||
+        (notifName == (kAXTitleChangedNotification as String))
     Task { @MainActor in
-        TaskbarWindowTracker.shared.handleAXEventNotification(isGeometryChange: isGeometryChange)
+        TaskbarWindowTracker.shared.handleAXEventNotification(
+            isGeometryChange: isGeometryChange,
+            isHighFrequency: isHighFrequency
+        )
     }
 }
 
@@ -232,10 +238,14 @@ public final class TaskbarWindowTracker {
     /// Callback invocado cuando cambia la geometría de ventanas (para `TaskbarOverlapResizer`).
     public var onWindowGeometryPotentiallyChanged: (() -> Void)?
 
-    /// Cola serial dedicada en segundo plano para todas las llamadas IPC de Accessibility, CGS y `CGWindowList`,
-    /// manteniendo el hilo principal 100% libre para clics y atajos instantáneos.
-    private let scanQueue = DispatchQueue(label: "com.macfileexplorer.taskbar.window-scan", qos: .userInteractive)
-    private let actionQueue = DispatchQueue(label: "com.macfileexplorer.taskbar.window-action", qos: .userInteractive)
+    /// Cachés O(1) de aplicaciones actualmente en ejecución para evitar `NSWorkspace.runningApplications` y `stat()` en SwiftUI `body`.
+    public private(set) var runningBundleIDsLowercased: Set<String> = []
+    public private(set) var runningBundlePathsLowercased: Set<String> = []
+
+    /// Cola serial dedicada en núcleos de eficiencia (`.utility`) para todas las llamadas IPC de Accessibility, CGS y `CGWindowList`,
+    /// manteniendo el hilo principal libre y evitando despertar los núcleos P de Apple Silicon en sondeos periódicos.
+    private let scanQueue = DispatchQueue(label: "com.macfileexplorer.taskbar.window-scan", qos: .utility)
+    private let actionQueue = DispatchQueue(label: "com.macfileexplorer.taskbar.window-action", qos: .userInitiated)
 
     private var ownedWindowProviders: [String: @MainActor () -> Set<Int>] = [:]
     private var orderEngine = TaskbarWindowOrderEngine()
@@ -608,8 +618,10 @@ public final class TaskbarWindowTracker {
 
     private func startFallbackTimer() {
         fallbackRefreshTimer?.invalidate()
-        let timer = Timer(timeInterval: 1.5, repeats: true) { [weak self] _ in
-            Task { @MainActor [weak self] in
+        // Intervalo coalescido (4 s, tolerancia 1 s): los AXObservers y NSWorkspace cubren eventos instantáneos
+        // y este respaldo liviano mantiene Apple Silicon en reposo casi total.
+        let timer = Timer(timeInterval: 4.0, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated {
                 guard let self, self.isMonitoring else { return }
                 let wasTrusted = self.isAccessibilityGranted
                 let nowTrusted = self.checkAccessibilityPermission(prompt: false)
@@ -619,14 +631,14 @@ public final class TaskbarWindowTracker {
                 self.refreshNow()
             }
         }
-        timer.tolerance = 0.2
+        timer.tolerance = 1.0
         RunLoop.main.add(timer, forMode: .common)
         fallbackRefreshTimer = timer
     }
 
-    fileprivate func handleAXEventNotification(isGeometryChange: Bool) {
+    fileprivate func handleAXEventNotification(isGeometryChange: Bool, isHighFrequency: Bool = false) {
         guard isMonitoring else { return }
-        scheduleCoalescedRefresh(delay: 0.04)
+        scheduleCoalescedRefresh(delay: isHighFrequency ? 0.22 : 0.05)
         if isGeometryChange {
             scheduleGeometryCheck()
         }
@@ -670,7 +682,7 @@ public final class TaskbarWindowTracker {
 
         let taskbarPrefs = TaskbarPreferences.shared
         let ownedWindowNumbers = collectAllOwnedWindowNumbers()
-        let shouldRefreshBadges = trusted && activeConsumers.contains(.taskbar) && taskbarPrefs.showNotificationBadges && Date().timeIntervalSince(lastBadgeFetchDate) >= 2.0
+        let shouldRefreshBadges = trusted && activeConsumers.contains(.taskbar) && taskbarPrefs.showNotificationBadges && Date().timeIntervalSince(lastBadgeFetchDate) >= 5.0
         if shouldRefreshBadges {
             lastBadgeFetchDate = Date()
         }
@@ -680,11 +692,22 @@ public final class TaskbarWindowTracker {
         let dockPID = allRunning.first(where: { $0.bundleIdentifier == "com.apple.dock" })?.processIdentifier
         let frontmostPID = NSWorkspace.shared.frontmostApplication?.processIdentifier ?? -1
 
+        var nextRunningBIDs = Set<String>()
+        var nextRunningPaths = Set<String>()
+        nextRunningBIDs.reserveCapacity(allRunning.count)
+        nextRunningPaths.reserveCapacity(allRunning.count)
+
         var regularSnapshots: [RunningAppSnapshot] = []
         regularSnapshots.reserveCapacity(allRunning.count)
         for app in allRunning where app.activationPolicy == .regular && !app.isTerminated {
-            if app.processIdentifier == selfPID { continue }
             let bundleID = app.bundleIdentifier ?? ""
+            if !bundleID.isEmpty {
+                nextRunningBIDs.insert(bundleID.lowercased())
+            }
+            if let bURL = app.bundleURL {
+                nextRunningPaths.insert(Self.normalizedBundlePathKey(for: bURL))
+            }
+            if app.processIdentifier == selfPID { continue }
             if TaskbarPreferences.defaultExcludedSystemBundleIDs.contains(bundleID) { continue }
             if trusted {
                 installAXObserverIfNeeded(for: app)
@@ -700,6 +723,12 @@ public final class TaskbarWindowTracker {
                     isHidden: app.isHidden
                 )
             )
+        }
+        if runningBundleIDsLowercased != nextRunningBIDs {
+            runningBundleIDsLowercased = nextRunningBIDs
+        }
+        if runningBundlePathsLowercased != nextRunningPaths {
+            runningBundlePathsLowercased = nextRunningPaths
         }
 
         let nowRef = Date().timeIntervalSinceReferenceDate
@@ -729,7 +758,7 @@ public final class TaskbarWindowTracker {
                 self.isScanInFlight = false
                 guard self.isMonitoring else { return }
 
-                if let updatedBadges = result.updatedBadges {
+                if let updatedBadges = result.updatedBadges, self.badgeByAppKey != updatedBadges {
                     self.badgeByAppKey = updatedBadges
                 }
 
@@ -1722,15 +1751,28 @@ public final class TaskbarWindowTracker {
     }
 
     public func isAppRunning(bundleIdentifier: String, bundlePath: String) -> Bool {
-        let normalizedPath = URL(fileURLWithPath: bundlePath).standardizedFileURL.path(percentEncoded: false)
+        // Búsqueda O(1) 100% en memoria (cero llamadas IPC a NSWorkspace ni syscalls `stat()` en cada redibujo de SwiftUI)
+        if !runningBundleIDsLowercased.isEmpty || !runningBundlePathsLowercased.isEmpty {
+            if !bundleIdentifier.isEmpty,
+               runningBundleIDsLowercased.contains(bundleIdentifier.lowercased()) {
+                return true
+            }
+            if !bundlePath.isEmpty {
+                let normalizedKey = bundlePath
+                    .trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+                    .lowercased()
+                if runningBundlePathsLowercased.contains("/" + normalizedKey)
+                    || runningBundlePathsLowercased.contains(bundlePath.lowercased()) {
+                    return true
+                }
+            }
+            return false
+        }
+        // Respaldo inicial solo antes del primer escaneo
         return NSWorkspace.shared.runningApplications.contains { app in
             guard !app.isTerminated, app.activationPolicy == .regular else { return false }
             if !bundleIdentifier.isEmpty,
                app.bundleIdentifier?.caseInsensitiveCompare(bundleIdentifier) == .orderedSame {
-                return true
-            }
-            if let url = app.bundleURL,
-               url.standardizedFileURL.path(percentEncoded: false).caseInsensitiveCompare(normalizedPath) == .orderedSame {
                 return true
             }
             return false
@@ -1846,28 +1888,39 @@ public final class TaskbarWindowTracker {
 
     // MARK: - Lectura Multi-Fuente de Badges (Dock AX + LaunchServices StatusLabel)
 
-    /// Lee `StatusLabel` directamente desde LaunchServices (`_LSCopyRunningApplicationArray` + `_LSCopyApplicationInformation`).
-    /// Funciona en ~1 ms sin IPC de Accesibilidad incluso cuando la app no está fijada en el Dock o el Dock está oculto.
-    private nonisolated static func fetchLaunchServicesBadgesOffMain() -> [String: String] {
-        guard let handle = dlopen("/System/Library/Frameworks/CoreServices.framework/CoreServices", RTLD_LAZY),
-              let symRunning = dlsym(handle, "_LSCopyRunningApplicationArray"),
-              let symInfo = dlsym(handle, "_LSCopyApplicationInformation") else {
-            return [:]
-        }
-
+    private enum LaunchServicesSymbols {
         typealias CopyRunningFn = @convention(c) (Int32) -> Unmanaged<CFArray>?
         typealias CopyAppInfoFn = @convention(c) (Int32, CFTypeRef, CFArray?) -> Unmanaged<CFDictionary>?
 
-        let copyRunning = unsafeBitCast(symRunning, to: CopyRunningFn.self)
-        let copyInfo = unsafeBitCast(symInfo, to: CopyAppInfoFn.self)
+        static let resolved: (copyRunning: CopyRunningFn, copyInfo: CopyAppInfoFn)? = {
+            guard let handle = dlopen("/System/Library/Frameworks/CoreServices.framework/CoreServices", RTLD_LAZY),
+                  let symRunning = dlsym(handle, "_LSCopyRunningApplicationArray"),
+                  let symInfo = dlsym(handle, "_LSCopyApplicationInformation") else {
+                return nil
+            }
+            return (
+                unsafeBitCast(symRunning, to: CopyRunningFn.self),
+                unsafeBitCast(symInfo, to: CopyAppInfoFn.self)
+            )
+        }()
 
-        guard let asns = copyRunning(-2)?.takeRetainedValue() as? [AnyObject] else {
+        nonisolated(unsafe) static let requestedKeys: CFArray = [
+            "StatusLabel", "pid", "CFBundleIdentifier", "LSBundlePath", "CFBundleName"
+        ] as CFArray
+    }
+
+    /// Lee `StatusLabel` directamente desde LaunchServices solicitando únicamente las 5 claves necesarias
+    /// (en lugar del diccionario completo de +50 claves por proceso) y reutilizando los símbolos resueltos una sola vez.
+    private nonisolated static func fetchLaunchServicesBadgesOffMain() -> [String: String] {
+        guard let syms = LaunchServicesSymbols.resolved,
+              let asns = syms.copyRunning(-2)?.takeRetainedValue() as? [AnyObject] else {
             return [:]
         }
 
+        let keys = LaunchServicesSymbols.requestedKeys
         var badges: [String: String] = [:]
         for asn in asns {
-            guard let info = copyInfo(-2, asn, nil)?.takeRetainedValue() as? [String: Any],
+            guard let info = syms.copyInfo(-2, asn, keys)?.takeRetainedValue() as? [String: Any],
                   let statusDict = info["StatusLabel"] as? [String: Any] else {
                 continue
             }

@@ -196,9 +196,9 @@ public enum AdvancedSearchService {
         }
         guard shouldRun else { return }
 
-        Task.detached(priority: .utility) {
-            try? await Task.sleep(for: .seconds(2))
-            if Task.isCancelled { return }
+        Task.detached(priority: .background) {
+            try? await Task.sleep(for: .seconds(5))
+            if Task.isCancelled || ProcessInfo.processInfo.isLowPowerModeEnabled { return }
             autoreleasepool {
                 let width = 96
                 let height = 32
@@ -531,10 +531,38 @@ public enum AdvancedSearchService {
         return containsQuery(transcript, query: query)
     }
 
-    /// Extrae todo el texto legible de una imagen usando Vision `.accurate` + reescalado 2x para capturas pequeñas.
-    public static func extractOCRTranscript(at url: URL) -> String {
+    /// Extrae todo el texto legible de una imagen usando Vision.
+    /// - `isBackgroundIndex == true`: ruta optimizada para Apple Silicon (decodificación ImageIO reescalada a máx. 1400 px
+    ///   y una sola pasada rápida sin reescalado 2× ni sobrecarga de CPU/RAM en segundo plano).
+    /// - `isBackgroundIndex == false`: búsqueda explícita del usuario con máxima precisión (`.accurate` + respaldo 2×).
+    public static func extractOCRTranscript(at url: URL, isBackgroundIndex: Bool = false) -> String {
         autoreleasepool {
             let source = CGImageSourceCreateWithURL(url as CFURL, nil)
+
+            if isBackgroundIndex {
+                guard let source else { return "" }
+                let thumbOptions: [CFString: Any] = [
+                    kCGImageSourceCreateThumbnailFromImageAlways: true,
+                    kCGImageSourceCreateThumbnailWithTransform: true,
+                    kCGImageSourceShouldCacheImmediately: false,
+                    kCGImageSourceThumbnailMaxPixelSize: 1400
+                ]
+                guard let downsampled = CGImageSourceCreateThumbnailAtIndex(source, 0, thumbOptions as CFDictionary) else {
+                    return ""
+                }
+                let request = VNRecognizeTextRequest()
+                request.recognitionLevel = .fast
+                request.usesLanguageCorrection = false
+                request.recognitionLanguages = ["es-ES", "en-US"]
+                let handler = VNImageRequestHandler(cgImage: downsampled, options: [:])
+                if (try? handler.perform([request])) != nil,
+                   let observations = request.results,
+                   !observations.isEmpty {
+                    return buildTranscript(from: observations)
+                }
+                return ""
+            }
+
             let orientation = readImageOrientation(from: source)
 
             var primaryTranscript = ""

@@ -77,6 +77,31 @@ public struct ReleaseNoteSection: Identifiable, Sendable {
 public enum ReleaseNotesCatalog {
     public static let sections: [ReleaseNoteSection] = [
         ReleaseNoteSection(
+            id: "v1.8.1-apple-silicon-performance-and-app-icons",
+            versionLabelES: "Versión 1.8.1 — Optimización Apple Silicon y 5 íconos seleccionables",
+            versionLabelEN: "Version 1.8.1 — Apple Silicon Optimization & 5 Selectable App Icons",
+            dateLabelES: "24 nov 2026",
+            dateLabelEN: "Nov 24, 2026",
+            items: [
+                ReleaseNoteItem(
+                    id: "apple-silicon-idle-cpu-optimization",
+                    icon: "bolt.circle.fill",
+                    titleES: "Consumo de CPU casi nulo en reposo y mayor eficiencia en procesadores Apple Silicon (M1/M2/M3/M4)",
+                    titleEN: "Near-Zero Idle CPU Usage & Higher Efficiency on Apple Silicon (M1/M2/M3/M4)",
+                    summaryES: "Se optimizó el consumo en segundo plano para que MacFileExplorer permanezca prácticamente en reposo cuando no estás interactuando: las ventanas de configuración ahora detienen sus vistas previas animadas apenas se cierran, el análisis automático de texto en imágenes corre suavemente en núcleos de eficiencia sin provocar recargas repetidas de carpetas, y la barra de tareas evita redibujos y consultas repetitivas al sistema.",
+                    summaryEN: "Background activity has been deeply optimized so MacFileExplorer stays nearly idle when you are not interacting with it: settings windows stop all live preview animations the instant they close, automatic image text indexing runs gently on efficiency cores without triggering folder reload loops, and the taskbar eliminates redundant redraws and system queries."
+                ),
+                ReleaseNoteItem(
+                    id: "selectable-macos-app-icons-5-styles",
+                    icon: "app.badge.checkmark",
+                    titleES: "4 nuevos íconos para MacFileExplorer y selector de ícono en macOS",
+                    titleEN: "4 New MacFileExplorer Icons & macOS App Icon Picker",
+                    summaryES: "Ahora podés elegir entre 5 íconos distintos para que MacFileExplorer se muestre en el Dock de macOS, ⌘+Tab, la Barra de tareas y AltTab: Clásico, Estilo macOS (azul nativo), Mono Oscuro, Mono Claro y Capas Cristal. Cambialo al instante desde el menú MacFileExplorer → Ícono de la aplicación, desde Acerca de MacFileExplorer o en Configuración de la barra de tareas → Apariencia.",
+                    summaryEN: "Choose from 5 distinct icons for MacFileExplorer across the macOS Dock, ⌘+Tab, Taskbar, and AltTab: Classic, macOS Style (native Apple blue), Dark Mono, Light Mono, and Glass Layers. Switch instantly from MacFileExplorer → App Icon, About MacFileExplorer, or Taskbar Settings → Appearance."
+                )
+            ]
+        ),
+        ReleaseNoteSection(
             id: "v1.8.0-windows-style-taskbar",
             versionLabelES: "Versión 1.8.0 — Barra de tareas estilo Windows, Menú Inicio y Selector AltTab",
             versionLabelEN: "Version 1.8.0 — Windows-Style Taskbar, Start Menu & AltTab Window Switcher",

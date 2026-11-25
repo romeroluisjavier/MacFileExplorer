@@ -32,6 +32,10 @@ chmod +x "${RELEASE_APP}/Contents/MacOS/${APP_NAME}"
 cp "Sources/MacFileExplorer/Resources/AppIcon.icns" "${RELEASE_APP}/Contents/Resources/AppIcon.icns"
 cp "Sources/MacFileExplorer/Resources/AppIcon-Light.png" "${RELEASE_APP}/Contents/Resources/AppIcon-Light.png"
 cp "Sources/MacFileExplorer/Resources/AppIcon-Dark.png" "${RELEASE_APP}/Contents/Resources/AppIcon-Dark.png"
+cp "Sources/MacFileExplorer/Resources/AppIcon-MacOS.png" "${RELEASE_APP}/Contents/Resources/AppIcon-MacOS.png"
+cp "Sources/MacFileExplorer/Resources/AppIcon-MonoDark.png" "${RELEASE_APP}/Contents/Resources/AppIcon-MonoDark.png"
+cp "Sources/MacFileExplorer/Resources/AppIcon-MonoLight.png" "${RELEASE_APP}/Contents/Resources/AppIcon-MonoLight.png"
+cp "Sources/MacFileExplorer/Resources/AppIcon-GlassLayers.png" "${RELEASE_APP}/Contents/Resources/AppIcon-GlassLayers.png"
 cp "Sources/MacFileExplorer/Resources/StartIcon-EmonkBrain.png" "${RELEASE_APP}/Contents/Resources/StartIcon-EmonkBrain.png"
 
 if [ -d "${BIN_PATH}/${APP_NAME}_${APP_NAME}.bundle" ]; then

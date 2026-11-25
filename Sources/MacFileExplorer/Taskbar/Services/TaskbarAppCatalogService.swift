@@ -37,9 +37,22 @@ public final class TaskbarAppCatalogService {
         }
     }
 
+    /// Limpia el caché del ícono propio de `MacFileExplorer` cuando el usuario cambia el ícono de la app.
+    public func invalidateSelfIconCache() {
+        let ownPath = Bundle.main.bundleURL.standardizedFileURL.path(percentEncoded: false)
+        iconCache.removeValue(forKey: ownPath)
+        iconCache = iconCache.filter { !$0.key.lowercased().hasSuffix("/macfileexplorer.app") }
+    }
+
     /// Devuelve el ícono en caché de una aplicación (con tamaño óptimo y renderizado nítido).
     public func icon(forAppAt url: URL) -> NSImage {
         let key = url.standardizedFileURL.path(percentEncoded: false)
+        if isOwnApplication(bundleIdentifier: "", url: url),
+           let custom = FileIconProvider.shared.currentAppIcon {
+            let sized = (custom.copy() as? NSImage) ?? custom
+            sized.size = NSSize(width: 64, height: 64)
+            return sized
+        }
         if let cached = iconCache[key] {
             return cached
         }
@@ -50,6 +63,12 @@ public final class TaskbarAppCatalogService {
     }
 
     public func icon(forBundleIdentifier bundleID: String, fallbackURL: URL?) -> NSImage {
+        if isOwnApplication(bundleIdentifier: bundleID, url: fallbackURL),
+           let custom = FileIconProvider.shared.currentAppIcon {
+            let sized = (custom.copy() as? NSImage) ?? custom
+            sized.size = NSSize(width: 64, height: 64)
+            return sized
+        }
         if let fallbackURL {
             return icon(forAppAt: fallbackURL)
         }
@@ -57,6 +76,22 @@ public final class TaskbarAppCatalogService {
             return icon(forAppAt: url)
         }
         return NSWorkspace.shared.icon(for: .applicationBundle)
+    }
+
+    private func isOwnApplication(bundleIdentifier: String, url: URL?) -> Bool {
+        let ownBID = Bundle.main.bundleIdentifier ?? "com.macfileexplorer.app"
+        if !bundleIdentifier.isEmpty, bundleIdentifier.caseInsensitiveCompare(ownBID) == .orderedSame {
+            return true
+        }
+        if let url {
+            let normalized = url.standardizedFileURL.path(percentEncoded: false)
+            let ownPath = Bundle.main.bundleURL.standardizedFileURL.path(percentEncoded: false)
+            if normalized.caseInsensitiveCompare(ownPath) == .orderedSame
+                || normalized.lowercased().hasSuffix("/macfileexplorer.app") {
+                return true
+            }
+        }
+        return false
     }
 
     /// Devuelve la lista de apps recientes válidas (resueltas contra el catálogo o el disco).

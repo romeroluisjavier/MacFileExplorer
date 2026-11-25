@@ -130,6 +130,7 @@ public actor DirectoryIndexCacheService {
         encoder.outputFormat = .binary
         guard let encoded = try? encoder.encode(archive) else { return }
 
+        DirectoryWatcher.suppressInternalCacheWrites(in: dir)
         var localCacheURL = dir.appendingPathComponent(Self.hiddenCacheFileName)
         var tempCacheURL = dir.appendingPathComponent("\(Self.hiddenCacheFileName).tmp.\(UUID().uuidString)")
         do {

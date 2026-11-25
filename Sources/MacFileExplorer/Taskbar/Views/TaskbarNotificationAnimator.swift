@@ -287,20 +287,22 @@ public struct TaskbarNotificationAnimatedSlot<Content: View>: View {
     }
 
     public var body: some View {
-        TimelineView(.animation(paused: burstStartTime == nil)) { context in
-            let frame: TaskbarNotificationAnimationFrame = {
-                guard let start = burstStartTime, style != .none, style.burstDuration > 0 else {
-                    return .identity
+        Group {
+            // Cero suscripciones CVDisplayLink / TimelineView cuando no hay una ráfaga activa
+            if let start = burstStartTime, style != .none, style.burstDuration > 0 {
+                TimelineView(.periodic(from: .now, by: 1.0 / 30.0)) { context in
+                    let elapsed = context.date.timeIntervalSinceReferenceDate - start
+                    let progress = elapsed / style.burstDuration
+                    let frame = TaskbarNotificationAnimationEngine.frame(
+                        for: style,
+                        progress: progress,
+                        maxJumpUp: maxJumpUp
+                    )
+                    content(frame)
                 }
-                let elapsed = context.date.timeIntervalSinceReferenceDate - start
-                let progress = elapsed / style.burstDuration
-                return TaskbarNotificationAnimationEngine.frame(
-                    for: style,
-                    progress: progress,
-                    maxJumpUp: maxJumpUp
-                )
-            }()
-            content(frame)
+            } else {
+                content(.identity)
+            }
         }
         .onChange(of: normalizedBadge) { oldVal, newVal in
             if newVal.isEmpty {

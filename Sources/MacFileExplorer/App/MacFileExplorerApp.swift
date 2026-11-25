@@ -70,6 +70,7 @@ struct MacFileExplorerApp: App {
     @Bindable private var clipboardPrefs = ClipboardHistoryPreferences.shared
     @Bindable private var taskbarPrefs = TaskbarPreferences.shared
     @Bindable private var altTabPrefs = AltTabPreferences.shared
+    @Bindable private var fileIconProvider = FileIconProvider.shared
     @FocusedValue(\.explorerViewModel) private var focusedExplorerViewModel
 
     var body: some Scene {
@@ -98,6 +99,35 @@ struct MacFileExplorerApp: App {
                     UpdateWindowController.shared.showAndCheck()
                 } label: {
                     Label(loc.text(es: "Buscar actualizaciones…", en: "Check Upgrades…"), systemImage: "arrow.down.circle")
+                }
+
+                Menu {
+                    Picker(
+                        loc.text(es: "Ícono de la aplicación", en: "App Icon"),
+                        selection: $fileIconProvider.selectedAppIcon
+                    ) {
+                        ForEach(MacFileExplorerAppIcon.allCases) { option in
+                            Label(option.localizedTitle(using: loc), systemImage: option.menuSymbolName)
+                                .tag(option)
+                        }
+                    }
+                    .pickerStyle(.inline)
+
+                    Divider()
+
+                    Button {
+                        AppIconPickerWindowController.shared.show()
+                    } label: {
+                        Label(
+                            loc.text(es: "Elegir ícono con vista previa…", en: "Choose Icon with Preview…"),
+                            systemImage: "app.dashed"
+                        )
+                    }
+                } label: {
+                    Label(
+                        loc.text(es: "Ícono de la aplicación", en: "App Icon"),
+                        systemImage: "app.badge.checkmark"
+                    )
                 }
 
                 Divider()

@@ -34,13 +34,16 @@ public enum TaskbarSettingsTab: String, CaseIterable, Identifiable, Sendable {
 }
 
 /// Controlador singleton de la ventana nativa de Configuración de la Barra de tareas.
+/// Libera el `NSHostingView` al cerrarse para garantizar 0% CPU (ningún `TimelineView` activo en segundo plano).
 @MainActor
-public final class TaskbarSettingsWindowController {
+public final class TaskbarSettingsWindowController: NSObject, NSWindowDelegate {
     public static let shared = TaskbarSettingsWindowController()
 
     private var window: NSWindow?
 
-    private init() {}
+    private override init() {
+        super.init()
+    }
 
     public func show(tab: TaskbarSettingsTab = .general) {
         let loc = LocalizationManager.shared
@@ -60,6 +63,7 @@ public final class TaskbarSettingsWindowController {
             backing: .buffered,
             defer: false
         )
+        created.delegate = self
         created.title = title
         created.minSize = NSSize(width: 660, height: 500)
         created.isReleasedWhenClosed = false
@@ -68,6 +72,11 @@ public final class TaskbarSettingsWindowController {
         created.center()
         created.makeKeyAndOrderFront(nil)
         self.window = created
+    }
+
+    public func windowWillClose(_ notification: Notification) {
+        // Destruir el árbol SwiftUI (y cualquier TimelineView de previsualización) al cerrar la ventana
+        window?.contentView = nil
     }
 }
 
@@ -332,6 +341,18 @@ public struct TaskbarSettingsView: View {
         let iconColumns = [GridItem(.adaptive(minimum: 112, maximum: 150), spacing: 10)]
 
         return VStack(alignment: .leading, spacing: 16) {
+            sectionCard(title: loc.text(es: "Ícono de MacFileExplorer en macOS", en: "MacFileExplorer App Icon on macOS")) {
+                Text(loc.text(
+                    es: "Elegí qué ícono querés que muestre MacFileExplorer en el Dock de macOS, ⌘+Tab, la barra de tareas y AltTab.",
+                    en: "Choose which icon MacFileExplorer displays in the macOS Dock, ⌘+Tab, Taskbar, and AltTab."
+                ))
+                .font(.system(size: 11.5))
+                .foregroundStyle(.secondary)
+
+                MacFileExplorerAppIconGridView(previewDark: previewDark)
+                    .padding(.top, 2)
+            }
+
             sectionCard(title: loc.text(es: "Ícono del botón Inicio", en: "Start Button Icon")) {
                 Text(loc.text(
                     es: "Elegí qué ícono mostrar a la izquierda de la barra de tareas para abrir el Menú Inicio. También podés cambiarlo haciendo clic derecho directo sobre el botón Inicio.",
@@ -478,7 +499,7 @@ public struct TaskbarSettingsView: View {
                     .font(.system(size: 11.5))
                     .foregroundStyle(.secondary)
 
-                    TimelineView(.animation) { context in
+                    TimelineView(.periodic(from: .now, by: 1.0 / 30.0)) { context in
                         LazyVGrid(columns: iconColumns, spacing: 10) {
                             ForEach(TaskbarNotificationAnimation.allCases) { option in
                                 TaskbarNotificationAnimationPreviewCard(
@@ -557,7 +578,7 @@ public struct TaskbarSettingsView: View {
                     .font(.system(size: 11.5))
                     .foregroundStyle(.secondary)
 
-                    TimelineView(.animation) { context in
+                    TimelineView(.periodic(from: .now, by: 1.0 / 30.0)) { context in
                         LazyVGrid(columns: iconColumns, spacing: 10) {
                             ForEach(TaskbarHoverPreviewAnimation.allCases) { option in
                                 TaskbarHoverPreviewAnimationCard(

@@ -1,6 +1,19 @@
 # MacFileExplorer Releases
 
-## Versión 1.8.0 (Versión Actual)
+## Versión 1.8.1 (Versión Actual)
+
+- **Instalador:** [`MacFileExplorer-1.8.1.dmg`](./MacFileExplorer-1.8.1.dmg)
+- **Tamaño:** ~22 MB
+- **Arquitectura:** Binario Universal (`arm64` Apple Silicon + `x86_64` Intel)
+- **Requisitos del sistema:** macOS 14.0 (Sonoma) o posterior
+
+### Novedades principales en la v1.8.1:
+1. **Optimización integral de rendimiento y consumo en reposo para Apple Silicon (M1/M2/M3/M4)**: consumo en reposo reducido a `~0,0% – 0,2%` CPU y `0–1` Idle Wake Ups mediante planificación de OCR en núcleos de eficiencia (`background`), supresión de recargas repetidas al guardar cachés internas, liberación de `TimelineView` al cerrar ventanas de Configuración/Asistente, cero suscripciones `CVDisplayLink` en reposo en la Barra de tareas, caché `O(1)` de aplicaciones en ejecución y timers coalescidos.
+2. **4 nuevos íconos para MacFileExplorer y selector en macOS**: elegí entre **Clásico**, **Estilo macOS** (azul nativo), **Mono Oscuro**, **Mono Claro** y **Capas Cristal** desde `MacFileExplorer → Ícono de la aplicación`, *Acerca de MacFileExplorer* o *Configuración de la Barra de tareas → Apariencia* con actualización inmediata en el Dock, `⌘+Tab`, Barra de tareas y AltTab.
+
+---
+
+## Versión 1.8.0
 
 - **Instalador:** [`MacFileExplorer-1.8.0.dmg`](./MacFileExplorer-1.8.0.dmg)
 - **Tamaño:** ~18 MB

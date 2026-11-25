@@ -10,8 +10,9 @@ public final class InternalErrorLogger: @unchecked Sendable {
     public static let shared = InternalErrorLogger()
 
     private let queue = DispatchQueue(label: "com.macfileexplorer.internalErrorLogger", qos: .utility)
+    private let watchdogQueue = DispatchQueue(label: "com.macfileexplorer.hangWatchdog", qos: .utility)
     private var isInstalled = false
-    private var watchdogThread: Thread?
+    private var watchdogTimer: DispatchSourceTimer?
     private let lock = NSLock()
     private var lastMainThreadHeartbeat = Date()
 
@@ -94,37 +95,33 @@ public final class InternalErrorLogger: @unchecked Sendable {
         }
     }
 
-    // MARK: - Watchdog de Cuelgues del Hilo Principal (> 2.5s sin responder)
+    // MARK: - Watchdog de Cuelgues del Hilo Principal (> 3.0s sin responder, coalescido para Apple Silicon)
 
     private func startMainThreadHangWatchdog() {
-        let thread = Thread { [weak self] in
-            while let self {
-                Thread.sleep(forTimeInterval: 1.5)
-                let semaphore = DispatchSemaphore(value: 0)
-                let checkStart = Date()
-                DispatchQueue.main.async {
-                    self.lock.lock()
-                    self.lastMainThreadHeartbeat = Date()
-                    self.lock.unlock()
-                    semaphore.signal()
-                }
-                let waitResult = semaphore.wait(timeout: .now() + 2.5)
-                if waitResult == .timedOut {
-                    let elapsed = Date().timeIntervalSince(checkStart)
-                    self.logError(
-                        category: "MAIN_THREAD_HANG",
-                        message: String(format: "El hilo principal tardó más de %.2fs en responder (posible cuelgue / freeze).", elapsed),
-                        includeStackTrace: false
-                    )
-                    // Esperar a que se recupere antes de volver a reportar
-                    _ = semaphore.wait(timeout: .now() + 10.0)
-                }
+        let timer = DispatchSource.makeTimerSource(queue: watchdogQueue)
+        timer.schedule(deadline: .now() + .seconds(5), repeating: .seconds(5), leeway: .seconds(1))
+        timer.setEventHandler { [weak self] in
+            guard let self else { return }
+            let semaphore = DispatchSemaphore(value: 0)
+            let checkStart = Date()
+            DispatchQueue.main.async {
+                self.lock.lock()
+                self.lastMainThreadHeartbeat = Date()
+                self.lock.unlock()
+                semaphore.signal()
+            }
+            let waitResult = semaphore.wait(timeout: .now() + 3.0)
+            if waitResult == .timedOut {
+                let elapsed = Date().timeIntervalSince(checkStart)
+                self.logError(
+                    category: "MAIN_THREAD_HANG",
+                    message: String(format: "El hilo principal tardó más de %.2fs en responder (posible cuelgue / freeze).", elapsed),
+                    includeStackTrace: false
+                )
             }
         }
-        thread.name = "com.macfileexplorer.hangWatchdog"
-        thread.qualityOfService = .utility
-        thread.start()
-        self.watchdogThread = thread
+        self.watchdogTimer = timer
+        timer.resume()
     }
 
     // MARK: - Excepciones no capturadas y Señales Fatales

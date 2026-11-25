@@ -78,12 +78,13 @@ public actor OCRIndexCacheService {
         return entry.transcript
     }
 
-    /// Almacena el texto OCR reconocido de una imagen y programa su escritura diferida en `.macfileexplorer_ocr.cache`.
+    /// Almacena el texto OCR reconocido de una imagen y opcionalmente programa su escritura diferida.
     public func storeTranscript(
         _ transcript: String,
         for fileURL: URL,
         fileSize: Int64?,
-        modificationDate: Date
+        modificationDate: Date,
+        scheduleDiskFlush: Bool = true
     ) {
         let dir = fileURL.deletingLastPathComponent().standardizedFileURL
         loadArchiveIfNeeded(for: dir)
@@ -108,14 +109,21 @@ public actor OCRIndexCacheService {
         archive.entries[entry.fileName] = entry
         loadedArchives[dir] = archive
         touchMemoryOrder(for: dir)
-        scheduleSave(for: dir)
+        dirtyFolders.insert(dir)
+        if scheduleDiskFlush {
+            scheduleSave(for: dir)
+        }
     }
 
-    // MARK: - Indexación en Segundo Plano por Carpeta
+    // MARK: - Indexación en Segundo Plano por Carpeta (Optimizada para Apple Silicon E-Cores)
 
-    /// Programa en segundo plano (baja prioridad) el análisis OCR de las imágenes aún no indexadas
-    /// de una carpeta para que las búsquedas posteriores sean instantáneas.
+    private static let maxAutoIndexedImagesPerVisit = 40
+
+    /// Programa en segundo plano (QoS `.background`, núcleos de eficiencia en Apple Silicon) el análisis OCR
+    /// de las imágenes más recientes aún no indexadas sin consumir CPU notable ni despertar discos en bucle.
     public func scheduleBackgroundIndexing(for directoryURL: URL, items: [FileItem]) {
+        guard !ProcessInfo.processInfo.isLowPowerModeEnabled else { return }
+
         let dir = directoryURL.standardizedFileURL
         if activeIndexedFolderURL == dir, activeBackgroundIndexTask != nil {
             return
@@ -126,19 +134,20 @@ public actor OCRIndexCacheService {
 
         let imageCandidates = items.filter { item in
             guard !item.isDirectory else { return false }
-            if let size = item.size, size > 50_000_000 { return false }
+            if let size = item.size, size > 35_000_000 { return false }
             return QuickActionsService.isImageURL(item.url)
                 || item.contentType?.conforms(to: .image) == true
         }
 
         guard !imageCandidates.isEmpty else {
             activeBackgroundIndexTask = nil
+            activeIndexedFolderURL = nil
             return
         }
 
-        activeBackgroundIndexTask = Task(priority: .utility) { [weak self] in
-            // Esperar un instante para priorizar renderizado inicial y miniaturas de la carpeta
-            try? await Task.sleep(for: .milliseconds(650))
+        activeBackgroundIndexTask = Task(priority: .background) { [weak self] in
+            // Esperar a que la navegación se estabilice antes de usar E-cores en segundo plano
+            try? await Task.sleep(for: .milliseconds(2500))
             guard !Task.isCancelled, let self else { return }
             await self.runBackgroundIndexing(for: dir, candidates: imageCandidates)
         }
@@ -162,38 +171,62 @@ public actor OCRIndexCacheService {
     }
 
     private func runBackgroundIndexing(for dir: URL, candidates: [FileItem]) async {
+        defer {
+            if activeIndexedFolderURL == dir {
+                activeBackgroundIndexTask = nil
+                activeIndexedFolderURL = nil
+            }
+        }
+
         loadArchiveIfNeeded(for: dir)
         pruneDeletedEntries(in: dir, liveFileNames: Set(candidates.map(\.name)))
 
         var pending: [FileItem] = []
-        pending.reserveCapacity(candidates.count)
-        for item in candidates {
+        pending.reserveCapacity(min(candidates.count, Self.maxAutoIndexedImagesPerVisit))
+        // Priorizar las imágenes modificadas más recientemente y acotar la pasada automática por carpeta
+        let newestFirst = candidates.sorted { $0.modificationDate > $1.modificationDate }
+        for item in newestFirst {
             if Task.isCancelled { return }
             if cachedTranscript(for: item.url, fileSize: item.size, modificationDate: item.modificationDate) == nil {
                 pending.append(item)
+                if pending.count >= Self.maxAutoIndexedImagesPerVisit {
+                    break
+                }
             }
         }
 
         guard !pending.isEmpty else { return }
 
+        var indexedSinceFlush = 0
         for item in pending {
-            if Task.isCancelled { return }
+            if Task.isCancelled || ProcessInfo.processInfo.isLowPowerModeEnabled { break }
 
-            let transcript = await Task.detached(priority: .utility) {
-                AdvancedSearchService.extractOCRTranscript(at: item.url)
+            let transcript = await Task.detached(priority: .background) {
+                AdvancedSearchService.extractOCRTranscript(at: item.url, isBackgroundIndex: true)
             }.value
 
-            if Task.isCancelled { return }
+            if Task.isCancelled { break }
 
             storeTranscript(
                 transcript,
                 for: item.url,
                 fileSize: item.size,
-                modificationDate: item.modificationDate
+                modificationDate: item.modificationDate,
+                scheduleDiskFlush: false
             )
+            indexedSinceFlush += 1
 
-            // Pequeña cesión cooperativa para mantener fluida la interfaz mientras indexa
-            try? await Task.sleep(for: .milliseconds(40))
+            if indexedSinceFlush >= 12 {
+                indexedSinceFlush = 0
+                flushFolderArchive(for: dir)
+            }
+
+            // Pausa generosa en núcleos de eficiencia para mantener CPU cerca de 0% en reposo
+            try? await Task.sleep(for: .milliseconds(300))
+        }
+
+        if dirtyFolders.contains(dir) {
+            flushFolderArchive(for: dir)
         }
     }
 
@@ -314,8 +347,8 @@ public actor OCRIndexCacheService {
     private func scheduleSave(for dir: URL) {
         dirtyFolders.insert(dir)
         saveTasks[dir]?.cancel()
-        saveTasks[dir] = Task { [weak self] in
-            try? await Task.sleep(for: .milliseconds(500))
+        saveTasks[dir] = Task(priority: .background) { [weak self] in
+            try? await Task.sleep(for: .milliseconds(3000))
             guard !Task.isCancelled, let self else { return }
             await self.flushFolderArchive(for: dir)
         }
@@ -332,6 +365,7 @@ public actor OCRIndexCacheService {
         }
         loadedArchives[dir] = archive
 
+        DirectoryWatcher.suppressInternalCacheWrites(in: dir)
         var localCacheURL = dir.appendingPathComponent(Self.hiddenCacheFileName)
         var tempCacheURL = dir.appendingPathComponent("\(Self.hiddenCacheFileName).tmp.\(UUID().uuidString)")
         do {

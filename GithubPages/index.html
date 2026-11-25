@@ -9,7 +9,7 @@
   <meta property="og:description" content="Explorador de archivos con pestañas, Barra de tareas estilo Windows con Menú Inicio, selector rápido AltTab, buscador inteligente y herramientas rápidas con clic derecho. Gratis para Mac." />
   <meta property="og:image" content="assets/taskbar-overview.png" />
   <meta property="og:type" content="website" />
-  <link rel="icon" type="image/png" href="assets/app-icon.png" />
+  <link id="page-favicon" rel="icon" type="image/png" href="assets/app-icon.png" />
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -217,10 +217,10 @@
   <header class="fixed top-3 inset-x-0 z-40 px-4">
     <nav class="mac-nav max-w-6xl mx-auto rounded-2xl px-4 sm:px-5 h-14 flex items-center justify-between shadow-lg shadow-black/5 dark:shadow-black/30">
       <a href="#top" class="flex items-center gap-2.5 group">
-        <img src="assets/app-icon.png" alt="MacFileExplorer" class="w-8 h-8 rounded-lg shadow-sm group-hover:scale-105 transition-transform" />
+        <img id="nav-app-icon" src="assets/app-icon.png" alt="MacFileExplorer" class="w-8 h-8 rounded-lg shadow-sm group-hover:scale-105 transition-transform" />
         <div class="flex items-center gap-2">
           <span class="font-bold tracking-tight text-[15px] text-slate-900 dark:text-white">MacFileExplorer</span>
-          <span id="nav-version-pill" class="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-macos-blue/15 text-macos-blueDark dark:text-macos-blue border border-macos-blue/20">v1.8.0</span>
+          <span id="nav-version-pill" class="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-macos-blue/15 text-macos-blueDark dark:text-macos-blue border border-macos-blue/20">v1.8.1</span>
         </div>
       </a>
 
@@ -243,7 +243,7 @@
           </svg>
         </button>
 
-        <a id="nav-download-cta" href="https://github.com/romeroluisjavier/MacFileExplorer/raw/main/releases/MacFileExplorer-1.8.0.dmg"
+        <a id="nav-download-cta" href="https://github.com/romeroluisjavier/MacFileExplorer/raw/main/releases/MacFileExplorer-1.8.1.dmg"
           class="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-[13px] font-semibold text-white bg-gradient-to-b from-[#1A90FF] to-[#0071E3] hover:brightness-110 shadow-md shadow-macos-blue/25 transition-all">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.3" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v11m0 0-4-4m4 4 4-4M4 19h16"/>
@@ -271,7 +271,7 @@
         </span>
         <span id="hero-release-badge" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold mac-glass text-violet-600 dark:text-violet-400">
           <span class="w-1.5 h-1.5 rounded-full bg-violet-500"></span>
-          Última versión: v1.8.0
+          Última versión: v1.8.1
         </span>
       </div>
 
@@ -289,12 +289,12 @@
 
       <!-- Botones principales -->
       <div class="reveal mt-8 flex flex-wrap items-center justify-center gap-3.5">
-        <a id="hero-download-cta" href="https://github.com/romeroluisjavier/MacFileExplorer/raw/main/releases/MacFileExplorer-1.8.0.dmg"
+        <a id="hero-download-cta" href="https://github.com/romeroluisjavier/MacFileExplorer/raw/main/releases/MacFileExplorer-1.8.1.dmg"
           class="inline-flex items-center gap-2.5 px-7 py-3.5 rounded-2xl text-[15px] font-semibold text-white bg-gradient-to-b from-[#1A90FF] to-[#0071E3] hover:brightness-110 shadow-xl shadow-macos-blue/30 transition-all hover:-translate-y-0.5">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v12m0 0-4.5-4.5M12 15l4.5-4.5M4 20h16"/>
           </svg>
-          <span id="hero-download-label">Descargar MacFileExplorer v1.8.0</span>
+          <span id="hero-download-label">Descargar MacFileExplorer v1.8.1</span>
         </a>
 
         <a href="#install"
@@ -307,7 +307,7 @@
       </div>
 
       <p class="reveal mt-3.5 text-xs sm:text-[13px] text-slate-500 dark:text-slate-400">
-        Descarga liviana (~18 MB) · Sin cuentas ni suscripciones · Funciona en Mac Apple Silicon e Intel
+        Descarga liviana (~22 MB) · Sin cuentas ni suscripciones · Funciona en Mac Apple Silicon e Intel
       </p>
 
       <!-- Visor interactivo principal con GIFs de Taskbar y AltTab -->
@@ -356,7 +356,7 @@
          QUÉ PODÉS HACER CON LA APP (#features)
     ========================================================== -->
     <section id="features" class="max-w-6xl mx-auto mt-28 sm:mt-36 scroll-mt-24">
-      <div class="reveal text-center max-w-2xl mx-auto mb-14">
+      <div class="reveal text-center max-w-2xl mx-auto mb-10">
         <span class="inline-block text-xs font-bold uppercase tracking-widest text-macos-blue mb-2">Pensada para el día a día</span>
         <h2 class="text-3xl sm:text-5xl font-extrabold tracking-tight text-slate-950 dark:text-white">
           Una sola app para ordenar todo tu Mac
@@ -364,6 +364,58 @@
         <p class="mt-4 text-slate-600 dark:text-slate-400 text-base sm:text-lg">
           Sin configuraciones complicadas. Activá solo lo que te sirve y disfrutá de un Mac más cómodo desde el primer minuto.
         </p>
+      </div>
+
+      <!-- Aviso destacado: TODO es opcional y se activa o desactiva a gusto -->
+      <div class="reveal mb-10 rounded-3xl p-6 sm:p-7 mac-glass border-emerald-500/30 bg-gradient-to-br from-emerald-500/[0.07] via-macos-blue/[0.05] to-transparent">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+          <div class="max-w-2xl">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 mb-3">
+              <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+              Importante · Vos decidís qué usar
+            </div>
+            <h3 class="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-950 dark:text-white">
+              Todo se puede activar o desactivar con un clic
+            </h3>
+            <p class="mt-2 text-sm sm:text-[15px] text-slate-600 dark:text-slate-300 leading-relaxed">
+              No tenés que usar todas las funciones sí o sí. Si solo querés el <strong>explorador de archivos</strong>, dejás el resto apagado y listo. Cuando quieras sumar la <strong>Barra de tareas</strong>, <strong>AltTab</strong>, el <strong>Historial del portapapeles</strong> o el ícono superior, los encendés o apagás cuando quieras desde el menú — tu Mac nunca cambia nada a la fuerza.
+            </p>
+          </div>
+
+          <!-- Interruptores interactivos demostrativos -->
+          <div class="shrink-0 w-full lg:w-[360px] rounded-2xl p-4 bg-slate-900/[0.04] dark:bg-black/25 border border-slate-900/10 dark:border-white/10">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Probá encender o apagar</span>
+              <span id="modular-counter" class="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">4 de 6 activas</span>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <button type="button" data-modular-toggle="true" class="modular-toggle-btn flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-xs font-semibold bg-white/80 dark:bg-white/[0.07] border border-slate-900/10 dark:border-white/10 text-slate-800 dark:text-white transition-all hover:border-macos-blue/50">
+                <span class="truncate">Explorador</span>
+                <span class="toggle-track relative inline-flex h-4 w-7 shrink-0 items-center rounded-full bg-macos-blue transition-colors"><span class="toggle-thumb inline-block h-3 w-3 translate-x-3.5 rounded-full bg-white shadow transition-transform"></span></span>
+              </button>
+              <button type="button" data-modular-toggle="true" class="modular-toggle-btn flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-xs font-semibold bg-white/80 dark:bg-white/[0.07] border border-slate-900/10 dark:border-white/10 text-slate-800 dark:text-white transition-all hover:border-macos-blue/50">
+                <span class="truncate">Barra de tareas</span>
+                <span class="toggle-track relative inline-flex h-4 w-7 shrink-0 items-center rounded-full bg-macos-blue transition-colors"><span class="toggle-thumb inline-block h-3 w-3 translate-x-3.5 rounded-full bg-white shadow transition-transform"></span></span>
+              </button>
+              <button type="button" data-modular-toggle="true" class="modular-toggle-btn flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-xs font-semibold bg-white/80 dark:bg-white/[0.07] border border-slate-900/10 dark:border-white/10 text-slate-800 dark:text-white transition-all hover:border-macos-blue/50">
+                <span class="truncate">AltTab</span>
+                <span class="toggle-track relative inline-flex h-4 w-7 shrink-0 items-center rounded-full bg-macos-blue transition-colors"><span class="toggle-thumb inline-block h-3 w-3 translate-x-3.5 rounded-full bg-white shadow transition-transform"></span></span>
+              </button>
+              <button type="button" data-modular-toggle="true" class="modular-toggle-btn flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-xs font-semibold bg-white/80 dark:bg-white/[0.07] border border-slate-900/10 dark:border-white/10 text-slate-800 dark:text-white transition-all hover:border-macos-blue/50">
+                <span class="truncate">Portapapeles</span>
+                <span class="toggle-track relative inline-flex h-4 w-7 shrink-0 items-center rounded-full bg-macos-blue transition-colors"><span class="toggle-thumb inline-block h-3 w-3 translate-x-3.5 rounded-full bg-white shadow transition-transform"></span></span>
+              </button>
+              <button type="button" data-modular-toggle="false" class="modular-toggle-btn flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-xs font-semibold bg-white/60 dark:bg-white/[0.04] border border-slate-900/10 dark:border-white/10 text-slate-500 dark:text-slate-400 transition-all hover:border-macos-blue/50">
+                <span class="truncate">Menú superior</span>
+                <span class="toggle-track relative inline-flex h-4 w-7 shrink-0 items-center rounded-full bg-slate-300 dark:bg-white/20 transition-colors"><span class="toggle-thumb inline-block h-3 w-3 translate-x-0.5 rounded-full bg-white shadow transition-transform"></span></span>
+              </button>
+              <button type="button" data-modular-toggle="false" class="modular-toggle-btn flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-xs font-semibold bg-white/60 dark:bg-white/[0.04] border border-slate-900/10 dark:border-white/10 text-slate-500 dark:text-slate-400 transition-all hover:border-macos-blue/50">
+                <span class="truncate">Ocultar Dock</span>
+                <span class="toggle-track relative inline-flex h-4 w-7 shrink-0 items-center rounded-full bg-slate-300 dark:bg-white/20 transition-colors"><span class="toggle-thumb inline-block h-3 w-3 translate-x-0.5 rounded-full bg-white shadow transition-transform"></span></span>
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- 3 Pilares principales -->
@@ -523,6 +575,73 @@
           </p>
         </article>
       </div>
+
+      <!-- Personalización del ícono de la app en macOS (Clásico + 4 nuevos diseños) -->
+      <div id="icons" class="reveal mt-10 mac-glass rounded-3xl p-6 sm:p-8 scroll-mt-24">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-7">
+          <div class="max-w-xl">
+            <span class="inline-block text-xs font-bold uppercase tracking-widest text-macos-blue mb-1.5">Personalizala a tu gusto</span>
+            <h3 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-950 dark:text-white">
+              Elegí el ícono que querés ver en tu Mac
+            </h3>
+            <p class="mt-2 text-sm sm:text-[15px] text-slate-600 dark:text-slate-300 leading-relaxed">
+              Además del diseño clásico, incluimos <strong>4 nuevos íconos modernos</strong> (uno estilo nativo de macOS y variantes monocromáticas y cristal). Tocá cualquiera abajo para ver cómo queda en el Dock y en esta misma página:
+            </p>
+          </div>
+
+          <!-- Mini Dock interactivo de vista previa -->
+          <div class="shrink-0 flex flex-col items-center gap-2">
+            <div class="inline-flex items-center gap-3 px-4 py-2.5 rounded-2xl bg-slate-900/10 dark:bg-white/10 border border-slate-900/10 dark:border-white/15 shadow-inner">
+              <div class="w-10 h-10 rounded-xl bg-gradient-to-b from-sky-400 to-blue-600 opacity-70 flex items-center justify-center text-white text-xs font-bold">F</div>
+              <div class="w-10 h-10 rounded-xl bg-gradient-to-b from-amber-300 to-amber-500 opacity-70 flex items-center justify-center text-white text-xs font-bold">N</div>
+              <div class="flex flex-col items-center gap-1">
+                <img id="dock-live-icon" src="assets/app-icon-macos.png" alt="Ícono elegido en el Dock" class="w-12 h-12 rounded-xl shadow-md transition-transform duration-200 hover:scale-110" />
+                <span class="w-1.5 h-1.5 rounded-full bg-macos-blue"></span>
+              </div>
+              <div class="w-10 h-10 rounded-xl bg-gradient-to-b from-emerald-400 to-green-600 opacity-70 flex items-center justify-center text-white text-xs font-bold">M</div>
+              <div class="w-10 h-10 rounded-xl bg-gradient-to-b from-slate-400 to-slate-600 opacity-70 flex items-center justify-center text-white text-xs font-bold">⚙</div>
+            </div>
+            <span id="dock-live-label" class="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Vista previa en Dock: Estilo macOS</span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
+          <button type="button" data-app-icon-src="assets/app-icon-macos.png" data-app-icon-name="Estilo macOS"
+            class="app-icon-choice active group flex flex-col items-center p-4 rounded-2xl bg-macos-blue/12 border-2 border-macos-blue transition-all hover:-translate-y-0.5 text-center">
+            <img src="assets/app-icon-macos.png" alt="Ícono Estilo macOS" class="w-16 h-16 sm:w-20 sm:h-20 object-contain drop-shadow-md group-hover:scale-105 transition-transform" />
+            <span class="mt-3 text-sm font-bold text-slate-950 dark:text-white">Estilo macOS</span>
+            <span class="text-[11px] text-slate-500 dark:text-slate-400">Azul nativo Apple</span>
+          </button>
+
+          <button type="button" data-app-icon-src="assets/app-icon-mono-dark.png" data-app-icon-name="Mono Oscuro"
+            class="app-icon-choice group flex flex-col items-center p-4 rounded-2xl bg-slate-900/[0.03] dark:bg-white/[0.04] border border-slate-900/10 dark:border-white/10 transition-all hover:-translate-y-0.5 hover:border-macos-blue/50 text-center">
+            <img src="assets/app-icon-mono-dark.png" alt="Ícono Mono Oscuro" class="w-16 h-16 sm:w-20 sm:h-20 object-contain drop-shadow-md group-hover:scale-105 transition-transform" />
+            <span class="mt-3 text-sm font-bold text-slate-950 dark:text-white">Mono Oscuro</span>
+            <span class="text-[11px] text-slate-500 dark:text-slate-400">Blanco sobre negro</span>
+          </button>
+
+          <button type="button" data-app-icon-src="assets/app-icon-mono-light.png" data-app-icon-name="Mono Claro"
+            class="app-icon-choice group flex flex-col items-center p-4 rounded-2xl bg-slate-900/[0.03] dark:bg-white/[0.04] border border-slate-900/10 dark:border-white/10 transition-all hover:-translate-y-0.5 hover:border-macos-blue/50 text-center">
+            <img src="assets/app-icon-mono-light.png" alt="Ícono Mono Claro" class="w-16 h-16 sm:w-20 sm:h-20 object-contain drop-shadow-md group-hover:scale-105 transition-transform" />
+            <span class="mt-3 text-sm font-bold text-slate-950 dark:text-white">Mono Claro</span>
+            <span class="text-[11px] text-slate-500 dark:text-slate-400">Negro sobre blanco</span>
+          </button>
+
+          <button type="button" data-app-icon-src="assets/app-icon-glass-layers.png" data-app-icon-name="Capas Cristal"
+            class="app-icon-choice group flex flex-col items-center p-4 rounded-2xl bg-slate-900/[0.03] dark:bg-white/[0.04] border border-slate-900/10 dark:border-white/10 transition-all hover:-translate-y-0.5 hover:border-macos-blue/50 text-center">
+            <img src="assets/app-icon-glass-layers.png" alt="Ícono Capas Cristal" class="w-16 h-16 sm:w-20 sm:h-20 object-contain drop-shadow-md group-hover:scale-105 transition-transform" />
+            <span class="mt-3 text-sm font-bold text-slate-950 dark:text-white">Capas Cristal</span>
+            <span class="text-[11px] text-slate-500 dark:text-slate-400">Cristal nocturno</span>
+          </button>
+
+          <button type="button" data-app-icon-src="assets/app-icon.png" data-app-icon-name="Clásico"
+            class="app-icon-choice col-span-2 sm:col-span-1 group flex flex-col items-center p-4 rounded-2xl bg-slate-900/[0.03] dark:bg-white/[0.04] border border-slate-900/10 dark:border-white/10 transition-all hover:-translate-y-0.5 hover:border-macos-blue/50 text-center">
+            <img src="assets/app-icon.png" alt="Ícono Clásico" class="w-16 h-16 sm:w-20 sm:h-20 object-contain drop-shadow-md group-hover:scale-105 transition-transform" />
+            <span class="mt-3 text-sm font-bold text-slate-950 dark:text-white">Clásico</span>
+            <span class="text-[11px] text-slate-500 dark:text-slate-400">Original a color</span>
+          </button>
+        </div>
+      </div>
     </section>
 
     <!-- =========================================================
@@ -545,7 +664,7 @@
           <button type="button" data-demo-filter="gifs"
             class="demo-filter-btn active px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all bg-macos-blue text-white shadow-sm inline-flex items-center gap-1.5">
             <span class="w-1.5 h-1.5 rounded-full bg-emerald-300"></span>
-            En movimiento (6)
+            En movimiento (12)
           </button>
           <button type="button" data-demo-filter="screenshots"
             class="demo-filter-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white">
@@ -553,7 +672,7 @@
           </button>
           <button type="button" data-demo-filter="all"
             class="demo-filter-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white">
-            Todo (12)
+            Todo (18)
           </button>
         </div>
       </div>
@@ -594,12 +713,12 @@
             </p>
           </div>
           <div class="mt-6">
-            <a id="install-download-cta" href="https://github.com/romeroluisjavier/MacFileExplorer/raw/main/releases/MacFileExplorer-1.8.0.dmg"
+            <a id="install-download-cta" href="https://github.com/romeroluisjavier/MacFileExplorer/raw/main/releases/MacFileExplorer-1.8.1.dmg"
               class="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold text-white bg-gradient-to-b from-[#1A90FF] to-[#0071E3] hover:brightness-110 shadow-md shadow-macos-blue/25 transition-all">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v11m0 0-4-4m4 4 4-4M4 19h16"/>
               </svg>
-              <span id="install-download-label">Descargar v1.8.0 (.dmg)</span>
+              <span id="install-download-label">Descargar v1.8.1 (.dmg)</span>
             </a>
           </div>
         </div>
@@ -811,6 +930,69 @@
       });
     });
 
+    // 2B. Interruptores interactivos demostrativos («Activá solo lo que necesitás»)
+    const modularButtons = document.querySelectorAll('.modular-toggle-btn');
+    const modularCounter = document.getElementById('modular-counter');
+    function refreshModularCounter() {
+      if (!modularCounter) return;
+      const activeCount = Array.from(modularButtons).filter((b) => b.dataset.modularToggle === 'true').length;
+      modularCounter.textContent = `${activeCount} de ${modularButtons.length} activas`;
+    }
+    modularButtons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const nextOn = btn.dataset.modularToggle !== 'true';
+        btn.dataset.modularToggle = nextOn ? 'true' : 'false';
+        const track = btn.querySelector('.toggle-track');
+        const thumb = btn.querySelector('.toggle-thumb');
+        if (nextOn) {
+          btn.classList.remove('text-slate-500', 'dark:text-slate-400', 'bg-white/60', 'dark:bg-white/[0.04]');
+          btn.classList.add('text-slate-800', 'dark:text-white', 'bg-white/80', 'dark:bg-white/[0.07]');
+          track.classList.remove('bg-slate-300', 'dark:bg-white/20');
+          track.classList.add('bg-macos-blue');
+          thumb.classList.remove('translate-x-0.5');
+          thumb.classList.add('translate-x-3.5');
+        } else {
+          btn.classList.add('text-slate-500', 'dark:text-slate-400', 'bg-white/60', 'dark:bg-white/[0.04]');
+          btn.classList.remove('text-slate-800', 'dark:text-white', 'bg-white/80', 'dark:bg-white/[0.07]');
+          track.classList.add('bg-slate-300', 'dark:bg-white/20');
+          track.classList.remove('bg-macos-blue');
+          thumb.classList.add('translate-x-0.5');
+          thumb.classList.remove('translate-x-3.5');
+        }
+        refreshModularCounter();
+      });
+    });
+
+    // 2C. Selector interactivo de los 5 íconos de la app (actualiza Dock demo, barra y favicon)
+    const appIconChoices = document.querySelectorAll('.app-icon-choice');
+    const dockLiveIcon = document.getElementById('dock-live-icon');
+    const dockLiveLabel = document.getElementById('dock-live-label');
+    const navAppIcon = document.getElementById('nav-app-icon');
+    const pageFavicon = document.getElementById('page-favicon');
+    appIconChoices.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        appIconChoices.forEach((b) => {
+          b.classList.remove('active', 'bg-macos-blue/12', 'border-2', 'border-macos-blue');
+          b.classList.add('bg-slate-900/[0.03]', 'dark:bg-white/[0.04]', 'border', 'border-slate-900/10', 'dark:border-white/10');
+        });
+        btn.classList.add('active', 'bg-macos-blue/12', 'border-2', 'border-macos-blue');
+        btn.classList.remove('bg-slate-900/[0.03]', 'dark:bg-white/[0.04]', 'border', 'border-slate-900/10', 'dark:border-white/10');
+
+        const src = btn.dataset.appIconSrc;
+        const name = btn.dataset.appIconName;
+        if (dockLiveIcon) {
+          dockLiveIcon.style.transform = 'scale(0.86)';
+          setTimeout(() => {
+            dockLiveIcon.src = src;
+            dockLiveIcon.style.transform = 'scale(1)';
+          }, 90);
+        }
+        if (dockLiveLabel) dockLiveLabel.textContent = `Vista previa en Dock: ${name}`;
+        if (navAppIcon) navAppIcon.src = src;
+        if (pageFavicon) pageFavicon.href = src;
+      });
+    });
+
     // 3. Galería amigable (En movimiento + Imágenes)
     const DEMO_ITEMS = [
       {
@@ -830,6 +1012,30 @@
         desc: 'Presioná Opción + Tab para ver todas tus ventanas abiertas en una cuadrícula clara, buscar por nombre al instante y cerrar o minimizar sin perder tiempo.'
       },
       {
+        id: 'taskbar-animations-gif',
+        type: 'gifs',
+        badge: 'Animaciones',
+        title: 'Configuración de animaciones de la Barra de tareas',
+        src: 'assets/taskbar-animations-demo.gif',
+        desc: 'Elegí en vivo entre 6 animaciones para avisos con globo rojo (Salto, Campana, Latido, Destello, Onda y Bamboleo) y 4 animaciones para la vista previa de ventanas.'
+      },
+      {
+        id: 'start-button-icon-gif',
+        type: 'gifs',
+        badge: 'Botón Inicio',
+        title: 'Elegí el ícono del botón Inicio a tu gusto',
+        src: 'assets/start-button-icon-demo.gif',
+        desc: 'Cambiá el ícono de la esquina inferior izquierda entre 12 estilos (Cuadrícula, Apps de macOS, Apple, Comando ⌘ y variantes modernas) viéndolo actualizarse al instante.'
+      },
+      {
+        id: 'alttab-settings-gif',
+        type: 'gifs',
+        badge: 'AltTab',
+        title: 'Configuración de AltTab (3 diseños y opciones)',
+        src: 'assets/alttab-settings-demo.gif',
+        desc: 'Personalizá AltTab en segundos: alterná entre vista de Miniaturas, Íconos grandes o Lista compacta, activá la vista previa a pantalla completa y elegí tus atajos.'
+      },
+      {
         id: 'startmenu-gif',
         type: 'gifs',
         badge: 'Menú Inicio',
@@ -838,12 +1044,36 @@
         desc: 'Abrí tus aplicaciones fijadas, tus carpetas favoritas o encontrá cualquier programa de tu Mac escribiendo sus primeras letras desde la esquina inferior izquierda.'
       },
       {
+        id: 'clipboard-gif',
+        type: 'gifs',
+        badge: 'Portapapeles',
+        title: 'Historial del Portapapeles siempre a mano',
+        src: 'assets/clipboard-history-demo.gif',
+        desc: 'Abrí todo lo que copiaste (textos, enlaces, imágenes y archivos) desde cualquier programa con ⌃⌘V, elegí el que necesitás y pegalo al instante.'
+      },
+      {
+        id: 'advanced-search-gif',
+        type: 'gifs',
+        badge: 'Búsqueda avanzada',
+        title: 'Búsqueda avanzada dentro de fotos y PDFs',
+        src: 'assets/advanced-search-demo.gif',
+        desc: 'Activá filtros por tipo de archivo y buscá palabras que aparecen incluso adentro de facturas PDF o fotos sacadas con el celular.'
+      },
+      {
+        id: 'view-modes-gif',
+        type: 'gifs',
+        badge: 'Explorador',
+        title: 'Usá vista de Lista o Miniaturas con zoom',
+        src: 'assets/view-modes-demo.gif',
+        desc: 'Cambiá con un clic entre la vista detallada en Lista o la galería de Miniaturas grandes y ajustá el tamaño suavemente con el control inferior.'
+      },
+      {
         id: 'nav-gif',
         type: 'gifs',
         badge: 'Explorador',
         title: 'Navegación rápida entre tus carpetas',
         src: 'assets/navigation-demo.gif',
-        desc: 'Recorré tus carpetas con fluidez y cambiá en un clic entre vista de lista detallada o galería de íconos grandes.'
+        desc: 'Recorré tus carpetas con fluidez usando pestañas, barra lateral de accesos rápidos y barra de direcciones editable.'
       },
       {
         id: 'search-gif',
@@ -851,7 +1081,7 @@
         badge: 'Buscador',
         title: 'Encontrá archivos mientras escribís',
         src: 'assets/search-filter-demo.gif',
-        desc: 'Escribí parte del nombre o una palabra que está dentro de un documento o foto y filtrá tus resultados al instante.'
+        desc: 'Escribí unas letras para filtrar tus carpetas en vivo y llegar en un segundo al documento o imagen que estabas buscando.'
       },
       {
         id: 'dup-gif',
@@ -1033,10 +1263,22 @@
     // 6. Historial de novedades en lenguaje claro y cotidiano
     const STATIC_RELEASES = [
       {
+        tag: 'v1.8.1',
+        date: '24 nov 2026',
+        title: 'Súper liviana en tu Mac (Apple Silicon) y 4 nuevos íconos a elección',
+        latest: true,
+        dmgUrl: `https://github.com/${REPO_OWNER}/${REPO_NAME}/raw/main/releases/MacFileExplorer-1.8.1.dmg`,
+        highlights: [
+          'Gran mejora de rendimiento y batería en Mac con chip M1, M2, M3 y M4: la app prácticamente no consume procesador cuando está en reposo.',
+          '4 nuevos diseños de ícono para MacFileExplorer (Estilo macOS azul nativo, Mono Oscuro, Mono Claro y Capas Cristal) además del Clásico, elegibles al instante para tu Dock.',
+          'Podés cambiar el ícono desde el menú MacFileExplorer → Ícono de la aplicación, desde Acerca de MacFileExplorer o desde Configuración de la Barra de tareas.'
+        ]
+      },
+      {
         tag: 'v1.8.0',
         date: '24 nov 2026',
         title: 'Barra de tareas estilo Windows, Menú Inicio y Selector rápido AltTab',
-        latest: true,
+        latest: false,
         dmgUrl: `https://github.com/${REPO_OWNER}/${REPO_NAME}/raw/main/releases/MacFileExplorer-1.8.0.dmg`,
         highlights: [
           'Nueva Barra de tareas inferior con Menú Inicio, soporte para varios monitores, apps fijadas, 12 íconos elegibles para el botón Inicio y orden fijo al minimizar o restaurar.',

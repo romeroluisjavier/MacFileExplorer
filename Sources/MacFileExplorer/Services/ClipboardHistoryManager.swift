@@ -405,11 +405,13 @@ public final class ClipboardHistoryManager {
     private func startPollingIfNeeded() {
         guard pollTimer == nil else { return }
         lastObservedChangeCount = NSPasteboard.general.changeCount
-        let timer = Timer.scheduledTimer(withTimeInterval: 0.45, repeats: true) { [weak self] _ in
-            Task { @MainActor [weak self] in
+        // Intervalo eficiente con tolerancia para aprovechar timer coalescing de Apple Silicon sin perder inmediatez
+        let timer = Timer(timeInterval: 0.85, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated {
                 self?.checkGeneralPasteboardIfChanged()
             }
         }
+        timer.tolerance = 0.25
         RunLoop.main.add(timer, forMode: .common)
         pollTimer = timer
     }

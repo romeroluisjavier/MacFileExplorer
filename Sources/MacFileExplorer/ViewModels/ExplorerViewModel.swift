@@ -484,7 +484,7 @@ public final class ExplorerViewModel {
     }
 
     private func scheduleBackgroundOCRIndexing(for directoryURL: URL, items: [FileItem]) {
-        Task(priority: .utility) {
+        Task(priority: .background) {
             await OCRIndexCacheService.shared.scheduleBackgroundIndexing(for: directoryURL, items: items)
         }
     }

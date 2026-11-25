@@ -5,18 +5,17 @@ Un explorador de archivos nativo, ágil y moderno para macOS, inspirado en la pr
 ![macOS 14+](https://img.shields.io/badge/macOS-14.0%2B-blue?logo=apple)
 ![Swift 6](https://img.shields.io/badge/Swift-6.0-orange?logo=swift)
 ![Architecture](https://img.shields.io/badge/Architecture-Universal%20(Apple%20Silicon%20%2B%20Intel)-brightgreen)
-![Release](https://img.shields.io/badge/Release-v1.8.0-blueviolet)
+![Release](https://img.shields.io/badge/Release-v1.8.1-blueviolet)
 
 🌐 **Sitio web oficial con demos en vivo e instalación paso a paso:** [romeroluisjavier.github.io/MacFileExplorer](https://romeroluisjavier.github.io/MacFileExplorer/)
 
 ---
 
-## ✨ Novedades recientes (v1.8.0)
+## ✨ Novedades recientes (v1.8.1)
 
-- 🖥️ **Barra de tareas estilo Windows y Menú Inicio (`Barra de tareas`)**: activá una barra inferior opcional (multimonitor hasta 5 pantallas y sincronizada con Spaces) con un botón por ventana, apps abiertas sin ventana (como VS Code), aplicaciones fijadas, **12 íconos personalizables para el botón Inicio** (con animación hover), **6 animaciones de notificaciones** para globos rojos (Slack, Mail, WhatsApp/PWAs) y **Menú Inicio** con buscador instantáneo.
-- 🪟 **Vistas previas al pasar el cursor con 4 animaciones seleccionables**: miniaturas de tamaño fijo con carga anticipada y 4 estilos con previsualización en vivo en Configuración (**Suave**, **Desde la barra**, **Rebote elástico** y **Giro 3D**).
-- ⚡ **Selector rápido de ventanas AltTab (`⌥ + Tab` / menú `AltTab`)**: vista panorámica de todas tus ventanas abiertas (incluyendo minimizadas y otros escritorios) con 3 estilos visuales (Miniaturas, Íconos o Lista), vista previa a tamaño completo, buscador integrado y atajos rápidos para cerrar o minimizar.
-- 🧠 **Todo lo de v1.7.0 incluido**: índice OCR automático en segundo plano, gestor de caché oculta (`.macfileexplorer`), guía interactiva en Ayuda (`⌘?`), barra de direcciones editable y Quick Actions multimedia.
+- ⚡ **Optimización integral de CPU y energía para Apple Silicon (M1/M2/M3/M4)**: consumo en reposo reducido a **`~0,0% – 0,2%` CPU** y **`0–1` Idle Wake Ups** (OCR en segundo plano sobre núcleos de eficiencia sin bucles de recarga del watcher, cierre limpio de vistas previas animadas en Configuración, cero `CVDisplayLink` en reposo en la Barra de tareas, `isAppRunning` en caché O(1) y timers coalescidos).
+- 🎨 **4 nuevos íconos para MacFileExplorer + selector en macOS (5 diseños en total)**: elegí entre **Clásico**, **Estilo macOS**, **Mono Oscuro**, **Mono Claro** y **Capas Cristal** desde `MacFileExplorer → Ícono de la aplicación`, *Acerca de MacFileExplorer* o *Configuración de la Barra de tareas → Apariencia* con aplicación inmediata en Dock, `⌘+Tab`, Barra de tareas y AltTab.
+- 🖥️ **Barra de tareas estilo Windows, Menú Inicio y Selector AltTab (`v1.8.0` incluido)**: todo opcional (activable/desactivable a gusto) con 12 íconos de Inicio, 6 animaciones de notificaciones, 4 animaciones de vista previa (*Suave*, *Desde la barra*, *Rebote elástico* y *Giro 3D*) y selector rápido `⌥ + Tab`.
 
 ---
 
@@ -53,12 +52,12 @@ Un explorador de archivos nativo, ágil y moderno para macOS, inspirado en la pr
 
 ### 1. Descargar el instalador
 Descarga la versión más reciente en formato `.dmg` directamente desde este repositorio:
-- 👉 **[Descargar MacFileExplorer-1.8.0.dmg](https://github.com/romeroluisjavier/MacFileExplorer/raw/main/releases/MacFileExplorer-1.8.0.dmg)** *(ubicado en la carpeta [`releases/`](./releases) — también podés ver el historial en [`releases/README.md`](./releases/README.md))*
+- 👉 **[Descargar MacFileExplorer-1.8.1.dmg](https://github.com/romeroluisjavier/MacFileExplorer/raw/main/releases/MacFileExplorer-1.8.1.dmg)** *(ubicado en la carpeta [`releases/`](./releases) — también podés ver el historial en [`releases/README.md`](./releases/README.md))*
 
 ---
 
 ### 2. Instalación en tu Mac
-1. Haz doble clic en el archivo descargado **`MacFileExplorer-1.8.0.dmg`**.
+1. Haz doble clic en el archivo descargado **`MacFileExplorer-1.8.1.dmg`**.
 2. Arrastra el icono de **MacFileExplorer** a la carpeta **Applications** (Aplicaciones).
 
 ---

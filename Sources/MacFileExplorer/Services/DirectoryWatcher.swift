@@ -1,6 +1,38 @@
 import Foundation
 import CoreServices
 
+/// Registro ligero thread-safe para suprimir falsos disparos de `kqueue`/`FSEvents` causados
+/// por nuestras propias escrituras internas de caché (`.macfileexplorer_*.cache`).
+private final class InternalCacheWriteSuppressor: @unchecked Sendable {
+    static let shared = InternalCacheWriteSuppressor()
+
+    private let lock = NSLock()
+    private var suppressedUntilByPath: [String: CFAbsoluteTime] = [:]
+
+    func suppress(path: String, duration: TimeInterval) {
+        let now = CFAbsoluteTimeGetCurrent()
+        let deadline = now + duration
+        lock.lock()
+        suppressedUntilByPath[path] = max(suppressedUntilByPath[path] ?? 0, deadline)
+        if suppressedUntilByPath.count > 96 {
+            suppressedUntilByPath = suppressedUntilByPath.filter { $0.value > now }
+        }
+        lock.unlock()
+    }
+
+    func isSuppressed(path: String) -> Bool {
+        let now = CFAbsoluteTimeGetCurrent()
+        lock.lock()
+        defer { lock.unlock() }
+        guard let deadline = suppressedUntilByPath[path] else { return false }
+        if deadline > now {
+            return true
+        }
+        suppressedUntilByPath.removeValue(forKey: path)
+        return false
+    }
+}
+
 /// Monitor de cambios en tiempo real para una carpeta usando `FSEventStream` (`CoreServices`)
 /// y `DispatchSourceFileSystemObject` (`O_EVTONLY`) sobre el hilo principal.
 @MainActor
@@ -8,6 +40,18 @@ public final class DirectoryWatcher {
     private nonisolated(unsafe) var source: DispatchSourceFileSystemObject?
     private nonisolated(unsafe) var eventStream: FSEventStreamRef?
     private let fsEventBox: FSEventCallbackBox?
+
+    /// Marca brevemente una carpeta para ignorar eventos de inodo provocados por nuestras escrituras
+    /// de archivos ocultos `.macfileexplorer_*.cache`, evitando bucles de recarga en reposo.
+    public nonisolated static func suppressInternalCacheWrites(in directoryURL: URL, duration: TimeInterval = 1.6) {
+        let resolved = directoryURL.resolvingSymlinksInPath().standardizedFileURL
+        let path = normalizedPath(resolved.path(percentEncoded: false))
+        InternalCacheWriteSuppressor.shared.suppress(path: path, duration: duration)
+    }
+
+    public nonisolated static func isInternallySuppressed(path: String) -> Bool {
+        InternalCacheWriteSuppressor.shared.isSuppressed(path: normalizedPath(path))
+    }
 
     public init?(
         url: URL,
@@ -26,6 +70,9 @@ public final class DirectoryWatcher {
             )
             src.setEventHandler {
                 MainActor.assumeIsolated {
+                    if DirectoryWatcher.isInternallySuppressed(path: watchedPath) {
+                        return
+                    }
                     onChange()
                 }
             }
@@ -67,7 +114,7 @@ public final class DirectoryWatcher {
                 &context,
                 pathsToWatch,
                 FSEventStreamEventId(kFSEventStreamEventIdSinceNow),
-                0.05,
+                0.18,
                 flags
             ) {
                 FSEventStreamSetDispatchQueue(stream, DispatchQueue.main)
@@ -165,7 +212,10 @@ private final class FSEventCallbackBox: @unchecked Sendable {
                 : rawPath
 
             if cleanPath == watchedRootPath {
-                return true
+                if !DirectoryWatcher.isInternallySuppressed(path: watchedRootPath) {
+                    return true
+                }
+                continue
             }
 
             if watchedRootPath == "/" {
