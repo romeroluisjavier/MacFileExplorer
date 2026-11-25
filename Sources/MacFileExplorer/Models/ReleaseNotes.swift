@@ -77,6 +77,111 @@ public struct ReleaseNoteSection: Identifiable, Sendable {
 public enum ReleaseNotesCatalog {
     public static let sections: [ReleaseNoteSection] = [
         ReleaseNoteSection(
+            id: "v2.5.0-office-quicklook-media-actions-taskbar-upgrades",
+            versionLabelES: "Versión 2.5.0 — Editor Office y CSV con selección por arrastre, Vista Rápida libre con Acciones rápidas y Copiar, Barra de tareas avanzada e ícono rojo PDF",
+            versionLabelEN: "Version 2.5.0 — Office & CSV Editor with Drag-Select, Free Quick Look with Media Quick Actions & Copy, Advanced Taskbar & Red PDF Icon",
+            dateLabelES: "25 nov 2026",
+            dateLabelEN: "Nov 25, 2026",
+            items: [
+                ReleaseNoteItem(
+                    id: "quicklook-media-quick-actions-and-copy-bar",
+                    icon: "wand.and.stars",
+                    titleES: "Acciones rápidas y Copiar directo dentro de la Vista Rápida de imágenes y videos",
+                    titleEN: "Quick Actions & Copy Directly Inside Image and Video Previews",
+                    summaryES: "Al previsualizar una imagen o un video con Espacio ahora tenés una barra superior con las mismas Acciones rápidas del menú contextual y un botón de Copiar (también con ⌘C). En imágenes podés copiar imagen y archivo en un clic (o elegir solo imagen / solo archivo para pegar directo en chats, documentos o carpetas), eliminar el fondo a PNG transparente, convertir a JPG/PNG, rotar 90° a izquierda/derecha o 180° viendo el resultado al instante, y limpiar metadatos privados. En videos podés copiar el archivo, convertir a MP4, recortar (Trim) con vista previa, eliminar el audio (silenciar) y limpiar metadatos sin salir de la ventana de Vista Rápida.",
+                    summaryEN: "When previewing an image or video with Space, you now get a dedicated bar with the exact same Quick Actions from the right-click menu plus a Copy button (and ⌘C shortcut). For images, copy both the image and file in one click (or choose image-only / file-only for chats, documents, or folders), remove the background into a transparent PNG, convert to JPG/PNG, rotate 90° left/right or 180° with instant live refresh, and strip private metadata. For videos, copy the file, convert to MP4, trim with live preview, mute audio, and strip metadata right inside the Quick Look window."
+                ),
+                ReleaseNoteItem(
+                    id: "pdf-distinctive-red-acrobat-style-icon",
+                    icon: "doc.richtext.fill",
+                    titleES: "Nuevo ícono rojo estilo Acrobat para archivos PDF",
+                    titleEN: "New Distinctive Red Acrobat-Style Icon for PDF Files",
+                    summaryES: "Los archivos PDF ahora muestran un ícono rojo nítido estilo Acrobat Reader en lugar del ícono azul genérico de Vista Previa de macOS, permitiendo distinguir a simple vista tus documentos PDF de las imágenes PNG/JPG tanto en la lista de archivos como en la barra de Vista Rápida, Propiedades, historial del portapapeles y al arrastrar archivos.",
+                    summaryEN: "PDF files now display a crisp, unmistakable red Acrobat-style icon instead of macOS Preview's generic blue icon, making it effortless to tell PDF documents apart from PNG/JPG images at a glance across file lists, the Quick Look header bar, Properties, clipboard history, and file dragging."
+                ),
+                ReleaseNoteItem(
+                    id: "quicklook-free-independent-window-movement",
+                    icon: "macwindow.on.rectangle",
+                    titleES: "Movimiento libre de la ventana de Vista Rápida fuera de MacFileExplorer y entre monitores",
+                    titleEN: "Move Quick Look Preview Freely Outside MacFileExplorer & Across Displays",
+                    summaryES: "La ventana de Vista Rápida (Espacio) ahora es completamente independiente de la ventana principal de MacFileExplorer: podés arrastrarla con suavidad desde su barra superior hacia cualquier parte de la pantalla, colocarla al costado del explorador o llevarla a otro monitor sin que se frene ni quede atada a la ventana original, manteniendo todos los atajos (Espacio, Esc y flechas) y recordando su última ubicación.",
+                    summaryEN: "The Quick Look preview window (Space) is now fully independent from the main MacFileExplorer window: drag it smoothly by its top bar anywhere on screen, place it side by side next to the explorer, or move it onto another display without getting stuck or tethered to the parent window, while keeping all shortcuts (Space, Esc, and arrow keys) and remembering its last position."
+                ),
+                ReleaseNoteItem(
+                    id: "spreadsheet-mouse-drag-range-selection",
+                    icon: "rectangle.dashed",
+                    titleES: "Selección de múltiples filas y columnas arrastrando con el mouse en CSV y Excel",
+                    titleEN: "Drag-Select Multiple Rows & Columns with the Mouse in CSV & Excel Previews",
+                    summaryES: "Dentro de la vista previa y editor de planillas CSV y Excel (.xlsx / .xls) ahora podés hacer clic y arrastrar con el mouse sobre las celdas para seleccionar cualquier bloque rectangular de filas y columnas con desplazamiento automático en los bordes. También podés arrastrar sobre los números de fila (#) para seleccionar varias filas completas o sobre los encabezados de columna (A, B, C…) para seleccionar varias columnas enteras, ver el rango seleccionado (ej. D3:G14) y sus dimensiones junto a Conteo/Suma/Promedio en vivo, copiar directo a Excel o Google Sheets (⌘C) y rellenar el rango pegando un valor (⌘V).",
+                    summaryEN: "Inside CSV and Excel (.xlsx / .xls) previews and editors, you can now click and drag with your mouse across cells to select any rectangular block of rows and columns with smooth edge auto-scrolling. You can also drag down row numbers (#) to select multiple entire rows or across column headers (A, B, C…) to select entire columns, see the active range (e.g. D3:G14) and dimensions alongside live Count/Sum/Avg stats, copy cleanly to Excel or Google Sheets (⌘C), and fill the range when pasting a single value (⌘V)."
+                ),
+                ReleaseNoteItem(
+                    id: "taskbar-icons-only-and-compact-minimized-windows",
+                    icon: "app.dashed",
+                    titleES: "Modo «Solo íconos» y ventanas minimizadas compactas en la Barra de tareas",
+                    titleEN: "Icons-Only Mode & Compact Icon-Only Minimized Windows on the Taskbar",
+                    summaryES: "Ahora podés configurar fácilmente desde Configuración → Apariencia, el menú superior «Barra de tareas» o con clic derecho directo sobre la barra si querés ver todas las ventanas como «Solo íconos», o bien mantener el título en las ventanas abiertas y compactar únicamente las ventanas minimizadas u ocultas a solo su ícono — ahorrando espacio y dejando más lugar libre para los títulos de las ventanas que estás usando.",
+                    summaryEN: "You can now easily choose from Taskbar Settings → Appearance, the top \"Taskbar\" menu, or right-clicking directly on the bar whether to show all windows as \"Icons Only\", or keep titles on open windows while collapsing minimized or hidden windows to icon-only buttons — saving space and giving more room to the windows you are actively using."
+                ),
+                ReleaseNoteItem(
+                    id: "taskbar-drag-hover-spring-load-apps",
+                    icon: "hand.point.up.left.and.text",
+                    titleES: "Abrir apps desde la Barra de tareas mientras arrastrás un archivo",
+                    titleEN: "Open Apps from the Taskbar While Dragging a File",
+                    summaryES: "Al arrastrar uno o varios archivos (desde MacFileExplorer, Finder o cualquier otra app), solo tenés que apoyar el puntero sobre una aplicación o ventana de la barra inferior y quedarte quieto 1 segundo: verás una barra de progreso en el botón y automáticamente esa ventana pasará al frente — incluso si estaba minimizada u oculta — sin soltar el archivo, para que puedas subir el cursor y soltarlo directo adentro de esa app.",
+                    summaryEN: "While dragging one or more files (from MacFileExplorer, Finder, or any other app), simply hover and hold still for 1 second over any app or window button on the bottom Taskbar: a subtle progress bar fills along the button and that window automatically comes to the front — even if minimized or hidden — without dropping your file, so you can move straight up and drop it right inside that app."
+                ),
+                ReleaseNoteItem(
+                    id: "taskbar-keep-same-app-windows-side-by-side",
+                    icon: "rectangle.split.2x1",
+                    titleES: "Agrupación lado a lado de ventanas de la misma aplicación en la Barra de tareas",
+                    titleEN: "Keep Same-App Windows Side by Side on the Taskbar",
+                    summaryES: "Ahora podés activar en un clic (desde clic derecho en la Barra de tareas, el menú superior «Taskbar» o Configuración → General) la opción para mantener siempre juntas y una al lado de la otra todas las ventanas de una misma aplicación — por ejemplo, todas tus ventanas de Chrome. Cada ventana sigue teniendo su propio botón, las ventanas nuevas que abras más tarde se ubican automáticamente al lado de las existentes, las apps web (como Gemini o YouTube Music) se mantienen separadas, y al arrastrar una ventana hacia otra app se mueve todo el grupo junto.",
+                    summaryEN: "You can now toggle with one click (from right-clicking the Taskbar, the top \"Taskbar\" menu, or Taskbar Settings → General) keeping all windows of the same application side by side — for example, keeping all your Chrome windows next to each other. Each window keeps its own button, new windows opened later automatically appear right beside existing ones, web apps (like Gemini or YouTube Music) stay distinct, and dragging a window past another app moves its whole group together."
+                ),
+                ReleaseNoteItem(
+                    id: "office-menu-bar-settings-and-send-to-drive",
+                    icon: "menubar.dock.rectangle",
+                    titleES: "Nuevo menú superior «Office» para configurar edición en Vista Rápida y «Enviar a Drive»",
+                    titleEN: "New \"Office\" Menu Bar Menu for Quick Look Editing & \"Send to Drive\" Settings",
+                    summaryES: "Se agregó el menú «Office» en la barra superior de MacFileExplorer para centralizar todas las preferencias en un clic: activar o desactivar el modo edición en Vista Rápida, elegir si los documentos abren en Vista original o directo en Editor, habilitar o deshabilitar Word, Excel, PowerPoint y CSV por separado, configurar encabezados fijos y ajuste de texto en planillas, y controlar todo lo relacionado con «Enviar a Drive» (activarlo, elegir cuenta de Google, carpeta destino y si abrir Sheets/Docs/Slides dentro de la app o en Google Chrome externo).",
+                    summaryEN: "Added an \"Office\" menu to MacFileExplorer's top menu bar to manage everything in one place: enable or disable editing mode in Quick Look, choose whether documents open in Original View or Quick Editor by default, toggle Word, Excel, PowerPoint, and interactive CSV previews individually, configure frozen CSV headers and text wrapping, and control all \"Send to Drive\" options (enable/disable, default Google account, target folder, and opening Sheets/Docs/Slides inside MacFileExplorer or in external Google Chrome)."
+                ),
+                ReleaseNoteItem(
+                    id: "office-quicklook-libreoffice-editing-toolbar",
+                    icon: "doc.richtext.fill",
+                    titleES: "Edición rápida tipo Office / LibreOffice al previsualizar Word, Excel (.xlsx y .xls) y PowerPoint",
+                    titleEN: "Quick Office / LibreOffice-Style Editing When Previewing Word, Excel (.xlsx & .xls) & PowerPoint",
+                    summaryES: "Al tocar Espacio sobre documentos de Word, planillas de Excel (tanto modernas .xlsx como las versiones clásicas .xls, incluyendo exportaciones de bancos y sistemas) o presentaciones de PowerPoint ahora aparece una barra de herramientas práctica para editar sin salir del explorador: cambiar fuente, tamaño, negrita, cursiva, colores, alineación, listas, copiar y pegar texto o celdas, buscar y reemplazar, manejar hojas o diapositivas, editar notas del orador, convertir archivos .xls a .xlsx en un clic y elegir entre Guardar directamente (⌘S) o Guardar copia (⇧⌘S). Además podés alternar en un clic entre el modo Editor y la Vista original.",
+                    summaryEN: "Pressing Space on Word documents, Excel spreadsheets (both modern .xlsx and classic .xls files, including bank/ERP table exports), or PowerPoint presentations now opens a handy editing toolbar right inside Quick Look: change font, size, bold, italic, colors, alignment, lists, copy and paste text or cells, find and replace, switch sheets or slides, edit speaker notes, convert .xls files to .xlsx in one click, and choose between Save (⌘S) or Save Copy (⇧⌘S). You can also toggle between Editor mode and Original View in one click."
+                ),
+                ReleaseNoteItem(
+                    id: "interactive-csv-spreadsheet-preview",
+                    icon: "tablecells.fill",
+                    titleES: "Visor y editor interactivo de archivos CSV y TSV en Vista Rápida",
+                    titleEN: "Interactive CSV & TSV Spreadsheet Viewer and Editor in Quick Look",
+                    summaryES: "Los archivos CSV y TSV ahora se abren como una planilla interactiva completa sin necesidad de abrir otra aplicación: detecta automáticamente el separador (coma, punto y coma, tabulador o barra), congela los encabezados, permite filtrar filas en vivo, ordenar haciendo clic en cualquier columna, editar celdas con barra de valor, seleccionar rangos para copiar y pegar directo en Excel o Google Sheets, agregar o quitar filas y columnas, ver suma y promedio de lo seleccionado y guardar cambios o guardar una copia.",
+                    summaryEN: "CSV and TSV files now open as a full interactive spreadsheet without launching another app: it automatically detects delimiters (comma, semicolon, tab, or pipe), freezes headers, filters rows live, sorts by clicking any column, lets you edit cells with a formula/value bar, copy and paste cell ranges directly to Excel or Google Sheets, insert or delete rows and columns, inspect live sum/average stats on selected numbers, and save changes or save a copy."
+                ),
+                ReleaseNoteItem(
+                    id: "send-to-drive-auto-open-google-editors",
+                    icon: "icloud.and.arrow.up.fill",
+                    titleES: "«Enviar a Drive» automático con apertura en MacFileExplorer o Google Chrome externo",
+                    titleEN: "Automatic \"Send to Drive\" Opening in MacFileExplorer or External Google Chrome",
+                    summaryES: "Tanto desde Vista Rápida como haciendo clic derecho sobre cualquier archivo podés elegir «Enviar a Drive»: usa tu cuenta de Gmail conectada para subir automáticamente el archivo a la carpeta de Drive que elijas (incluso al volver a subir archivos varias veces seguidas sin abrir ventanas del Finder) y lo abre directo en Google Sheets, Docs o Slides. Si elegís «Google Chrome externo», el progreso y el aviso de apertura se muestran de forma discreta en la barra de estado inferior del Explorador sin mover la lista de archivos, y el documento se abre directo en una pestaña nueva de Chrome externo con tu misma cuenta.",
+                    summaryEN: "From both Quick Look and the right-click menu on any file, choose \"Send to Drive\" to use your connected Gmail account to upload the file straight to your chosen Drive folder (reliably across repeated uploads without ever popping up Finder dialogs) and open it right away in Google Sheets, Docs, or Slides. When \"External Google Chrome\" is selected, upload progress and completion status appear neatly in the bottom status bar of your Explorer without shifting the file list, and the document opens straight in a new external Chrome tab under your same Google account."
+                ),
+                ReleaseNoteItem(
+                    id: "taskbar-top-divider-and-5-visual-settings",
+                    icon: "paintbrush.pointed.fill",
+                    titleES: "Línea divisoria superior opcional y 5 nuevos ajustes visuales para la Barra de tareas",
+                    titleEN: "Optional Top Divider Line & 5 New Visual Appearance Controls for the Taskbar",
+                    summaryES: "En Configuración de la barra → Apariencia ahora podés activar o desactivar la línea divisoria que aparece arriba de la barra y personalizar 5 detalles visuales más en tiempo real: elegir entre barra acoplada al borde o Isla flotante redondeada, cambiar el material de fondo (Vidrio esmerilado, Cristal translúcido o Sólido), elegir el estilo de los botones (Tarjeta, Píldora o Sin borde), cambiar la forma del indicador de ventana activa (Píldora, Barra completa, Punto u Oculto) y personalizar su color entre 6 tonos.",
+                    summaryEN: "In Taskbar Settings → Appearance you can now show or hide the top divider line above the taskbar and customize 5 additional visual details live: switch between Edge-to-Edge or rounded Floating Island bar style, choose the background material (Frosted Glass, Crystal Translucent, or Solid Matte), pick the window button shape (Card, Pill, or Borderless), customize the active window indicator style (Pill, Full Bar, Dot, or Hidden), and pick from 6 active indicator accent colors."
+                )
+            ]
+        ),
+        ReleaseNoteSection(
             id: "v2.0.0-start-menu-animations-instant-navigation-bilingual",
             versionLabelES: "Versión 2.0.0 — 8 animaciones en el Menú Inicio, carpetas instantáneas y traducción total",
             versionLabelEN: "Version 2.0.0 — 8 Start Menu Animations, Instant Folder Switching & Full Bilingual Polish",

@@ -1,6 +1,7 @@
 import AppKit
 import CoreGraphics
 import Foundation
+import SwiftUI
 
 // MARK: - Enumeraciones de Configuración de la Barra de Tareas
 
@@ -256,6 +257,29 @@ public enum TaskbarFocusedClickAction: String, CaseIterable, Identifiable, Codab
         case .minimizeWindow: return loc.text(es: "Minimizar ventana", en: "Minimize Window")
         case .hideApp: return loc.text(es: "Ocultar aplicación", en: "Hide Application")
         case .doNothing: return loc.text(es: "No hacer nada", en: "Do Nothing")
+        }
+    }
+}
+
+/// Modo de visualización de las ventanas minimizadas u ocultas cuando la barra muestra títulos.
+public enum TaskbarMinimizedWindowDisplayMode: String, CaseIterable, Identifiable, Codable, Sendable {
+    case sameAsNormal
+    case iconOnly
+
+    public var id: String { rawValue }
+
+    @MainActor
+    public func localizedTitle(using loc: LocalizationManager = .shared) -> String {
+        switch self {
+        case .sameAsNormal: return loc.text(es: "Como ahora (con título)", en: "Same as open (with title)")
+        case .iconOnly: return loc.text(es: "Solo ícono", en: "Icon only")
+        }
+    }
+
+    public var systemImage: String {
+        switch self {
+        case .sameAsNormal: return "rectangle.leadinghalf.inset.filled"
+        case .iconOnly: return "app.dashed"
         }
     }
 }
@@ -560,6 +584,119 @@ public enum TaskbarStartMenuAnimation: String, CaseIterable, Identifiable, Codab
     }
 }
 
+/// Geometría visual de la barra de tareas: acoplada al borde inferior o isla flotante redondeada.
+public enum TaskbarBarStyle: String, CaseIterable, Identifiable, Codable, Sendable {
+    case docked
+    case floatingIsland
+
+    public var id: String { rawValue }
+
+    @MainActor
+    public func localizedTitle(using loc: LocalizationManager = .shared) -> String {
+        switch self {
+        case .docked: return loc.text(es: "Acoplada al borde", en: "Edge-to-Edge")
+        case .floatingIsland: return loc.text(es: "Isla flotante", en: "Floating Island")
+        }
+    }
+}
+
+/// Material / desenfoque de fondo de la barra de tareas.
+public enum TaskbarBackgroundMaterial: String, CaseIterable, Identifiable, Codable, Sendable {
+    case frostedGlass
+    case crystalBlur
+    case solid
+
+    public var id: String { rawValue }
+
+    @MainActor
+    public func localizedTitle(using loc: LocalizationManager = .shared) -> String {
+        switch self {
+        case .frostedGlass: return loc.text(es: "Vidrio esmerilado", en: "Frosted Glass")
+        case .crystalBlur: return loc.text(es: "Cristal translúcido", en: "Crystal Translucent")
+        case .solid: return loc.text(es: "Sólido", en: "Solid Matte")
+        }
+    }
+}
+
+/// Estilo visual de los botones de ventanas en la barra de tareas.
+public enum TaskbarButtonStyle: String, CaseIterable, Identifiable, Codable, Sendable {
+    case roundedCard
+    case pill
+    case minimalBorderless
+
+    public var id: String { rawValue }
+
+    @MainActor
+    public func localizedTitle(using loc: LocalizationManager = .shared) -> String {
+        switch self {
+        case .roundedCard: return loc.text(es: "Tarjeta", en: "Card")
+        case .pill: return loc.text(es: "Píldora", en: "Pill")
+        case .minimalBorderless: return loc.text(es: "Sin borde", en: "Borderless")
+        }
+    }
+}
+
+/// Forma del indicador visual inferior que señala la ventana enfocada actualmente.
+public enum TaskbarActiveIndicatorStyle: String, CaseIterable, Identifiable, Codable, Sendable {
+    case pill
+    case fullUnderline
+    case dot
+    case none
+
+    public var id: String { rawValue }
+
+    @MainActor
+    public func localizedTitle(using loc: LocalizationManager = .shared) -> String {
+        switch self {
+        case .pill: return loc.text(es: "Píldora", en: "Pill")
+        case .fullUnderline: return loc.text(es: "Barra completa", en: "Full Bar")
+        case .dot: return loc.text(es: "Punto", en: "Dot")
+        case .none: return loc.text(es: "Oculto", en: "Hidden")
+        }
+    }
+}
+
+/// Color de acento para el indicador de ventana activa en la barra de tareas.
+public enum TaskbarActiveIndicatorColor: String, CaseIterable, Identifiable, Codable, Sendable {
+    case systemAccent
+    case neutral
+    case emerald
+    case amber
+    case coral
+    case purple
+
+    public var id: String { rawValue }
+
+    @MainActor
+    public func localizedTitle(using loc: LocalizationManager = .shared) -> String {
+        switch self {
+        case .systemAccent: return loc.text(es: "Sistema", en: "System")
+        case .neutral: return loc.text(es: "Neutro", en: "Neutral")
+        case .emerald: return loc.text(es: "Esmeralda", en: "Emerald")
+        case .amber: return loc.text(es: "Ámbar", en: "Amber")
+        case .coral: return loc.text(es: "Coral", en: "Coral")
+        case .purple: return loc.text(es: "Violeta", en: "Purple")
+        }
+    }
+
+    public func resolvedColor(effectiveDark: Bool) -> Color {
+        switch self {
+        case .systemAccent:
+            return Color.accentColor
+        case .neutral:
+            return effectiveDark ? Color.white.opacity(0.92) : Color(white: 0.16)
+        case .emerald:
+            return Color(red: 0.16, green: 0.80, blue: 0.50)
+        case .amber:
+            return Color(red: 0.98, green: 0.70, blue: 0.14)
+        case .coral:
+            return Color(red: 1.0, green: 0.36, blue: 0.34)
+        case .purple:
+            return Color(red: 0.64, green: 0.42, blue: 1.0)
+        }
+    }
+}
+
 /// Modo de gestión opcional del Dock nativo de macOS.
 /// Por defecto siempre es `.unchanged` (Dock original de macOS activo y sin modificaciones).
 public enum TaskbarDockMode: String, CaseIterable, Identifiable, Codable, Sendable {
@@ -740,9 +877,15 @@ public struct TaskbarWindowItem: Identifiable, Equatable, Sendable {
         return trimmed.isEmpty ? appName : trimmed
     }
 
-    /// Clave de agrupación por aplicación (prefiere `bundleIdentifier`, con respaldo en `pid`).
+    /// Clave de agrupación por aplicación (prefiere `bundleIdentifier`, luego ruta del bundle y finalmente `pid`).
     public var appGroupKey: String {
-        bundleIdentifier.isEmpty ? "pid:\(pid)" : bundleIdentifier.lowercased()
+        if !bundleIdentifier.isEmpty {
+            return bundleIdentifier.lowercased()
+        }
+        if let bundlePath = appBundleURL?.standardizedFileURL.path(percentEncoded: false), !bundlePath.isEmpty {
+            return "path:\(bundlePath.lowercased())"
+        }
+        return "pid:\(pid)"
     }
 }
 
@@ -1048,44 +1191,26 @@ public struct TaskbarWindowOrderEngine: Sendable {
             return false
         }
 
-        // Construir salida en el orden registrado para las ventanas visibles en este Space/pantalla
-        var result = orderedWindowIDs.compactMap { byID[$0] }
-
-        // Si el usuario activó agrupación por app, compactar las ventanas de cada app juntas
-        // manteniendo el orden relativo de la primera aparición de cada app.
-        if groupByApp && result.count > 1 {
+        // Si el usuario activó agrupación por app, compactar TODA la lista `orderedWindowIDs`
+        // por `appGroupKey` preservando el orden de primera aparición de cada aplicación.
+        // Así las ventanas de la misma app quedan siempre contiguas (lado a lado) incluso al abrir
+        // una nueva ventana mucho tiempo después o al volver de otros Spaces, sin desplazar otras apps.
+        if groupByApp && orderedWindowIDs.count > 1 {
             var seenApps: [String] = []
-            var buckets: [String: [TaskbarWindowItem]] = [:]
-            for win in result {
-                let key = win.appGroupKey
+            var buckets: [String: [String]] = [:]
+            for id in orderedWindowIDs {
+                let key = byID[id]?.appGroupKey ?? metadataByID[id]?.appGroupKey ?? "id:\(id)"
                 if buckets[key] == nil {
                     seenApps.append(key)
                     buckets[key] = []
                 }
-                buckets[key]?.append(win)
+                buckets[key]?.append(id)
             }
-            result = seenApps.flatMap { buckets[$0] ?? [] }
-            // Reflejar el agrupamiento estable sobre las ventanas visibles
-            let visibleIDs = Set(result.map(\.id))
-            var rebuilt: [String] = []
-            var insertedVisible = false
-            for id in orderedWindowIDs {
-                if visibleIDs.contains(id) {
-                    if !insertedVisible {
-                        rebuilt.append(contentsOf: result.map(\.id))
-                        insertedVisible = true
-                    }
-                } else {
-                    rebuilt.append(id)
-                }
-            }
-            if !insertedVisible {
-                rebuilt.append(contentsOf: result.map(\.id))
-            }
-            orderedWindowIDs = rebuilt
+            orderedWindowIDs = seenApps.flatMap { buckets[$0] ?? [] }
         }
 
-        return result
+        // Construir salida en el orden registrado para las ventanas visibles en este Space/pantalla
+        return orderedWindowIDs.compactMap { byID[$0] }
     }
 
     /// Busca una ranura ausente del mismo `pid` que `newWin` deba reemplazar en el mismo lugar
@@ -1148,8 +1273,12 @@ public struct TaskbarWindowOrderEngine: Sendable {
            let sourceWin = byID[sourceID],
            let targetWin = byID[targetID],
            sourceWin.appGroupKey != targetWin.appGroupKey {
-            // Al mover hacia otra app en modo agrupado, mover todo el bloque de la app origen
-            let sourceGroupIDs = orderedWindowIDs.filter { byID[$0]?.appGroupKey == sourceWin.appGroupKey }
+            // Al mover hacia otra app en modo agrupado, mover todo el bloque de la app origen (incluyendo otros Spaces)
+            let metadataSnapshot = metadataByID
+            let groupKeyForID: (String) -> String? = { id in
+                byID[id]?.appGroupKey ?? metadataSnapshot[id]?.appGroupKey
+            }
+            let sourceGroupIDs = orderedWindowIDs.filter { groupKeyForID($0) == sourceWin.appGroupKey }
             guard !sourceGroupIDs.isEmpty else { return }
             let sourceSet = Set(sourceGroupIDs)
             guard let sourceFirstIndex = orderedWindowIDs.firstIndex(where: { sourceSet.contains($0) }),
@@ -1164,11 +1293,11 @@ public struct TaskbarWindowOrderEngine: Sendable {
             }
             let insertionIndex: Int
             if movingRight {
-                // Insertar después del bloque de la app destino
-                let lastTargetGroupIndex = orderedWindowIDs.lastIndex(where: { byID[$0]?.appGroupKey == targetWin.appGroupKey }) ?? targetIndex
+                // Insertar después del bloque completo de la app destino
+                let lastTargetGroupIndex = orderedWindowIDs.lastIndex(where: { groupKeyForID($0) == targetWin.appGroupKey }) ?? targetIndex
                 insertionIndex = lastTargetGroupIndex + 1
             } else {
-                let firstTargetGroupIndex = orderedWindowIDs.firstIndex(where: { byID[$0]?.appGroupKey == targetWin.appGroupKey }) ?? targetIndex
+                let firstTargetGroupIndex = orderedWindowIDs.firstIndex(where: { groupKeyForID($0) == targetWin.appGroupKey }) ?? targetIndex
                 insertionIndex = firstTargetGroupIndex
             }
             orderedWindowIDs.insert(contentsOf: sourceGroupIDs, at: min(insertionIndex, orderedWindowIDs.count))
@@ -1324,5 +1453,198 @@ public enum TaskbarStartMenuFilter {
                 return lhs.app.name.localizedStandardCompare(rhs.app.name) == .orderedAscending
             }
             .map(\.app)
+    }
+}
+
+// MARK: - Activación por Permanencia al Arrastrar Archivos sobre la Barra (Spring-Loading 1 s)
+
+/// Estado visual de carga mientras el usuario mantiene un archivo arrastrado sobre un botón de la barra.
+public struct TaskbarDragHoverState: Equatable, Sendable {
+    public var isHovering: Bool
+    /// Progreso normalizado `0...1` durante la espera quieta antes de enfocar la aplicación/ventana.
+    public var progress: CGFloat
+    /// `true` una vez cumplida la espera y elevada la ventana/aplicación objetivo.
+    public var didActivate: Bool
+
+    public static let idle = TaskbarDragHoverState(isHovering: false, progress: 0, didActivate: false)
+
+    public init(isHovering: Bool, progress: CGFloat, didActivate: Bool) {
+        self.isHovering = isHovering
+        self.progress = progress
+        self.didActivate = didActivate
+    }
+}
+
+/// Máquina de estados determinista que mide permanencia quieta durante un arrastre (`NSDraggingSession`)
+/// con tolerancia a micro-movimientos de la mano antes de disparar la apertura/enfoque de la app objetivo.
+public struct TaskbarDragDwellTracker: Sendable {
+    public static let defaultDwellDuration: TimeInterval = 1.0
+    public static let defaultJitterTolerance: CGFloat = 18.0
+
+    public let dwellDuration: TimeInterval
+    public let jitterTolerance: CGFloat
+
+    public private(set) var isActive: Bool = false
+    public private(set) var didTrigger: Bool = false
+    public private(set) var anchorLocation: CGPoint = .zero
+    public private(set) var stillSince: TimeInterval = 0
+
+    public init(
+        dwellDuration: TimeInterval = Self.defaultDwellDuration,
+        jitterTolerance: CGFloat = Self.defaultJitterTolerance
+    ) {
+        self.dwellDuration = max(0.05, dwellDuration)
+        self.jitterTolerance = max(0, jitterTolerance)
+    }
+
+    @discardableResult
+    public mutating func begin(at location: CGPoint, now: TimeInterval) -> TaskbarDragHoverState {
+        isActive = true
+        didTrigger = false
+        anchorLocation = location
+        stillSince = now
+        return TaskbarDragHoverState(isHovering: true, progress: 0, didActivate: false)
+    }
+
+    @discardableResult
+    public mutating func update(location: CGPoint, now: TimeInterval) -> (state: TaskbarDragHoverState, shouldTriggerNow: Bool) {
+        guard isActive else {
+            return (begin(at: location, now: now), false)
+        }
+        if didTrigger {
+            return (TaskbarDragHoverState(isHovering: true, progress: 1.0, didActivate: true), false)
+        }
+        let distance = hypot(location.x - anchorLocation.x, location.y - anchorLocation.y)
+        if distance > jitterTolerance {
+            anchorLocation = location
+            stillSince = now
+            return (TaskbarDragHoverState(isHovering: true, progress: 0, didActivate: false), false)
+        }
+        return evaluate(now: now)
+    }
+
+    public mutating func evaluate(now: TimeInterval) -> (state: TaskbarDragHoverState, shouldTriggerNow: Bool) {
+        guard isActive else {
+            return (.idle, false)
+        }
+        if didTrigger {
+            return (TaskbarDragHoverState(isHovering: true, progress: 1.0, didActivate: true), false)
+        }
+        let elapsed = max(0, now - stillSince)
+        if elapsed >= dwellDuration {
+            didTrigger = true
+            return (TaskbarDragHoverState(isHovering: true, progress: 1.0, didActivate: true), true)
+        }
+        let progress = CGFloat(min(1.0, elapsed / dwellDuration))
+        return (TaskbarDragHoverState(isHovering: true, progress: progress, didActivate: false), false)
+    }
+
+    @discardableResult
+    public mutating func reset() -> TaskbarDragHoverState {
+        isActive = false
+        didTrigger = false
+        anchorLocation = .zero
+        stillSince = 0
+        return .idle
+    }
+}
+
+// MARK: - Cálculo de Anchos Mixtos de Botones (Títulos, Solo Íconos y Minimizadas Compactas)
+
+/// Plan de diseño calculado para la fila de botones de ventanas en la barra de tareas.
+public struct TaskbarButtonLayoutPlan: Equatable, Sendable {
+    public let buttonWidths: [CGFloat]
+    public let showTitles: [Bool]
+    public let leadingSpacings: [CGFloat]
+    public let needsHorizontalScroll: Bool
+
+    public init(
+        buttonWidths: [CGFloat],
+        showTitles: [Bool],
+        leadingSpacings: [CGFloat],
+        needsHorizontalScroll: Bool
+    ) {
+        self.buttonWidths = buttonWidths
+        self.showTitles = showTitles
+        self.leadingSpacings = leadingSpacings
+        self.needsHorizontalScroll = needsHorizontalScroll
+    }
+}
+
+/// Calcula dinámicamente qué ventanas muestran título o solo ícono y distribuye el espacio horizontal
+/// disponible para que las ventanas abiertas aprovechen todo el espacio liberado por las minimizadas compactas.
+public enum TaskbarButtonLayoutCalculator {
+    public static let maxExpandedButtonWidth: CGFloat = 215
+    public static let minExpandedButtonWidth: CGFloat = 96
+
+    public static func shouldShowTitle(
+        for item: TaskbarWindowItem,
+        showWindowTitles: Bool,
+        minimizedDisplayMode: TaskbarMinimizedWindowDisplayMode
+    ) -> Bool {
+        guard showWindowTitles else { return false }
+        if minimizedDisplayMode == .iconOnly && (item.isMinimized || item.isAppHidden) {
+            return false
+        }
+        return true
+    }
+
+    public static func computeLayout(
+        windows: [TaskbarWindowItem],
+        availableWidth: CGFloat,
+        barHeight: CGFloat,
+        showWindowTitles: Bool,
+        minimizedDisplayMode: TaskbarMinimizedWindowDisplayMode,
+        groupWindowsByApp: Bool
+    ) -> TaskbarButtonLayoutPlan {
+        guard !windows.isEmpty else {
+            return TaskbarButtonLayoutPlan(
+                buttonWidths: [],
+                showTitles: [],
+                leadingSpacings: [],
+                needsHorizontalScroll: false
+            )
+        }
+
+        let leadingSpacings: [CGFloat] = windows.indices.map { idx in
+            guard idx > 0 else { return 0 }
+            if groupWindowsByApp {
+                return windows[idx].appGroupKey == windows[idx - 1].appGroupKey ? 2 : 7
+            }
+            return 5
+        }
+        let totalSpacing = leadingSpacings.reduce(0, +)
+        let iconOnlyWidth = max(34, barHeight - 2)
+
+        let showTitles = windows.map {
+            shouldShowTitle(
+                for: $0,
+                showWindowTitles: showWindowTitles,
+                minimizedDisplayMode: minimizedDisplayMode
+            )
+        }
+        let expandedCount = showTitles.filter { $0 }.count
+        let compactCount = windows.count - expandedCount
+        let compactTotalWidth = CGFloat(compactCount) * iconOnlyWidth
+
+        let expandedWidth: CGFloat
+        if expandedCount > 0 {
+            let remainingForExpanded = availableWidth - totalSpacing - compactTotalWidth
+            let idealExpanded = floor(remainingForExpanded / CGFloat(expandedCount))
+            expandedWidth = min(maxExpandedButtonWidth, max(minExpandedButtonWidth, idealExpanded))
+        } else {
+            expandedWidth = iconOnlyWidth
+        }
+
+        let buttonWidths = showTitles.map { $0 ? expandedWidth : iconOnlyWidth }
+        let totalContentWidth = compactTotalWidth + CGFloat(expandedCount) * expandedWidth + totalSpacing
+        let needsHorizontalScroll = totalContentWidth > availableWidth
+
+        return TaskbarButtonLayoutPlan(
+            buttonWidths: buttonWidths,
+            showTitles: showTitles,
+            leadingSpacings: leadingSpacings,
+            needsHorizontalScroll: needsHorizontalScroll
+        )
     }
 }

@@ -125,7 +125,7 @@ public struct ShareToSlackModalView: View {
             VStack(spacing: 6) {
                 ForEach(viewModel.slackShareURLs.prefix(3), id: \.self) { url in
                     HStack(spacing: 10) {
-                        Image(nsImage: NSWorkspace.shared.icon(forFile: url.path(percentEncoded: false)))
+                        Image(nsImage: FileIconProvider.shared.icon(forFilePath: url.path(percentEncoded: false), size: 20))
                             .resizable()
                             .frame(width: 20, height: 20)
 

@@ -219,7 +219,8 @@ public final class GoogleAccountsManager: NSObject {
     }
 
     /// Abre cualquier URL dentro de la sesión aislada de la cuenta indicada en una nueva pestaña nativa.
-    public func openURLInAccountTab(_ url: URL, for accountID: UUID, service: GoogleServiceShortcut? = nil) {
+    @discardableResult
+    public func openURLInAccountTab(_ url: URL, for accountID: UUID, service: GoogleServiceShortcut? = nil) -> BrowserTabItem {
         let acctLabel = accounts.first(where: { $0.id == accountID })?.displayLabel ?? "Google"
         let newTab = BrowserTabItem(
             accountID: accountID,
@@ -231,6 +232,51 @@ public final class GoogleAccountsManager: NSObject {
         )
         openTabs.append(newTab)
         presentOrActivateNativeWindowTab(for: newTab)
+        return newTab
+    }
+
+    /// Abre o enfoca la pestaña de Google Drive de una cuenta y la navega directamente a la carpeta destino para «Enviar a Drive».
+    @discardableResult
+    public func openOrFocusDriveFolderTab(url: URL, for accountID: UUID) -> BrowserTabItem {
+        if let idx = openTabs.firstIndex(where: {
+            $0.accountID == accountID
+                && $0.service == .drive
+                && $0.currentURL.host?.lowercased() == "drive.google.com"
+        }) {
+            let existingTab = openTabs[idx]
+            presentOrActivateNativeWindowTab(for: existingTab)
+            let wv = webView(for: existingTab)
+            let currentURLString = (wv.url ?? existingTab.currentURL).absoluteString
+            let targetFolderID = GoogleDriveUploadPreferences.extractFolderID(from: url.absoluteString)
+            let currentFolderID = GoogleDriveUploadPreferences.extractFolderID(from: currentURLString)
+
+            let alreadyInTargetFolder: Bool = {
+                if let targetFolderID {
+                    return currentFolderID == targetFolderID
+                }
+                return currentFolderID == nil && currentURLString.lowercased().contains("/my-drive")
+            }()
+
+            if !alreadyInTargetFolder {
+                openTabs[idx].currentURL = url
+                openTabs[idx].isLoading = true
+                wv.load(URLRequest(url: url))
+            }
+            return openTabs[idx]
+        }
+
+        let acctLabel = accounts.first(where: { $0.id == accountID })?.displayLabel ?? "Google"
+        let newTab = BrowserTabItem(
+            accountID: accountID,
+            title: "Drive — \(acctLabel)",
+            currentURL: url,
+            service: .drive,
+            isLoading: true,
+            pageZoom: defaultPageZoom
+        )
+        openTabs.append(newTab)
+        presentOrActivateNativeWindowTab(for: newTab)
+        return newTab
     }
 
     /// Abre un marcador (bookmark) en una pestaña nativa dentro de `MacFileExplorer`.
@@ -654,7 +700,11 @@ public final class GoogleAccountsManager: NSObject {
 
         guard let index = openTabs.firstIndex(where: { $0.id == tabID }) else { return }
         let removedTab = openTabs.remove(at: index)
-        webViewsByTabID[tabID]?.stopLoading()
+        if let wv = webViewsByTabID[tabID] {
+            wv.stopLoading()
+            wv.configuration.userContentController.removeScriptMessageHandler(forName: "googleAccountDetector")
+            wv.configuration.userContentController.removeScriptMessageHandler(forName: GoogleDriveUploadService.networkProbeHandlerName)
+        }
         webViewsByTabID.removeValue(forKey: tabID)
         coordinatorsByTabID.removeValue(forKey: tabID)
 
@@ -1283,12 +1333,19 @@ public final class GoogleAccountsManager: NSObject {
         let contentController = WKUserContentController()
         if tab.accountID != BookmarksManager.generalBookmarksAccountID {
             contentController.add(coordinator, name: "googleAccountDetector")
+            contentController.add(coordinator, name: GoogleDriveUploadService.networkProbeHandlerName)
             let userScript = WKUserScript(
                 source: Self.profileDetectionScript,
                 injectionTime: .atDocumentEnd,
                 forMainFrameOnly: false
             )
             contentController.addUserScript(userScript)
+            let driveObserverScript = WKUserScript(
+                source: GoogleDriveUploadService.networkUploadObserverUserScript,
+                injectionTime: .atDocumentStart,
+                forMainFrameOnly: false
+            )
+            contentController.addUserScript(driveObserverScript)
         }
         config.userContentController = contentController
 
@@ -1299,6 +1356,7 @@ public final class GoogleAccountsManager: NSObject {
         webView.pageZoom = CGFloat(tab.pageZoom)
         webView.navigationDelegate = coordinator
         webView.uiDelegate = coordinator
+        coordinator.attachSPAObservers(to: webView)
 
         webViewsByTabID[tab.id] = webView
         webView.load(URLRequest(url: tab.currentURL))
@@ -1845,11 +1903,12 @@ public final class GoogleAccountsManager: NSObject {
 
     // MARK: - Enrutamiento de Enlaces Externos a Google Chrome
 
-    /// Dominios permitidos para permanecer dentro de las pestañas de Gmail, Drive y Calendar.
+    /// Dominios permitidos para permanecer dentro de las pestañas de Gmail, Drive, Calendar y Google Docs/Sheets/Slides.
     public static let allowedServiceHosts: Set<String> = [
         "mail.google.com",
         "drive.google.com",
-        "calendar.google.com"
+        "calendar.google.com",
+        "docs.google.com"
     ]
 
     /// Dominios auxiliares de autenticación para permitir iniciar/renovar sesión dentro de la app.
@@ -1908,10 +1967,19 @@ public final class GoogleAccountsManager: NSObject {
         inTab tabID: UUID,
         currentWebViewURL: URL?
     ) -> URL? {
-        guard openTabs.first(where: { $0.id == tabID })?.service != nil else {
+        guard let tab = openTabs.first(where: { $0.id == tabID }), tab.service != nil else {
             return nil
         }
         let resolvedURL = Self.resolveOutboundLinkURL(linkURL)
+        // Si el usuario eligió abrir Google Sheets / Docs / Slides en Google Chrome externo,
+        // cualquier documento de `docs.google.com` abierto desde la pestaña de Drive también se abre en Chrome externo.
+        if tab.service == .drive,
+           GoogleDriveUploadPreferences.shared.openInExternalChrome,
+           let targetHost = resolvedURL.host?.lowercased(),
+           targetHost == "docs.google.com" {
+            let email = accounts.first(where: { $0.id == tab.accountID })?.email
+            return GoogleDriveUploadService.urlWithAuthUser(resolvedURL, email: email)
+        }
         guard !Self.shouldKeepNavigationInServiceTab(targetURL: resolvedURL, currentWebViewURL: currentWebViewURL) else {
             return nil
         }
@@ -2031,6 +2099,8 @@ private final class WebTabCoordinator: NSObject, WKNavigationDelegate, WKUIDeleg
     let accountID: UUID
     weak var manager: GoogleAccountsManager?
     private var faviconCaptureTask: Task<Void, Never>?
+    private var urlObservation: NSKeyValueObservation?
+    private var titleObservation: NSKeyValueObservation?
 
     init(tabID: UUID, accountID: UUID, manager: GoogleAccountsManager) {
         self.tabID = tabID
@@ -2038,10 +2108,46 @@ private final class WebTabCoordinator: NSObject, WKNavigationDelegate, WKUIDeleg
         self.manager = manager
     }
 
+    /// Observa cambios de URL y título por KVO para reflejar navegación SPA (`history.pushState`)
+    /// en Google Drive, Gmail, Calendar y Google Docs en tiempo real.
+    func attachSPAObservers(to webView: WKWebView) {
+        urlObservation = webView.observe(\.url, options: [.new]) { [weak self] wv, _ in
+            Task { @MainActor [weak self, weak wv] in
+                guard let self, let wv else { return }
+                self.manager?.updateTabState(
+                    tabID: self.tabID,
+                    title: wv.title,
+                    url: wv.url,
+                    isLoading: wv.isLoading,
+                    canGoBack: wv.canGoBack,
+                    canGoForward: wv.canGoForward
+                )
+            }
+        }
+        titleObservation = webView.observe(\.title, options: [.new]) { [weak self] wv, _ in
+            Task { @MainActor [weak self, weak wv] in
+                guard let self, let wv else { return }
+                self.manager?.updateTabState(
+                    tabID: self.tabID,
+                    title: wv.title,
+                    url: wv.url,
+                    isLoading: wv.isLoading,
+                    canGoBack: wv.canGoBack,
+                    canGoForward: wv.canGoForward
+                )
+            }
+        }
+    }
+
     func userContentController(
         _ userContentController: WKUserContentController,
         didReceive message: WKScriptMessage
     ) {
+        if message.name == GoogleDriveUploadService.networkProbeHandlerName,
+           let dict = message.body as? [String: Any] {
+            GoogleDriveUploadService.shared.handleNetworkProbeMessage(forTabID: tabID, payload: dict)
+            return
+        }
         guard message.name == "googleAccountDetector",
               let dict = message.body as? [String: Any] else { return }
         manager?.recordDetectedProfile(
@@ -2156,8 +2262,19 @@ private final class WebTabCoordinator: NSObject, WKNavigationDelegate, WKUIDeleg
         _ webView: WKWebView,
         runOpenPanelWith parameters: WKOpenPanelParameters,
         initiatedByFrame frame: WKFrameInfo,
-        completionHandler: @escaping ([URL]?) -> Void
+        completionHandler: @escaping @MainActor ([URL]?) -> Void
     ) {
+        // Si «Enviar a Drive» tiene una subida automática programada en esta pestaña, inyectar el archivo directo sin diálogo manual.
+        if let automatedURL = GoogleDriveUploadService.shared.consumeAutomatedUploadURL(forTabID: tabID) {
+            completionHandler([automatedURL])
+            return
+        }
+        // Si hay una subida automática activa en curso, jamás abrir NSOpenPanel (Finder).
+        if GoogleDriveUploadService.shared.isAutomatedUploadActive(forTabID: tabID) {
+            completionHandler(nil)
+            return
+        }
+
         // Permitir adjuntar archivos desde el Mac en Gmail o subir archivos a Google Drive
         let panel = NSOpenPanel()
         panel.allowsMultipleSelection = parameters.allowsMultipleSelection

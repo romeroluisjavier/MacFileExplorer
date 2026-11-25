@@ -44,6 +44,7 @@ public final class TaskbarManager {
             self?.triggerOverlapResizeCheck()
         }
         prefs.onWindowFilteringChanged = { [weak self] in
+            TaskbarWindowTracker.shared.reapplyWindowOrderingImmediately()
             TaskbarWindowTracker.shared.refreshNow()
             self?.triggerOverlapResizeCheck()
         }
@@ -183,14 +184,17 @@ public final class TaskbarManager {
         }
 
         let barHeight = CGFloat(prefs.barHeight)
+        let isFloating = (prefs.barStyle == .floatingIsland)
         let fullScreenIDs = TaskbarWindowTracker.shared.fullScreenDisplayIDs
 
         for screen in screens {
+            let horizInset: CGFloat = isFloating ? min(14, screen.frameCocoa.width * 0.01) : 0
+            let bottomInset: CGFloat = isFloating ? 6 : 0
             let targetFrame = NSRect(
-                x: screen.frameCocoa.minX,
-                y: screen.frameCocoa.minY,
-                width: screen.frameCocoa.width,
-                height: barHeight
+                x: round(screen.frameCocoa.minX + horizInset),
+                y: round(screen.frameCocoa.minY + bottomInset),
+                width: round(max(240, screen.frameCocoa.width - horizInset * 2)),
+                height: round(barHeight)
             )
 
             let panel: TaskbarPanel
@@ -207,8 +211,12 @@ public final class TaskbarManager {
             }
 
             panel.applyThemeAppearance(prefs.themeMode)
+            panel.hasShadow = isFloating
             if panel.frame != targetFrame {
                 panel.setFrame(targetFrame, display: true)
+            }
+            if isFloating {
+                panel.invalidateShadow()
             }
 
             if fullScreenIDs.contains(screen.id) {
@@ -241,11 +249,12 @@ public final class TaskbarManager {
         guard prefs.isEnabled, prefs.autoResizeOverlappingWindows else { return }
         let fullScreenIDs = TaskbarWindowTracker.shared.fullScreenDisplayIDs
         let visibleBarDisplayIDs = Set(panelsByDisplayID.keys.filter { !fullScreenIDs.contains($0) })
+        let reservedBarHeight = CGFloat(prefs.barHeight) + (prefs.barStyle == .floatingIsland ? 6 : 0)
         TaskbarOverlapResizer.shared.adjustOverlappingWindowsIfNeeded(
             windows: TaskbarWindowTracker.shared.windows,
             screens: TaskbarWindowTracker.shared.connectedScreens,
             visibleBarDisplayIDs: visibleBarDisplayIDs,
-            barHeight: CGFloat(prefs.barHeight)
+            barHeight: reservedBarHeight
         )
     }
 

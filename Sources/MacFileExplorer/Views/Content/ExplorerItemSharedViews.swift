@@ -612,6 +612,10 @@ public struct ExplorerItemContextMenu: View {
                 targetURLsToOpen()
             }
 
+            if !item.isNavigableFolder {
+                SendToDriveMenuButton(fileURL: item.url)
+            }
+
             Divider()
 
             Button {
@@ -871,6 +875,111 @@ public struct AddToSlackMenuButton: View {
                     } else {
                         Image(systemName: "bubble.left.and.bubble.right.fill")
                     }
+                }
+            }
+        }
+    }
+}
+
+/// Menú contextual «Enviar a Drive» que sube automáticamente el archivo a la carpeta configurada
+/// usando la cuenta de Gmail logueada y lo abre directo en Google Sheets, Docs o Slides.
+public struct SendToDriveMenuButton: View {
+    let fileURL: URL
+
+    private var loc: LocalizationManager { LocalizationManager.shared }
+    @Bindable private var googleManager: GoogleAccountsManager = .shared
+    @Bindable private var drivePrefs: GoogleDriveUploadPreferences = .shared
+    @Bindable private var officePrefs: OfficePreferences = .shared
+
+    public init(fileURL: URL) {
+        self.fileURL = fileURL
+    }
+
+    @ViewBuilder
+    public var body: some View {
+        if officePrefs.isSendToDriveEnabled {
+            menuContent
+        }
+    }
+
+    @ViewBuilder
+    private var menuContent: some View {
+        let target = OfficePreviewSupport.googleEditorTarget(for: fileURL)
+        let targetName = target.localizedName(using: loc)
+        let preferredAccount = GoogleDriveUploadService.shared.resolvePreferredAccount()
+        let folderName = preferredAccount.map { drivePrefs.displayFolderName(for: $0.id, using: loc) }
+            ?? loc.text(es: "Mi unidad", en: "My Drive")
+
+        Divider()
+
+        Menu {
+            if let preferredAccount {
+                Button {
+                    GoogleDriveUploadService.shared.sendFileToDriveAndOpen(fileURL, account: preferredAccount)
+                } label: {
+                    Label(
+                        loc.text(
+                            es: "Subir a «\(folderName)» y abrir en \(targetName)",
+                            en: "Upload to \"\(folderName)\" & open in \(targetName)"
+                        ),
+                        systemImage: target.symbolName
+                    )
+                }
+
+                if googleManager.accounts.count > 1 {
+                    Divider()
+                    ForEach(googleManager.accounts) { account in
+                        let acctFolder = drivePrefs.displayFolderName(for: account.id, using: loc)
+                        Button {
+                            GoogleDriveUploadService.shared.sendFileToDriveAndOpen(fileURL, account: account)
+                        } label: {
+                            Label("\(account.displayLabel) · \(acctFolder)", systemImage: "person.crop.circle")
+                        }
+                    }
+                }
+            } else {
+                Button {
+                    GoogleAccountsManager.shared.startAddGoogleAccount()
+                } label: {
+                    Label(
+                        loc.text(es: "Conectar cuenta de Google…", en: "Connect Google Account…"),
+                        systemImage: "person.badge.plus"
+                    )
+                }
+            }
+
+            Divider()
+
+            Button {
+                drivePrefs.openInExternalChrome.toggle()
+            } label: {
+                Label(
+                    drivePrefs.openInExternalChrome
+                        ? loc.text(es: "✓ Abrir en Google Chrome externo", en: "✓ Open in external Google Chrome")
+                        : loc.text(es: "Abrir en Google Chrome externo", en: "Open in external Google Chrome"),
+                    systemImage: "safari"
+                )
+            }
+
+            Button {
+                GoogleDriveSettingsWindowController.shared.show()
+            } label: {
+                Label(
+                    loc.text(es: "Configurar carpeta de Drive…", en: "Configure Drive Folder…"),
+                    systemImage: "folder.badge.gearshape"
+                )
+            }
+        } label: {
+            Label {
+                Text(loc.text(
+                    es: "Enviar a Drive (\(targetName))",
+                    en: "Send to Drive (\(targetName))"
+                ))
+            } icon: {
+                if let driveIcon = NativeWindowTabIconBuilder.googleDriveMenuIcon(size: 15) {
+                    Image(nsImage: driveIcon)
+                } else {
+                    Image(systemName: "externaldrive.badge.icloud")
                 }
             }
         }

@@ -165,6 +165,10 @@ public final class FileIconProvider {
 
     /// Obtiene el icono estándar (básico) para un `FileItem` con el tamaño en puntos solicitado.
     public func icon(for item: FileItem, size: CGFloat = 20) -> NSImage {
+        if !item.isNavigableFolder && !item.isPackage && item.fileExtension.lowercased() == "pdf" {
+            return pdfFileIcon(size: size)
+        }
+
         let key: String
         if item.isNavigableFolder {
             key = "folder::\(item.url.path(percentEncoded: false))::\(Int(size))"
@@ -185,6 +189,22 @@ public final class FileIconProvider {
         return sizedIcon
     }
 
+    /// Obtiene el icono para una ruta de archivo arbitraria (mostrando el ícono rojo de PDF para archivos `.pdf`).
+    public func icon(forFilePath path: String, size: CGFloat = 20) -> NSImage {
+        let url = URL(fileURLWithPath: path)
+        if url.pathExtension.lowercased() == "pdf" {
+            var isDir: ObjCBool = false
+            let exists = FileManager.default.fileExists(atPath: path, isDirectory: &isDir)
+            if !exists || !isDir.boolValue {
+                return pdfFileIcon(size: size)
+            }
+        }
+        let rawIcon = NSWorkspace.shared.icon(forFile: path)
+        let sizedIcon = (rawIcon.copy() as? NSImage) ?? rawIcon
+        sizedIcon.size = NSSize(width: size, height: size)
+        return sizedIcon
+    }
+
     /// Obtiene el icono representativo de la aplicación predeterminada asociada a la extensión del archivo (cacheado por extensión).
     public func appIcon(for item: FileItem, size: CGFloat = 20) -> NSImage {
         guard !item.isNavigableFolder && !item.isPackage && !item.fileExtension.isEmpty else {
@@ -192,6 +212,10 @@ public final class FileIconProvider {
         }
 
         let ext = item.fileExtension.lowercased()
+        if ext == "pdf" {
+            return pdfFileIcon(size: size)
+        }
+
         let key = "appIcon::\(ext)::\(Int(size))"
         if let cached = cache.object(forKey: key as NSString) {
             return cached
@@ -213,6 +237,154 @@ public final class FileIconProvider {
 
         cache.setObject(resultIcon, forKey: key as NSString)
         return resultIcon
+    }
+
+    /// Genera y cachea un ícono rojo vectorial estilo Acrobat Reader para archivos `.pdf`,
+    /// siguiendo la grilla macOS HIG para alinearse exactamente con el resto de íconos de aplicaciones
+    /// y distinguir instantáneamente los PDF de imágenes que también usan Vista Previa (Preview).
+    public func pdfFileIcon(size: CGFloat = 20) -> NSImage {
+        let clampedSize = max(12, size)
+        let key = "customPDF::\(Int(clampedSize.rounded()))"
+        if let cached = cache.object(forKey: key as NSString) {
+            return cached
+        }
+
+        let image = NSImage(size: NSSize(width: clampedSize, height: clampedSize), flipped: true) { rect in
+            guard let ctx = NSGraphicsContext.current?.cgContext else { return false }
+            let s = min(rect.width, rect.height)
+            ctx.saveGState()
+            ctx.setAllowsAntialiasing(true)
+            ctx.setShouldAntialias(true)
+
+            // Grilla squircle estándar de íconos de apps de macOS (~81% del lienzo)
+            let inset = s * 0.095
+            let cardRect = CGRect(x: inset, y: inset, width: s - inset * 2, height: s - inset * 2)
+            let cornerRadius = cardRect.width * 0.225
+            let cardPath = CGPath(roundedRect: cardRect, cornerWidth: cornerRadius, cornerHeight: cornerRadius, transform: nil)
+
+            // 1. Sombra suave inferior acorde a íconos nativos de macOS
+            ctx.saveGState()
+            ctx.setShadow(
+                offset: CGSize(width: 0, height: s * 0.025),
+                blur: s * 0.045,
+                color: NSColor(calibratedWhite: 0, alpha: 0.34).cgColor
+            )
+            ctx.setFillColor(NSColor(srgbRed: 0.84, green: 0.07, blue: 0.07, alpha: 1.0).cgColor)
+            ctx.addPath(cardPath)
+            ctx.fillPath()
+            ctx.restoreGState()
+
+            // 2. Degradado rojo carmesí vibrante estilo Acrobat Reader dentro del squircle
+            ctx.saveGState()
+            ctx.addPath(cardPath)
+            ctx.clip()
+
+            let colorSpace = CGColorSpaceCreateDeviceRGB()
+            let baseColors: [CGColor] = [
+                NSColor(srgbRed: 0.965, green: 0.185, blue: 0.145, alpha: 1.0).cgColor,
+                NSColor(srgbRed: 0.875, green: 0.070, blue: 0.070, alpha: 1.0).cgColor,
+                NSColor(srgbRed: 0.675, green: 0.025, blue: 0.040, alpha: 1.0).cgColor
+            ]
+            if let gradient = CGGradient(colorsSpace: colorSpace, colors: baseColors as CFArray, locations: [0.0, 0.52, 1.0]) {
+                ctx.drawLinearGradient(
+                    gradient,
+                    start: CGPoint(x: cardRect.midX, y: cardRect.minY),
+                    end: CGPoint(x: cardRect.midX, y: cardRect.maxY),
+                    options: []
+                )
+            }
+
+            // Brillo especular superior sutil
+            let glossColors: [CGColor] = [
+                NSColor(srgbRed: 1, green: 1, blue: 1, alpha: 0.19).cgColor,
+                NSColor(srgbRed: 1, green: 1, blue: 1, alpha: 0.0).cgColor
+            ]
+            if let gloss = CGGradient(colorsSpace: colorSpace, colors: glossColors as CFArray, locations: [0.0, 1.0]) {
+                ctx.drawLinearGradient(
+                    gloss,
+                    start: CGPoint(x: cardRect.midX, y: cardRect.minY),
+                    end: CGPoint(x: cardRect.midX, y: cardRect.minY + cardRect.height * 0.40),
+                    options: []
+                )
+            }
+
+            // 3. Emblema blanco de lazo trefoil estilo PDF / Acrobat centrado visualmente
+            let yOffset: CGFloat = 0.02
+            func rpt(_ nx: CGFloat, _ ny: CGFloat) -> CGPoint {
+                CGPoint(
+                    x: cardRect.minX + nx * cardRect.width,
+                    y: cardRect.minY + (ny + yOffset) * cardRect.height
+                )
+            }
+
+            let ribbon = CGMutablePath()
+            ribbon.move(to: rpt(0.455, 0.365))
+            ribbon.addCurve(
+                to: rpt(0.515, 0.165),
+                control1: rpt(0.500, 0.270),
+                control2: rpt(0.555, 0.195)
+            )
+            ribbon.addCurve(
+                to: rpt(0.460, 0.365),
+                control1: rpt(0.460, 0.130),
+                control2: rpt(0.435, 0.245)
+            )
+            ribbon.addCurve(
+                to: rpt(0.765, 0.650),
+                control1: rpt(0.495, 0.490),
+                control2: rpt(0.625, 0.640)
+            )
+            ribbon.addCurve(
+                to: rpt(0.690, 0.545),
+                control1: rpt(0.875, 0.660),
+                control2: rpt(0.845, 0.530)
+            )
+            ribbon.addCurve(
+                to: rpt(0.205, 0.725),
+                control1: rpt(0.470, 0.565),
+                control2: rpt(0.235, 0.615)
+            )
+            ribbon.addCurve(
+                to: rpt(0.325, 0.725),
+                control1: rpt(0.160, 0.825),
+                control2: rpt(0.265, 0.835)
+            )
+            ribbon.addCurve(
+                to: rpt(0.455, 0.365),
+                control1: rpt(0.385, 0.615),
+                control2: rpt(0.425, 0.475)
+            )
+
+            // Refuerzo de grosor en tamaños pequeños (<= 24 pt) para máxima nitidez en vista Lista
+            let strokeFactor: CGFloat = (s <= 24) ? 0.080 : 0.065
+
+            ctx.saveGState()
+            ctx.setShadow(
+                offset: CGSize(width: 0, height: cardRect.height * 0.02),
+                blur: cardRect.height * 0.04,
+                color: NSColor(srgbRed: 0.35, green: 0.0, blue: 0.0, alpha: 0.45).cgColor
+            )
+            ctx.addPath(ribbon)
+            ctx.setStrokeColor(NSColor.white.cgColor)
+            ctx.setLineWidth(cardRect.width * strokeFactor)
+            ctx.setLineCap(.round)
+            ctx.setLineJoin(.round)
+            ctx.strokePath()
+            ctx.restoreGState()
+
+            // Borde interno sutil característico de íconos macOS
+            ctx.addPath(cardPath)
+            ctx.setStrokeColor(NSColor(srgbRed: 1, green: 1, blue: 1, alpha: 0.16).cgColor)
+            ctx.setLineWidth(max(0.6, s * 0.016))
+            ctx.strokePath()
+
+            ctx.restoreGState()
+            ctx.restoreGState()
+            return true
+        }
+
+        cache.setObject(image, forKey: key as NSString)
+        return image
     }
 
     /// Devuelve el icono base para una fila de la vista Lista según el `ListIconDisplayMode` activo.

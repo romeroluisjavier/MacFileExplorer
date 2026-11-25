@@ -7,8 +7,12 @@ import WebKit
 public struct IsolatedGoogleWebTabView: View {
     public let tabID: UUID
     @Bindable var googleManager: GoogleAccountsManager = .shared
+    @Bindable private var driveUploadService: GoogleDriveUploadService = .shared
+    @Bindable private var drivePrefs: GoogleDriveUploadPreferences = .shared
+    @Bindable private var officePrefs: OfficePreferences = .shared
 
     @ViewState private var urlDraft: String = ""
+    @ViewState private var savedDriveFolderToastLabel: String? = nil
     @FocusState private var isURLFieldFocused: Bool
 
     private var loc: LocalizationManager { LocalizationManager.shared }
@@ -36,6 +40,12 @@ public struct IsolatedGoogleWebTabView: View {
                     chromeToolbar(for: tab)
 
                     Divider()
+
+                    // Banner en vivo cuando «Enviar a Drive» está subiendo un archivo automáticamente en esta pestaña
+                    if let upload = driveUploadService.activeUpload, upload.tabID == tab.id {
+                        driveUploadStatusBanner(upload)
+                        Divider()
+                    }
 
                     // Contenedor WebKit ocupando el 100% del ancho con `WKWebsiteDataStore(forIdentifier: account.id)` aislado
                     IsolatedWebViewRepresentable(tab: tab, googleManager: googleManager)
@@ -178,6 +188,46 @@ public struct IsolatedGoogleWebTabView: View {
 
             // Accesos rápidos a Gmail / Drive / Calendar de ESTA misma cuenta aislada
             if let account {
+                if officePrefs.isSendToDriveEnabled && tab.currentURL.host?.lowercased() == "drive.google.com" {
+                    let isShowingSaved = (savedDriveFolderToastLabel != nil)
+                    Button {
+                        captureCurrentDriveFolder(for: account, in: tab)
+                    } label: {
+                        HStack(spacing: 5) {
+                            if isShowingSaved {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .font(.system(size: PreviewToolbarMetrics.iconSize, weight: .semibold))
+                                    .foregroundStyle(Color.green)
+                            } else {
+                                GoogleServiceIconView(service: .drive, size: PreviewToolbarMetrics.iconSize)
+                            }
+                            Text(
+                                savedDriveFolderToastLabel.map {
+                                    loc.text(es: "Guardada: \($0)", en: "Saved: \($0)")
+                                } ?? loc.text(es: "Usar para Enviar a Drive", en: "Set Send to Drive Folder")
+                            )
+                            .font(.system(size: 11, weight: .semibold))
+                            .lineLimit(1)
+                        }
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(
+                            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                .fill((isShowingSaved ? Color.green : Color.accentColor).opacity(0.14))
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                .strokeBorder((isShowingSaved ? Color.green : Color.accentColor).opacity(0.35), lineWidth: 0.7)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .fixedSize()
+                    .help(loc.text(
+                        es: "Guardar la carpeta actual de Drive como destino predeterminado de «Enviar a Drive» para \(account.displayLabel) (actual: \(drivePrefs.displayFolderName(for: account.id, using: loc)))",
+                        en: "Save this Drive folder as the default \"Send to Drive\" destination for \(account.displayLabel) (current: \(drivePrefs.displayFolderName(for: account.id, using: loc)))"
+                    ))
+                }
+
                 HStack(spacing: 4) {
                     ForEach(GoogleServiceShortcut.allCases) { service in
                         Button {
@@ -206,6 +256,104 @@ public struct IsolatedGoogleWebTabView: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
         .background(.bar)
+    }
+
+    /// Lee la URL y el título reales en vivo directamente del `WKWebView` (incluyendo navegación SPA de Drive)
+    /// para fijar la carpeta destino exacta de «Enviar a Drive».
+    private func captureCurrentDriveFolder(for account: GoogleAccount, in tab: BrowserTabItem) {
+        let webView = googleManager.webView(for: tab)
+        let js = """
+        (() => {
+          const crumb = Array.from(document.querySelectorAll('[data-tooltip], [aria-current="page"], h1, [role="heading"]'))
+            .map((el) => (el.innerText || '').trim())
+            .find((t) => t.length > 0 && t.length < 80);
+          return JSON.stringify({
+            href: window.location.href || '',
+            title: document.title || '',
+            crumb: crumb || ''
+          });
+        })();
+        """
+        webView.evaluateJavaScript(js) { rawResult, _ in
+            Task { @MainActor in
+                var liveURL = webView.url ?? tab.currentURL
+                var liveTitle = webView.title ?? tab.title
+
+                if let jsonStr = rawResult as? String,
+                   let data = jsonStr.data(using: .utf8),
+                   let obj = try? JSONSerialization.jsonObject(with: data) as? [String: String] {
+                    if let href = obj["href"], let parsedURL = URL(string: href) {
+                        liveURL = parsedURL
+                    }
+                    if let docTitle = obj["title"], !docTitle.isEmpty {
+                        liveTitle = docTitle
+                    }
+                }
+
+                drivePrefs.setFolderFromLiveDriveTab(
+                    url: liveURL,
+                    pageTitle: liveTitle,
+                    for: account.id
+                )
+                let savedLabel = drivePrefs.displayFolderName(for: account.id, using: loc)
+                savedDriveFolderToastLabel = savedLabel
+                Task { @MainActor in
+                    try? await Task.sleep(for: .seconds(2.8))
+                    if savedDriveFolderToastLabel == savedLabel {
+                        savedDriveFolderToastLabel = nil
+                    }
+                }
+            }
+        }
+    }
+
+    private func driveUploadStatusBanner(_ upload: GoogleDriveActiveUpload) -> some View {
+        let isFailed: Bool = {
+            if case .failed = upload.stage { return true }
+            return false
+        }()
+        let isCompleted = (upload.stage == .completed)
+        let accent: Color = isFailed ? .red : (isCompleted ? .green : .accentColor)
+
+        return HStack(spacing: 9) {
+            if !upload.stage.isTerminal {
+                ProgressView()
+                    .controlSize(.small)
+            } else {
+                Image(systemName: isFailed ? "exclamationmark.triangle.fill" : "checkmark.circle.fill")
+                    .font(.system(size: 13))
+                    .foregroundStyle(accent)
+            }
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text(upload.stage.localizedDescription(
+                    fileName: upload.fileURL.lastPathComponent,
+                    folderName: upload.folderName,
+                    target: upload.editorTarget,
+                    openedInExternalChrome: upload.openInExternalChrome,
+                    using: loc
+                ))
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(.primary)
+                .lineLimit(2)
+            }
+
+            Spacer(minLength: 8)
+
+            Button {
+                driveUploadService.cancelActiveUpload()
+            } label: {
+                Text(upload.stage.isTerminal
+                    ? loc.text(es: "Cerrar", en: "Dismiss")
+                    : loc.text(es: "Cancelar", en: "Cancel"))
+                    .font(.system(size: 11, weight: .medium))
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 7)
+        .background(accent.opacity(0.10))
     }
 
     private func webZoomControl(for tab: BrowserTabItem) -> some View {

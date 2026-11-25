@@ -1,6 +1,21 @@
 # MacFileExplorer Releases
 
-## Versión 2.0.0 (Versión Actual)
+## Versión 2.5.0 (Versión Actual)
+
+- **Instalador:** [`MacFileExplorer-2.5.0.dmg`](./MacFileExplorer-2.5.0.dmg)
+- **Tamaño:** ~23 MB
+- **Arquitectura:** Binario Universal (`arm64` Apple Silicon + `x86_64` Intel)
+- **Requisitos del sistema:** macOS 14.0 (Sonoma) o posterior
+
+### Novedades principales en la v2.5.0:
+1. **Acciones rápidas y Copiar (`⌘C`) dentro de la Vista Rápida de imágenes y videos**: copiá imagen y archivo en un clic (o elegí solo imagen / solo archivo), eliminá fondos a PNG transparente, convertí a JPG/PNG, rotá 90°/180° en vivo, convertí videos a MP4, recortá (*Trim*), silenciá audio y limpiá metadatos privados sin salir del Preview.
+2. **Vista Rápida libre entre monitores e ícono rojo estilo Acrobat para PDFs**: arrastrá la ventana de Vista Rápida con total suavidad fuera de MacFileExplorer o hacia otro monitor, y distinguí al instante archivos `.pdf` de imágenes `.png`/`.jpg` gracias al nuevo ícono rojo vectorial estilo Acrobat.
+3. **Editor Office y CSV con selección por arrastre, menú «Office» y «Enviar a Drive» en barra inferior**: arrastrá con el mouse sobre celdas, filas (`#`) o columnas (`A, B, C…`) en CSV y Excel para seleccionar múltiples filas y columnas con Conteo/Suma/Promedio en vivo y copiado directo a Excel/Sheets; editá Word, Excel (`.xlsx`/`.xls`) y PowerPoint en un clic; y subí archivos a Google Drive con progreso discreto en la barra de estado inferior y apertura automática en Sheets, Docs o Slides (en la app o Google Chrome externo).
+4. **Barra de tareas avanzada**: abrir apps manteniendo un archivo arrastrado 1 segundo sobre su botón, agrupación lado a lado de ventanas de la misma app, modos «Solo íconos» y «Solo ícono en ventanas minimizadas», línea divisoria superior opcional y 5 ajustes visuales en vivo (incluyendo Isla flotante).
+
+---
+
+## Versión 2.0.0
 
 - **Instalador:** [`MacFileExplorer-2.0.0.dmg`](./MacFileExplorer-2.0.0.dmg)
 - **Tamaño:** ~22 MB

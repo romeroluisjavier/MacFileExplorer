@@ -510,7 +510,7 @@ public struct ClipboardHistoryMainView: View {
                 ForEach(entry.filePaths, id: \.self) { path in
                     let fileURL = URL(fileURLWithPath: path)
                     HStack(spacing: 10) {
-                        Image(nsImage: NSWorkspace.shared.icon(forFile: path))
+                        Image(nsImage: FileIconProvider.shared.icon(forFilePath: path, size: 24))
                             .resizable()
                             .frame(width: 24, height: 24)
 

@@ -187,6 +187,9 @@ public final class BookmarksManager {
             process.arguments = ["--new-window", url.absoluteString]
             do {
                 try process.run()
+                if let chromeApp = NSRunningApplication.runningApplications(withBundleIdentifier: "com.google.Chrome").first {
+                    chromeApp.activate()
+                }
                 return
             } catch {
                 // Fallback a NSWorkspace si Process falla
@@ -199,7 +202,20 @@ public final class BookmarksManager {
             if newWindow {
                 config.arguments = ["--new-window", url.absoluteString]
             }
-            NSWorkspace.shared.open([url], withApplicationAt: chromeAppURL, configuration: config)
+            NSWorkspace.shared.open([url], withApplicationAt: chromeAppURL, configuration: config) { runningApp, error in
+                Task { @MainActor in
+                    if let error {
+                        // Respaldo con `/usr/bin/open -a "Google Chrome"` si LaunchServices falló
+                        _ = error
+                        let fallback = Process()
+                        fallback.executableURL = URL(fileURLWithPath: "/usr/bin/open")
+                        fallback.arguments = ["-a", "Google Chrome", url.absoluteString]
+                        try? fallback.run()
+                    } else {
+                        runningApp?.activate()
+                    }
+                }
+            }
         } else {
             NSWorkspace.shared.open(url)
         }

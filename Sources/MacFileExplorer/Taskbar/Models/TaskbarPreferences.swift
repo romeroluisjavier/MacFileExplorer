@@ -60,8 +60,15 @@ public final class TaskbarPreferences {
         static let startButtonIcon = "com.macfileexplorer.taskbar.startButtonIcon"
         static let startMenuAnimation = "com.macfileexplorer.taskbar.startMenuAnimation"
         static let startMenuAnimationDuration = "com.macfileexplorer.taskbar.startMenuAnimationDuration"
+        static let showTopBorder = "com.macfileexplorer.taskbar.showTopBorder"
+        static let barStyle = "com.macfileexplorer.taskbar.barStyle"
+        static let backgroundMaterial = "com.macfileexplorer.taskbar.backgroundMaterial"
+        static let buttonStyle = "com.macfileexplorer.taskbar.buttonStyle"
+        static let activeIndicatorStyle = "com.macfileexplorer.taskbar.activeIndicatorStyle"
+        static let activeIndicatorColor = "com.macfileexplorer.taskbar.activeIndicatorColor"
         static let alignment = "com.macfileexplorer.taskbar.alignment"
         static let showWindowTitles = "com.macfileexplorer.taskbar.showWindowTitles"
+        static let minimizedWindowDisplayMode = "com.macfileexplorer.taskbar.minimizedWindowDisplayMode"
         static let showMinimizedIndicator = "com.macfileexplorer.taskbar.showMinimizedIndicator"
         static let showNotificationBadges = "com.macfileexplorer.taskbar.showNotificationBadges"
         static let notificationAnimation = "com.macfileexplorer.taskbar.notificationAnimation"
@@ -197,6 +204,60 @@ public final class TaskbarPreferences {
         }
     }
 
+    /// Muestra u oculta la línea divisoria horizontal en el borde superior de la barra de tareas.
+    public var showTopBorder: Bool {
+        didSet {
+            guard !isBootstrapping, showTopBorder != oldValue else { return }
+            defaults.set(showTopBorder, forKey: Keys.showTopBorder)
+            onAppearanceOrLayoutChanged?()
+        }
+    }
+
+    /// Estilo geométrico de la barra (`docked` = acoplada al borde, `floatingIsland` = isla flotante redondeada).
+    public var barStyle: TaskbarBarStyle {
+        didSet {
+            guard !isBootstrapping, barStyle != oldValue else { return }
+            defaults.set(barStyle.rawValue, forKey: Keys.barStyle)
+            onAppearanceOrLayoutChanged?()
+        }
+    }
+
+    /// Material de fondo / desenfoque de la barra de tareas.
+    public var backgroundMaterial: TaskbarBackgroundMaterial {
+        didSet {
+            guard !isBootstrapping, backgroundMaterial != oldValue else { return }
+            defaults.set(backgroundMaterial.rawValue, forKey: Keys.backgroundMaterial)
+            onAppearanceOrLayoutChanged?()
+        }
+    }
+
+    /// Estilo visual de los botones de ventanas (`roundedCard`, `pill`, `minimalBorderless`).
+    public var buttonStyle: TaskbarButtonStyle {
+        didSet {
+            guard !isBootstrapping, buttonStyle != oldValue else { return }
+            defaults.set(buttonStyle.rawValue, forKey: Keys.buttonStyle)
+            onAppearanceOrLayoutChanged?()
+        }
+    }
+
+    /// Forma del indicador de ventana enfocada en la parte inferior del botón.
+    public var activeIndicatorStyle: TaskbarActiveIndicatorStyle {
+        didSet {
+            guard !isBootstrapping, activeIndicatorStyle != oldValue else { return }
+            defaults.set(activeIndicatorStyle.rawValue, forKey: Keys.activeIndicatorStyle)
+            onAppearanceOrLayoutChanged?()
+        }
+    }
+
+    /// Color del indicador de ventana activa.
+    public var activeIndicatorColor: TaskbarActiveIndicatorColor {
+        didSet {
+            guard !isBootstrapping, activeIndicatorColor != oldValue else { return }
+            defaults.set(activeIndicatorColor.rawValue, forKey: Keys.activeIndicatorColor)
+            onAppearanceOrLayoutChanged?()
+        }
+    }
+
     public var alignment: TaskbarAlignment {
         didSet {
             guard !isBootstrapping, alignment != oldValue else { return }
@@ -209,6 +270,21 @@ public final class TaskbarPreferences {
         didSet {
             guard !isBootstrapping, showWindowTitles != oldValue else { return }
             defaults.set(showWindowTitles, forKey: Keys.showWindowTitles)
+            onAppearanceOrLayoutChanged?()
+        }
+    }
+
+    /// Acceso directo inverso a `showWindowTitles` para mostrar únicamente íconos en todos los botones de ventanas.
+    public var iconsOnlyMode: Bool {
+        get { !showWindowTitles }
+        set { showWindowTitles = !newValue }
+    }
+
+    /// Define si las ventanas minimizadas u ocultas conservan su tamaño con título o se compactan a solo ícono.
+    public var minimizedWindowDisplayMode: TaskbarMinimizedWindowDisplayMode {
+        didSet {
+            guard !isBootstrapping, minimizedWindowDisplayMode != oldValue else { return }
+            defaults.set(minimizedWindowDisplayMode.rawValue, forKey: Keys.minimizedWindowDisplayMode)
             onAppearanceOrLayoutChanged?()
         }
     }
@@ -434,8 +510,15 @@ public final class TaskbarPreferences {
         self.startMenuAnimation = (defaults.string(forKey: Keys.startMenuAnimation).flatMap(TaskbarStartMenuAnimation.init(rawValue:))) ?? .riseFromBar
         let savedStartDuration = defaults.object(forKey: Keys.startMenuAnimationDuration) as? Double ?? Self.defaultStartMenuAnimationDuration
         self.startMenuAnimationDuration = min(max(savedStartDuration, Self.minStartMenuAnimationDuration), Self.maxStartMenuAnimationDuration)
+        self.showTopBorder = defaults.object(forKey: Keys.showTopBorder) as? Bool ?? true
+        self.barStyle = (defaults.string(forKey: Keys.barStyle).flatMap(TaskbarBarStyle.init(rawValue:))) ?? .docked
+        self.backgroundMaterial = (defaults.string(forKey: Keys.backgroundMaterial).flatMap(TaskbarBackgroundMaterial.init(rawValue:))) ?? .frostedGlass
+        self.buttonStyle = (defaults.string(forKey: Keys.buttonStyle).flatMap(TaskbarButtonStyle.init(rawValue:))) ?? .roundedCard
+        self.activeIndicatorStyle = (defaults.string(forKey: Keys.activeIndicatorStyle).flatMap(TaskbarActiveIndicatorStyle.init(rawValue:))) ?? .pill
+        self.activeIndicatorColor = (defaults.string(forKey: Keys.activeIndicatorColor).flatMap(TaskbarActiveIndicatorColor.init(rawValue:))) ?? .systemAccent
         self.alignment = (defaults.string(forKey: Keys.alignment).flatMap(TaskbarAlignment.init(rawValue:))) ?? .left
         self.showWindowTitles = defaults.object(forKey: Keys.showWindowTitles) as? Bool ?? true
+        self.minimizedWindowDisplayMode = (defaults.string(forKey: Keys.minimizedWindowDisplayMode).flatMap(TaskbarMinimizedWindowDisplayMode.init(rawValue:))) ?? .sameAsNormal
         self.showMinimizedIndicator = defaults.object(forKey: Keys.showMinimizedIndicator) as? Bool ?? true
         self.showNotificationBadges = defaults.object(forKey: Keys.showNotificationBadges) as? Bool ?? true
         self.notificationAnimation = (defaults.string(forKey: Keys.notificationAnimation).flatMap(TaskbarNotificationAnimation.init(rawValue:))) ?? .bounce
@@ -603,8 +686,15 @@ public final class TaskbarPreferences {
         startButtonIcon = .windowsGrid
         startMenuAnimation = .riseFromBar
         startMenuAnimationDuration = Self.defaultStartMenuAnimationDuration
+        showTopBorder = true
+        barStyle = .docked
+        backgroundMaterial = .frostedGlass
+        buttonStyle = .roundedCard
+        activeIndicatorStyle = .pill
+        activeIndicatorColor = .systemAccent
         alignment = .left
         showWindowTitles = true
+        minimizedWindowDisplayMode = .sameAsNormal
         showMinimizedIndicator = true
         showNotificationBadges = true
         notificationAnimation = .bounce

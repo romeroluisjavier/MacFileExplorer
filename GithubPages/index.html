@@ -4,9 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>MacFileExplorer — File Explorer, Taskbar &amp; AltTab for your Mac</title>
-  <meta id="meta-description" name="description" content="Everything comfortable from Windows, thoughtfully built for your Mac. Browse folders with tabs, add a Windows-style Taskbar with Start Menu, switch windows instantly with AltTab, and clean duplicates. Free for macOS." />
+  <meta id="meta-description" name="description" content="Everything comfortable from Windows, thoughtfully built for your Mac. Browse folders with tabs, customize a Floating Island Taskbar & Start Menu, switch windows with AltTab, edit Word/Excel/PowerPoint/CSV in Quick Look, and Send to Drive automatically. Free for macOS." />
   <meta property="og:title" content="MacFileExplorer — Everything comfortable from Windows, built for your Mac" />
-  <meta property="og:description" content="Tabbed file explorer, Windows-style Taskbar with Start Menu, fast AltTab window switcher, smart search, and right-click quick actions. Free for macOS." />
+  <meta property="og:description" content="Tabbed file explorer, customizable Taskbar & Start Menu, fast AltTab switcher, Quick Look Office & CSV editor, automatic Send to Drive, and right-click quick actions. Free for macOS." />
   <meta property="og:image" content="assets/taskbar-overview.png" />
   <meta property="og:type" content="website" />
   <link id="page-favicon" rel="icon" type="image/png" href="assets/app-icon.png" />
@@ -1106,6 +1106,48 @@
 </head>
 
 <body class="text-slate-900 dark:text-slate-100 antialiased selection:bg-brand-500/20 selection:text-brand-600">
+  <!-- Authentic 1998 Retro Era Vector Logos Sprite (Windows 95/98 Flying Flag & 1977–1998 Rainbow Apple) -->
+  <svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" style="position:absolute;width:0;height:0;overflow:hidden;pointer-events:none" aria-hidden="true">
+    <defs>
+      <!-- Classic 1998 Windows 95/98 Waving 4-Color Flag with Trailing Pixel Blocks -->
+      <symbol id="logo-win98" viewBox="0 0 24 24">
+        <!-- Trailing flying pixels (signature 1995–1998 Windows Start icon detail) -->
+        <rect x="1.2" y="7.8" width="1.9" height="1.9" fill="#E53935"/>
+        <rect x="4.0" y="6.1" width="2.1" height="2.1" fill="#F25022"/>
+        <rect x="2.0" y="11.3" width="1.8" height="1.8" fill="#111827"/>
+        <rect x="4.6" y="9.8" width="2.0" height="2.0" fill="#7FBA00"/>
+        <rect x="1.4" y="14.9" width="1.9" height="1.9" fill="#00A4EF"/>
+        <rect x="4.1" y="13.4" width="2.1" height="2.1" fill="#00A4EF"/>
+        <rect x="4.5" y="16.9" width="1.9" height="1.9" fill="#FFB900"/>
+        <!-- Bold black waving flag frame -->
+        <path d="M8.1 4.9 C11.1 3.7 13.7 4.2 15.6 4.8 C17.9 5.5 20.1 5.1 22.8 3.6 L21.0 18.6 C18.5 19.9 16.3 20.2 13.8 19.6 C11.7 19.0 9.4 18.8 6.3 19.9 Z" fill="#111111"/>
+        <!-- Top-Left Red Pane -->
+        <path d="M9.0 5.9 C11.0 5.2 12.7 5.3 14.3 5.8 L13.5 11.2 C12.0 10.7 10.3 10.7 8.2 11.3 Z" fill="#F25022"/>
+        <!-- Top-Right Green Pane -->
+        <path d="M15.6 6.1 C17.5 6.6 19.3 6.5 21.3 5.5 L20.5 10.9 C18.6 11.8 16.8 11.9 14.8 11.5 Z" fill="#7FBA00"/>
+        <!-- Bottom-Left Blue Pane -->
+        <path d="M8.0 12.6 C10.0 11.9 11.7 12.0 13.3 12.5 L12.5 17.9 C10.9 17.4 9.2 17.4 7.2 18.1 Z" fill="#00A4EF"/>
+        <!-- Bottom-Right Yellow Pane -->
+        <path d="M14.6 12.8 C16.5 13.3 18.3 13.2 20.3 12.2 L19.5 17.6 C17.6 18.5 15.8 18.6 13.8 18.1 Z" fill="#FFB900"/>
+      </symbol>
+
+      <!-- Classic 1977–1998 Apple Computer 6-Stripe Rainbow Logo (Mac OS 8 / 9 Era) -->
+      <clipPath id="apple98-clip">
+        <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
+      </clipPath>
+      <symbol id="logo-apple98" viewBox="0 0 24 24">
+        <g clip-path="url(#apple98-clip)">
+          <rect x="0" y="0" width="24" height="10.7" fill="#61BB46"/>
+          <rect x="0" y="10.7" width="24" height="2.25" fill="#FDB827"/>
+          <rect x="0" y="12.95" width="24" height="2.25" fill="#F5821F"/>
+          <rect x="0" y="15.2" width="24" height="2.25" fill="#E03A3E"/>
+          <rect x="0" y="17.45" width="24" height="2.25" fill="#963D97"/>
+          <rect x="0" y="19.7" width="24" height="4.3" fill="#009DDC"/>
+        </g>
+      </symbol>
+    </defs>
+  </svg>
+
   <!-- Reading Progress Bar -->
   <div id="scroll-progress" aria-hidden="true"></div>
 
@@ -1127,7 +1169,7 @@
           <img id="nav-app-icon" src="assets/app-icon.png" alt="MacFileExplorer" class="w-8 h-8 rounded-lg shadow-sm group-hover:scale-105 transition-transform shrink-0" />
           <div class="flex items-center gap-2 min-w-0">
             <span class="font-bold tracking-tight text-[15px] text-slate-900 dark:text-white truncate">MacFileExplorer</span>
-            <span id="nav-version-pill" class="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-brand-500/12 text-brand-600 dark:text-brand-400 border border-brand-500/20">v2.0.0</span>
+            <span id="nav-version-pill" class="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-brand-500/12 text-brand-600 dark:text-brand-400 border border-brand-500/20">v2.5.0</span>
           </div>
         </a>
 
@@ -1152,7 +1194,7 @@
           <div class="relative">
             <button id="theme-menu-trigger" type="button" aria-haspopup="true" aria-expanded="false"
               class="h-9 px-2.5 sm:px-3 rounded-xl flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-slate-900/[0.05] dark:bg-white/[0.08] hover:bg-slate-900/10 dark:hover:bg-white/15 border border-slate-900/10 dark:border-white/10 transition-colors whitespace-nowrap">
-              <span id="theme-trigger-icon" class="text-sm leading-none" aria-hidden="true">☀️</span>
+              <span id="theme-trigger-icon" class="inline-flex items-center justify-center w-4 h-4 text-sm leading-none shrink-0" aria-hidden="true">☀️</span>
               <span id="theme-trigger-label" class="hidden sm:inline">Light</span>
               <svg class="w-3.5 h-3.5 opacity-70" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/>
@@ -1162,11 +1204,11 @@
             <div id="theme-menu" class="theme-menu absolute right-0 mt-2 w-56 rounded-2xl p-1.5 z-50" role="menu">
               <div class="px-2.5 py-1.5 text-[10.5px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500" data-i18n="theme.heading">Appearance</div>
               <button type="button" data-set-theme="light" class="theme-opt w-full flex items-center justify-between gap-2 px-2.5 py-2 rounded-xl text-left text-xs font-semibold text-slate-800 dark:text-slate-100 hover:bg-slate-900/5 dark:hover:bg-white/10 transition-colors" role="menuitem">
-                <span class="flex items-center gap-2"><span>☀️</span><span data-i18n="theme.light">Light</span></span>
+                <span class="flex items-center gap-2"><span class="inline-flex items-center justify-center w-4 h-4 shrink-0">☀️</span><span data-i18n="theme.light">Light</span></span>
                 <span class="theme-check opacity-0 text-brand-600 dark:text-brand-400 font-bold">✓</span>
               </button>
               <button type="button" data-set-theme="dark" class="theme-opt w-full flex items-center justify-between gap-2 px-2.5 py-2 rounded-xl text-left text-xs font-semibold text-slate-800 dark:text-slate-100 hover:bg-slate-900/5 dark:hover:bg-white/10 transition-colors" role="menuitem">
-                <span class="flex items-center gap-2"><span>🌙</span><span data-i18n="theme.dark">Dark</span></span>
+                <span class="flex items-center gap-2"><span class="inline-flex items-center justify-center w-4 h-4 shrink-0">🌙</span><span data-i18n="theme.dark">Dark</span></span>
                 <span class="theme-check opacity-0 text-brand-600 dark:text-brand-400 font-bold">✓</span>
               </button>
               <div class="my-1.5 border-t border-slate-900/10 dark:border-white/10"></div>
@@ -1174,18 +1216,18 @@
                 <span>🥚</span><span data-i18n="theme.easterEggs">1998 Easter Eggs</span>
               </div>
               <button type="button" data-set-theme="win98" class="theme-opt w-full flex items-center justify-between gap-2 px-2.5 py-2 rounded-xl text-left text-xs font-semibold text-slate-800 dark:text-slate-100 hover:bg-slate-900/5 dark:hover:bg-white/10 transition-colors" role="menuitem">
-                <span class="flex items-center gap-2"><span>🪟</span><span>Windows</span><span class="px-1.5 py-0.5 text-[9.5px] rounded bg-teal-600/15 text-teal-700 dark:text-teal-300 font-bold">98</span></span>
+                <span class="flex items-center gap-2"><svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" aria-hidden="true"><use href="#logo-win98"/></svg><span>Windows</span><span class="px-1.5 py-0.5 text-[9.5px] rounded bg-teal-600/15 text-teal-700 dark:text-teal-300 font-bold">98</span></span>
                 <span class="theme-check opacity-0 text-brand-600 dark:text-brand-400 font-bold">✓</span>
               </button>
               <button type="button" data-set-theme="macos98" class="theme-opt w-full flex items-center justify-between gap-2 px-2.5 py-2 rounded-xl text-left text-xs font-semibold text-slate-800 dark:text-slate-100 hover:bg-slate-900/5 dark:hover:bg-white/10 transition-colors" role="menuitem">
-                <span class="flex items-center gap-2"><span>🍎</span><span>macOS</span><span class="px-1.5 py-0.5 text-[9.5px] rounded bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 font-bold">98</span></span>
+                <span class="flex items-center gap-2"><svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" aria-hidden="true"><use href="#logo-apple98"/></svg><span>macOS</span><span class="px-1.5 py-0.5 text-[9.5px] rounded bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 font-bold">98</span></span>
                 <span class="theme-check opacity-0 text-brand-600 dark:text-brand-400 font-bold">✓</span>
               </button>
             </div>
           </div>
 
           <!-- Desktop Download CTA -->
-          <a id="nav-download-cta" href="https://github.com/romeroluisjavier/MacFileExplorer/raw/main/releases/MacFileExplorer-2.0.0.dmg"
+          <a id="nav-download-cta" href="https://github.com/romeroluisjavier/MacFileExplorer/raw/main/releases/MacFileExplorer-2.5.0.dmg"
             class="btn-primary hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[12.5px] font-semibold text-white bg-gradient-to-b from-[#1A90FF] to-[#0071E3] hover:brightness-110 shadow-md shadow-brand-600/25 transition-all whitespace-nowrap">
             <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2.3" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v11m0 0-4-4m4 4 4-4M4 19h16"/>
@@ -1220,14 +1262,14 @@
           <div class="pt-2 border-t border-slate-900/10 dark:border-white/10">
             <div class="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2" data-i18n="theme.mobileLabel">Theme (incl. 1998 Easter Eggs)</div>
             <div class="grid grid-cols-4 gap-1.5">
-              <button type="button" data-set-theme="light" class="theme-pill-mobile px-1.5 py-2 rounded-xl text-[11px] font-bold border border-slate-900/12 dark:border-white/12 bg-slate-100 dark:bg-white/10 text-slate-900 dark:text-white">☀️ <span data-i18n="theme.light">Light</span></button>
-              <button type="button" data-set-theme="dark" class="theme-pill-mobile px-1.5 py-2 rounded-xl text-[11px] font-bold border border-slate-900/12 dark:border-white/12 bg-slate-100 dark:bg-white/10 text-slate-900 dark:text-white">🌙 <span data-i18n="theme.dark">Dark</span></button>
-              <button type="button" data-set-theme="win98" class="theme-pill-mobile px-1.5 py-2 rounded-xl text-[11px] font-bold border border-slate-900/12 dark:border-white/12 bg-slate-100 dark:bg-white/10 text-slate-900 dark:text-white">🪟 Win98</button>
-              <button type="button" data-set-theme="macos98" class="theme-pill-mobile px-1.5 py-2 rounded-xl text-[11px] font-bold border border-slate-900/12 dark:border-white/12 bg-slate-100 dark:bg-white/10 text-slate-900 dark:text-white">🍎 Mac98</button>
+              <button type="button" data-set-theme="light" class="theme-pill-mobile inline-flex items-center justify-center gap-1 px-1.5 py-2 rounded-xl text-[11px] font-bold border border-slate-900/12 dark:border-white/12 bg-slate-100 dark:bg-white/10 text-slate-900 dark:text-white">☀️ <span data-i18n="theme.light">Light</span></button>
+              <button type="button" data-set-theme="dark" class="theme-pill-mobile inline-flex items-center justify-center gap-1 px-1.5 py-2 rounded-xl text-[11px] font-bold border border-slate-900/12 dark:border-white/12 bg-slate-100 dark:bg-white/10 text-slate-900 dark:text-white">🌙 <span data-i18n="theme.dark">Dark</span></button>
+              <button type="button" data-set-theme="win98" class="theme-pill-mobile inline-flex items-center justify-center gap-1 px-1.5 py-2 rounded-xl text-[11px] font-bold border border-slate-900/12 dark:border-white/12 bg-slate-100 dark:bg-white/10 text-slate-900 dark:text-white"><svg class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" aria-hidden="true"><use href="#logo-win98"/></svg><span>Win98</span></button>
+              <button type="button" data-set-theme="macos98" class="theme-pill-mobile inline-flex items-center justify-center gap-1 px-1.5 py-2 rounded-xl text-[11px] font-bold border border-slate-900/12 dark:border-white/12 bg-slate-100 dark:bg-white/10 text-slate-900 dark:text-white"><svg class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" aria-hidden="true"><use href="#logo-apple98"/></svg><span>Mac98</span></button>
             </div>
           </div>
 
-          <a id="mobile-download-cta" href="https://github.com/romeroluisjavier/MacFileExplorer/raw/main/releases/MacFileExplorer-2.0.0.dmg"
+          <a id="mobile-download-cta" href="https://github.com/romeroluisjavier/MacFileExplorer/raw/main/releases/MacFileExplorer-2.5.0.dmg"
             class="btn-primary w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold text-white bg-gradient-to-b from-[#1A90FF] to-[#0071E3] shadow-md">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.3" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v11m0 0-4-4m4 4 4-4M4 19h16"/>
@@ -1240,7 +1282,7 @@
       <!-- Fun Retro Easter Egg Banner (visible only in Windows 98 / macOS 98 modes) -->
       <div id="retro-banner" class="mt-2">
         <div id="retro-banner-inner" class="px-3.5 py-2 flex flex-wrap items-center justify-between gap-2 text-xs font-bold">
-          <span id="retro-banner-text">💾 Welcome back to 1998! Pure CSS Easter Egg mode.</span>
+          <span id="retro-banner-text" class="inline-flex items-center gap-2">Welcome back to 1998! Pure CSS Easter Egg mode.</span>
           <button type="button" data-set-theme="light" class="btn-secondary px-2.5 py-1 text-[11px] font-bold" data-i18n="retro.back">Back to Modern Light</button>
         </div>
       </div>
@@ -1265,7 +1307,7 @@
           </span>
           <span id="hero-release-badge" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold mac-glass text-indigo-700 dark:text-indigo-300">
             <span class="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
-            <span id="hero-release-badge-text">Latest version: v2.0.0</span>
+            <span id="hero-release-badge-text">Latest version: v2.5.0</span>
           </span>
         </div>
 
@@ -1278,17 +1320,17 @@
         </h1>
 
         <p class="desktop-subtext mt-5 sm:mt-6 text-[15px] sm:text-xl text-slate-600 dark:text-slate-300 max-w-2xl mx-auto leading-relaxed" data-i18n-html="hero.subtitle">
-          Organize folders with tabs, add a <strong class="font-semibold text-slate-900 dark:text-white">Taskbar with a Start Menu</strong> at the bottom of your screen, and jump to any window in a split second with <strong class="font-semibold text-slate-900 dark:text-white">AltTab</strong>. Simple, lightweight, and ready to use.
+          Organize folders with tabs, customize a <strong class="font-semibold text-slate-900 dark:text-white">Taskbar &amp; Start Menu</strong>, switch windows with <strong class="font-semibold text-slate-900 dark:text-white">AltTab</strong>, and preview or edit <strong class="font-semibold text-slate-900 dark:text-white">Word, Excel, PowerPoint &amp; CSV</strong> files or send them straight to Google Drive.
         </p>
 
         <!-- Primary CTAs (stack cleanly on mobile) -->
         <div class="mt-7 sm:mt-9 flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 max-w-md sm:max-w-none mx-auto">
-          <a id="hero-download-cta" href="https://github.com/romeroluisjavier/MacFileExplorer/raw/main/releases/MacFileExplorer-2.0.0.dmg"
+          <a id="hero-download-cta" href="https://github.com/romeroluisjavier/MacFileExplorer/raw/main/releases/MacFileExplorer-2.5.0.dmg"
             class="btn-primary inline-flex items-center justify-center gap-2.5 px-7 py-3.5 rounded-2xl text-[15px] font-semibold text-white bg-gradient-to-b from-[#1A90FF] to-[#0071E3] hover:brightness-110 shadow-xl shadow-brand-600/25 transition-all hover:-translate-y-0.5">
             <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v12m0 0-4.5-4.5M12 15l4.5-4.5M4 20h16"/>
             </svg>
-            <span id="hero-download-label">Download MacFileExplorer v2.0.0</span>
+            <span id="hero-download-label">Download MacFileExplorer v2.5.0</span>
           </a>
 
           <a href="#install"
@@ -1312,7 +1354,7 @@
             </h2>
           </div>
 
-          <!-- Mobile-friendly 4-tab strip (fits all 4 cleanly on mobile too) -->
+          <!-- Mobile-friendly 5-tab strip -->
           <div class="flex justify-center mb-4 sm:mb-5">
             <div class="inline-flex items-center gap-0.5 sm:gap-1 p-1 sm:p-1.5 rounded-2xl mac-glass overflow-x-auto no-scrollbar max-w-full" role="tablist" aria-label="Summary preview">
               <button type="button" data-hero-id="taskbar" role="tab" aria-selected="true"
@@ -1334,6 +1376,11 @@
                 class="hero-tab shrink-0 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-[11px] sm:text-[13px] font-semibold transition-all text-slate-600 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white inline-flex items-center gap-1 sm:gap-1.5">
                 <span class="hero-tab-dot w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
                 <span data-i18n="hero.tabExplorer">File Explorer</span>
+              </button>
+              <button type="button" data-hero-id="office" role="tab" aria-selected="false"
+                class="hero-tab shrink-0 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-[11px] sm:text-[13px] font-semibold transition-all text-slate-600 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white inline-flex items-center gap-1 sm:gap-1.5">
+                <span class="hero-tab-dot w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                <span data-i18n="hero.tabOffice">Office &amp; Drive</span>
               </button>
             </div>
           </div>
@@ -1357,7 +1404,7 @@
                   aria-label="Pause auto-rotation">
                   <svg id="hero-icon-pause" class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path d="M5.75 3a.75.75 0 0 0-.75.75v12.5c0 .414.336.75.75.75h1.5a.75.75 0 0 0 .75-.75V3.75A.75.75 0 0 0 7.25 3h-1.5Zm7 0a.75.75 0 0 0-.75.75v12.5c0 .414.336.75.75.75h1.5a.75.75 0 0 0 .75-.75V3.75a.75.75 0 0 0-.75-.75h-1.5Z"/></svg>
                   <svg id="hero-icon-play" class="w-3.5 h-3.5 hidden" fill="currentColor" viewBox="0 0 20 20"><path d="M6.3 2.84A1.5 1.5 0 0 0 4 4.11v11.78a1.5 1.5 0 0 0 2.3 1.27l9.344-5.891a1.5 1.5 0 0 0 0-2.538L6.3 2.841Z"/></svg>
-                  <span id="hero-slide-counter" class="tabular-nums">1 / 4</span>
+                  <span id="hero-slide-counter" class="tabular-nums">1 / 5</span>
                 </button>
                 <span class="text-slate-300 dark:text-white/15">·</span>
                 <button type="button" id="hero-enlarge-btn" class="text-brand-600 dark:text-brand-400 font-semibold hover:underline" data-i18n="hero.clickZoom">Click to enlarge</button>
@@ -1408,9 +1455,9 @@
                   </p>
                 </div>
                 <ul class="mt-3.5 pt-3 border-t border-slate-900/10 dark:border-white/10 space-y-1.5 text-[11.5px] sm:text-xs text-slate-600 dark:text-slate-300">
-                  <li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-brand-500 shrink-0"></span><span data-i18n="pillar1.b1">Live hover window previews with 4 selectable animations</span></li>
-                  <li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-brand-500 shrink-0"></span><span data-i18n="pillar1.b2">Animated alerts for new unread messages (Slack, Mail, WhatsApp)</span></li>
-                  <li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-brand-500 shrink-0"></span><span data-i18n="pillar1.b3">8 Start Menu animations (incl. 0 ms instant), 12 Start icons &amp; up to 5 displays</span></li>
+                  <li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-brand-500 shrink-0"></span><span data-i18n="pillar1.b1">Drag files over any taskbar app for 1 s to raise it &amp; drop straight inside</span></li>
+                  <li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-brand-500 shrink-0"></span><span data-i18n="pillar1.b2">Keep same-app windows side by side, plus Icons Only or compact minimized icons</span></li>
+                  <li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-brand-500 shrink-0"></span><span data-i18n="pillar1.b3">Live hover previews, animated unread alerts, Floating Island &amp; 8 Start animations</span></li>
                 </ul>
               </article>
             </div>
@@ -1548,10 +1595,10 @@
                       <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>
                     </svg>
                   </div>
-                  <h3 class="text-sm sm:text-[15px] font-bold text-slate-950 dark:text-white leading-snug" data-i18n="extra5.title">Peek at files without opening them</h3>
+                  <h3 class="text-sm sm:text-[15px] font-bold text-slate-950 dark:text-white leading-snug" data-i18n="extra5.title">Peek at photos, PDFs, JSON &amp; XML</h3>
                 </div>
                 <p class="text-xs sm:text-[13px] text-slate-600 dark:text-slate-300 leading-relaxed" data-i18n-html="extra5.desc">
-                  Press <kbd class="mac-kbd">Space</kbd> on any document, photo, code file, or folder for an instant full Quick Look preview.
+                  Press <kbd class="mac-kbd">Space</kbd> on any photo, PDF, JSON tree, XML, code file, or folder for an instant full Quick Look preview.
                 </p>
               </article>
             </div>
@@ -1568,6 +1615,54 @@
                 </div>
                 <p class="text-xs sm:text-[13px] text-slate-600 dark:text-slate-300 leading-relaxed" data-i18n-html="extra6.desc">
                   Create and extract <strong>.zip</strong> or <strong>.rar</strong> archives, rename dozens of files at once, pause large transfers, or share straight to Slack and Gemini.
+                </p>
+              </article>
+            </div>
+
+            <div class="feature-parallax-wrap h-full" data-card-parallax="1" data-card-col="0">
+              <article class="mac-glass mac-glass-interactive h-full rounded-2xl p-4">
+                <div class="flex items-center gap-2.5 mb-2">
+                  <div class="w-8 h-8 rounded-lg bg-blue-500/12 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.9" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
+                    </svg>
+                  </div>
+                  <h3 class="text-sm sm:text-[15px] font-bold text-slate-950 dark:text-white leading-snug" data-i18n="extra7.title">Edit Word, Excel &amp; PowerPoint in Quick Look</h3>
+                </div>
+                <p class="text-xs sm:text-[13px] text-slate-600 dark:text-slate-300 leading-relaxed" data-i18n-html="extra7.desc">
+                  Opens in crisp <strong>Original View</strong> by default and switches in one click to a LibreOffice-style editor for <strong>.docx</strong>, <strong>.xlsx</strong>, classic <strong>.xls</strong>, and <strong>.pptx</strong> — with Copy/Paste, Save (<kbd class="mac-kbd">⌘S</kbd>), Save Copy, and <strong>.xls → .xlsx</strong> export.
+                </p>
+              </article>
+            </div>
+
+            <div class="feature-parallax-wrap h-full" data-card-parallax="1" data-card-col="1">
+              <article class="mac-glass mac-glass-interactive h-full rounded-2xl p-4">
+                <div class="flex items-center gap-2.5 mb-2">
+                  <div class="w-8 h-8 rounded-lg bg-emerald-500/12 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.9" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 0 1-1.125-1.125M3.375 19.5h7.5c.621 0 1.125-.504 1.125-1.125m-9.75 0V5.625m0 12.75v-1.5c0-.621.504-1.125 1.125-1.125m18.375 2.625V5.625m0 12.75c0 .621-.504 1.125-1.125 1.125m1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125m0 3.75h-7.5A1.125 1.125 0 0 1 12 18.375m9.75-12.75c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125m19.5 0v1.5c0 .621-.504 1.125-1.125 1.125M2.25 5.625v1.5c0 .621.504 1.125 1.125 1.125m0 0h17.25m-17.25 0h7.5c.621 0 1.125.504 1.125 1.125M3.375 8.25c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125m17.25-3.75h-7.5c-.621 0-1.125.504-1.125 1.125m8.625-1.125c.621 0 1.125.504 1.125 1.125v1.5c0 .621-.504 1.125-1.125 1.125m-17.25 0h7.5m-7.5 0c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125M12 10.875v-1.5m0 1.5c0 .621-.504 1.125-1.125 1.125M12 10.875c0 .621.504 1.125 1.125 1.125m-2.25 0c.621 0 1.125.504 1.125 1.125M13.125 12h7.5m-7.5 0c-.621 0-1.125.504-1.125 1.125M20.625 12c.621 0 1.125.504 1.125 1.125v1.5c0 .621-.504 1.125-1.125 1.125m-17.25 0h7.5M12 14.625v-1.5m0 1.5c0 .621-.504 1.125-1.125 1.125M12 14.625c0 .621.504 1.125 1.125 1.125m-2.25 0c.621 0 1.125.504 1.125 1.125m0 1.5v-1.5m0 0c0-.621.504-1.125 1.125-1.125m0 0h7.5"/>
+                    </svg>
+                  </div>
+                  <h3 class="text-sm sm:text-[15px] font-bold text-slate-950 dark:text-white leading-snug" data-i18n="extra8.title">Fast interactive CSV &amp; TSV spreadsheets</h3>
+                </div>
+                <p class="text-xs sm:text-[13px] text-slate-600 dark:text-slate-300 leading-relaxed" data-i18n-html="extra8.desc">
+                  Inspect and edit huge <strong>.csv</strong> files smoothly at 120 FPS without launching Excel: auto-detects separators, freezes headers, filters &amp; sorts live, calculates Sum/Avg, and copies ranges straight to Excel or Sheets.
+                </p>
+              </article>
+            </div>
+
+            <div class="feature-parallax-wrap h-full" data-card-parallax="1" data-card-col="2">
+              <article class="mac-glass mac-glass-interactive h-full rounded-2xl p-4">
+                <div class="flex items-center gap-2.5 mb-2">
+                  <div class="w-8 h-8 rounded-lg bg-violet-500/12 text-violet-600 dark:text-violet-400 flex items-center justify-center shrink-0">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.9" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0 3 3m-3-3-3 3M6.75 19.5a4.5 4.5 0 0 1-1.41-8.775 5.25 5.25 0 0 1 10.233-2.33 3 3 0 0 1 3.758 3.848A3.752 3.752 0 0 1 18 19.5H6.75Z"/>
+                    </svg>
+                  </div>
+                  <h3 class="text-sm sm:text-[15px] font-bold text-slate-950 dark:text-white leading-snug" data-i18n="extra9.title">«Send to Drive» &amp; top Office menu</h3>
+                </div>
+                <p class="text-xs sm:text-[13px] text-slate-600 dark:text-slate-300 leading-relaxed" data-i18n-html="extra9.desc">
+                  Upload any file to your chosen Google Drive folder using your connected Gmail account and open it automatically in <strong>Google Sheets, Docs, or Slides</strong> (in-app or Chrome). Configure everything from the top <strong>Office</strong> menu.
                 </p>
               </article>
             </div>
@@ -1673,7 +1768,7 @@
                 Every feature can be turned ON or OFF in one click
               </h3>
               <p class="desktop-subtext mt-1 text-xs sm:text-[13px] text-slate-600 dark:text-slate-300 leading-relaxed" data-i18n-html="modular.desc">
-                Want just the <strong>File Explorer</strong>? Leave the rest off. Switch <strong>Taskbar</strong>, <strong>AltTab</strong>, or <strong>Clipboard</strong> on or off anytime — nothing is forced.
+                Want just the <strong>File Explorer</strong>? Leave the rest off. Switch <strong>Taskbar</strong>, <strong>AltTab</strong>, <strong>Office Editor</strong>, or <strong>Clipboard</strong> on or off anytime — nothing is forced.
               </p>
 
               <!-- Matching Compact Smoked-Glass Status Bar -->
@@ -1796,7 +1891,7 @@
             <button type="button" data-demo-filter="gifs"
               class="demo-filter-btn active shrink-0 px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all bg-brand-600 text-white shadow-sm inline-flex items-center gap-1.5">
               <span class="w-1.5 h-1.5 rounded-full bg-emerald-300"></span>
-              <span data-i18n="demo.filterGifs">In motion (16)</span>
+              <span data-i18n="demo.filterGifs">In motion (24)</span>
             </button>
             <button type="button" data-demo-filter="screenshots"
               class="demo-filter-btn shrink-0 px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all text-slate-600 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white">
@@ -1804,7 +1899,7 @@
             </button>
             <button type="button" data-demo-filter="all"
               class="demo-filter-btn shrink-0 px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all text-slate-600 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white">
-              <span data-i18n="demo.filterAll">All (22)</span>
+              <span data-i18n="demo.filterAll">All (30)</span>
             </button>
           </div>
         </div>
@@ -1844,12 +1939,12 @@
                     Click the blue button below. The installer file will land in your <strong>Downloads</strong> folder in just a few seconds.
                   </p>
                 </div>
-                <a id="install-download-cta" href="https://github.com/romeroluisjavier/MacFileExplorer/raw/main/releases/MacFileExplorer-2.0.0.dmg"
+                <a id="install-download-cta" href="https://github.com/romeroluisjavier/MacFileExplorer/raw/main/releases/MacFileExplorer-2.5.0.dmg"
                   class="btn-primary inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-gradient-to-b from-[#1A90FF] to-[#0071E3] hover:brightness-110 shadow-md shadow-brand-600/25 transition-all shrink-0 self-start sm:self-center">
                   <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v11m0 0-4-4m4 4 4-4M4 19h16"/>
                   </svg>
-                  <span id="install-download-label">Download v2.0.0 (.dmg)</span>
+                  <span id="install-download-label">Download v2.5.0 (.dmg)</span>
                 </a>
               </div>
             </div>
@@ -2068,10 +2163,10 @@
       <!-- Fun inline quick-switch footer pills for Light / Dark / Win98 / Mac98 -->
       <div class="flex flex-wrap items-center justify-center gap-1.5 text-xs">
         <span class="text-[11px] font-semibold opacity-75 mr-1" data-i18n="footer.tryTheme">Style:</span>
-        <button type="button" data-set-theme="light" class="footer-theme-btn px-2.5 py-1 rounded-lg border border-slate-900/10 dark:border-white/10 hover:border-brand-500/50 font-semibold transition-colors">☀️ <span data-i18n="theme.light">Light</span></button>
-        <button type="button" data-set-theme="dark" class="footer-theme-btn px-2.5 py-1 rounded-lg border border-slate-900/10 dark:border-white/10 hover:border-brand-500/50 font-semibold transition-colors">🌙 <span data-i18n="theme.dark">Dark</span></button>
-        <button type="button" data-set-theme="win98" class="footer-theme-btn px-2.5 py-1 rounded-lg border border-slate-900/10 dark:border-white/10 hover:border-brand-500/50 font-semibold transition-colors">🪟 Win 98</button>
-        <button type="button" data-set-theme="macos98" class="footer-theme-btn px-2.5 py-1 rounded-lg border border-slate-900/10 dark:border-white/10 hover:border-brand-500/50 font-semibold transition-colors">🍎 Mac 98</button>
+        <button type="button" data-set-theme="light" class="footer-theme-btn inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-slate-900/10 dark:border-white/10 hover:border-brand-500/50 font-semibold transition-colors">☀️ <span data-i18n="theme.light">Light</span></button>
+        <button type="button" data-set-theme="dark" class="footer-theme-btn inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-slate-900/10 dark:border-white/10 hover:border-brand-500/50 font-semibold transition-colors">🌙 <span data-i18n="theme.dark">Dark</span></button>
+        <button type="button" data-set-theme="win98" class="footer-theme-btn inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-slate-900/10 dark:border-white/10 hover:border-brand-500/50 font-semibold transition-colors"><svg class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" aria-hidden="true"><use href="#logo-win98"/></svg><span>Win 98</span></button>
+        <button type="button" data-set-theme="macos98" class="footer-theme-btn inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-slate-900/10 dark:border-white/10 hover:border-brand-500/50 font-semibold transition-colors"><svg class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" aria-hidden="true"><use href="#logo-apple98"/></svg><span>Mac 98</span></button>
       </div>
 
       <div class="flex flex-wrap items-center justify-center gap-4 text-xs sm:text-sm font-medium">
@@ -2131,8 +2226,8 @@
   <script>
     const REPO_OWNER = 'romeroluisjavier';
     const REPO_NAME = 'MacFileExplorer';
-    let currentVersionTag = 'v2.0.0';
-    let currentDmgUrl = `https://github.com/${REPO_OWNER}/${REPO_NAME}/raw/main/releases/MacFileExplorer-2.0.0.dmg`;
+    let currentVersionTag = 'v2.5.0';
+    let currentDmgUrl = `https://github.com/${REPO_OWNER}/${REPO_NAME}/raw/main/releases/MacFileExplorer-2.5.0.dmg`;
     let currentLang = localStorage.getItem('mfe-lang') === 'es' ? 'es' : 'en';
     let currentTheme = ['light', 'dark', 'win98', 'macos98'].includes(localStorage.getItem('mfe-theme-v2'))
       ? localStorage.getItem('mfe-theme-v2')
@@ -2160,15 +2255,15 @@
         'theme.dark': 'Dark',
         'theme.easterEggs': '1998 Easter Eggs',
         'theme.mobileLabel': 'Theme (incl. 1998 Easter Eggs)',
-        'retro.win98': '💾 Windows 98 Mode unlocked! Pure CSS Easter Egg — welcome back to 1998.',
-        'retro.macos98': '🍎 Mac OS 8/9 Platinum (1998) unlocked! Pure CSS Easter Egg — welcome back to 1998.',
+        'retro.win98': 'Windows 98 Mode unlocked! Pure CSS Easter Egg — welcome back to 1998.',
+        'retro.macos98': 'Mac OS 8/9 Platinum (1998) unlocked! Pure CSS Easter Egg — welcome back to 1998.',
         'retro.back': 'Back to Light Mode',
         'hero.badgeFree': '100% Free for Mac',
         'hero.badgeOS': 'macOS 14+ · Apple Silicon & Intel',
         'hero.latestPrefix': 'Latest version:',
         'hero.title1': 'Everything comfortable from Windows,',
         'hero.title2': 'built for your Mac.',
-        'hero.subtitle': 'Organize folders with tabs, add a <strong class="font-semibold text-slate-900 dark:text-white">Taskbar with a Start Menu</strong> at the bottom of your screen, and jump to any window in a split second with <strong class="font-semibold text-slate-900 dark:text-white">AltTab</strong>. Simple, lightweight, and ready to use.',
+        'hero.subtitle': 'Organize folders with tabs, customize a <strong class="font-semibold text-slate-900 dark:text-white">Taskbar &amp; Start Menu</strong>, switch windows with <strong class="font-semibold text-slate-900 dark:text-white">AltTab</strong>, and preview or edit <strong class="font-semibold text-slate-900 dark:text-white">Word, Excel, PowerPoint &amp; CSV</strong> files or send them straight to Google Drive.',
         'hero.downloadBtn': 'Download MacFileExplorer',
         'hero.howToInstall': 'See how to install',
         'hero.meta': 'Lightweight download (~22 MB) · No account or subscription · Native on Apple Silicon (M1–M4) & Intel',
@@ -2176,6 +2271,7 @@
         'hero.tabTaskbar': 'Taskbar',
         'hero.tabStart': 'Start Menu',
         'hero.tabExplorer': 'File Explorer',
+        'hero.tabOffice': 'Office & Drive',
         'hero.autoplayPause': 'Pause auto-rotation',
         'hero.autoplayPlay': 'Resume auto-rotation',
         'hero.clickZoom': 'Click to enlarge',
@@ -2184,7 +2280,7 @@
         'features.subtitle': 'No complicated setup. Turn on only what you like and enjoy a faster, more familiar Mac from minute one.',
         'modular.badge': 'Important · You choose what to use',
         'modular.title': 'Every feature can be turned ON or OFF in one click',
-        'modular.desc': 'Want just the <strong>File Explorer</strong>? Leave the rest off. Switch <strong>Taskbar</strong>, <strong>AltTab</strong>, or <strong>Clipboard</strong> on or off anytime — nothing is forced.',
+        'modular.desc': 'Want just the <strong>File Explorer</strong>? Leave the rest off. Switch <strong>Taskbar</strong>, <strong>AltTab</strong>, <strong>Office Editor</strong>, or <strong>Clipboard</strong> on or off anytime — nothing is forced.',
         'modular.tryIt': 'Try toggling modules',
         'modular.counter': '{n} of {total} active',
         'modular.m1': 'File Explorer',
@@ -2196,9 +2292,9 @@
         'pillar.easy': 'Effortless',
         'pillar1.title': 'Taskbar & Start Menu',
         'pillar1.desc': 'See every open window at the bottom of your screen just like Windows, pin your favorite apps, and launch anything from the <strong>Start Menu</strong>.',
-        'pillar1.b1': 'Live hover window previews with 4 selectable animations',
-        'pillar1.b2': 'Animated alerts for unread messages (Slack, Mail, WhatsApp)',
-        'pillar1.b3': '8 Start Menu animations (incl. 0 ms instant), 12 Start icons & up to 5 displays',
+        'pillar1.b1': 'Drag files over any taskbar app for 1 s to raise it & drop straight inside',
+        'pillar1.b2': 'Keep same-app windows side by side, plus Icons Only or compact minimized icons',
+        'pillar1.b3': 'Live hover previews, animated unread alerts, Floating Island & 8 Start animations',
         'pillar2.title': 'Fast Window Switcher (AltTab)',
         'pillar2.desc': 'Stop hunting for buried windows. Press <kbd class="mac-kbd">⌥ + Tab</kbd> to see large previews of every open window and switch instantly.',
         'pillar2.b1': 'Built-in search bar to filter windows as you type',
@@ -2217,10 +2313,16 @@
         'extra3.desc': 'Right-click any image or clip to remove backgrounds, strip private GPS metadata, convert formats, resize, or trim video without opening another app.',
         'extra4.title': 'Clipboard History everywhere',
         'extra4.desc': 'Never lose copied text, links, or images again. Press <kbd class="mac-kbd">⌃⌘V</kbd> inside any Mac app to search and paste past copies immediately.',
-        'extra5.title': 'Peek at files without opening them',
-        'extra5.desc': 'Press <kbd class="mac-kbd">Space</kbd> on any document, photo, code file, or folder for an instant full Quick Look preview.',
+        'extra5.title': 'Peek at photos, PDFs, JSON & XML',
+        'extra5.desc': 'Press <kbd class="mac-kbd">Space</kbd> on any photo, PDF, JSON tree, XML, code file, or folder for an instant full Quick Look preview.',
         'extra6.title': 'Zip, bulk rename & share',
         'extra6.desc': 'Create and extract <strong>.zip</strong> or <strong>.rar</strong> archives, rename dozens of files at once, pause large transfers, or share straight to Slack and Gemini.',
+        'extra7.title': 'Edit Word, Excel & PowerPoint in Quick Look',
+        'extra7.desc': 'Opens in crisp <strong>Original View</strong> by default and switches in one click to a LibreOffice-style editor for <strong>.docx</strong>, <strong>.xlsx</strong>, classic <strong>.xls</strong>, and <strong>.pptx</strong> — with Copy/Paste, Save (<kbd class="mac-kbd">⌘S</kbd>), Save Copy, and <strong>.xls → .xlsx</strong> export.',
+        'extra8.title': 'Fast interactive CSV & TSV spreadsheets',
+        'extra8.desc': 'Inspect and edit huge <strong>.csv</strong> files smoothly at 120 FPS without launching Excel: auto-detects separators, freezes headers, filters &amp; sorts live, calculates Sum/Avg, and copies ranges straight to Excel or Sheets.',
+        'extra9.title': '«Send to Drive» & top Office menu',
+        'extra9.desc': 'Upload any file to your chosen Google Drive folder using your connected Gmail account and open it automatically in <strong>Google Sheets, Docs, or Slides</strong> (in-app or Chrome). Configure everything from the top <strong>Office</strong> menu.',
         'icons.eyebrow': 'Make it yours',
         'icons.title': 'Choose your favorite icon for macOS',
         'icons.desc': 'Pick from <strong>5 app icons</strong> — tap any to preview it live in the Dock and browser tab.',
@@ -2238,9 +2340,9 @@
         'demo.eyebrow': 'Visual tour',
         'demo.title': 'See it in action',
         'demo.subtitle': 'Explore how every feature looks and feels on your Mac. Tap any card to view it full screen.',
-        'demo.filterGifs': 'In motion (16)',
+        'demo.filterGifs': 'In motion (24)',
         'demo.filterShots': 'Screenshots (6)',
-        'demo.filterAll': 'All (22)',
+        'demo.filterAll': 'All (30)',
         'install.eyebrow': 'Ready in 1 minute',
         'install.title': 'How to install on your Mac',
         'install.subtitle': 'No technical skills or terminal commands required. Just follow these 3 quick steps:',
@@ -2303,15 +2405,15 @@
         'theme.dark': 'Oscuro',
         'theme.easterEggs': 'Easter Eggs 1998',
         'theme.mobileLabel': 'Tema (incl. Easter Eggs 1998)',
-        'retro.win98': '💾 ¡Modo Windows 98 desbloqueado! Easter Egg en CSS puro — bienvenido a 1998.',
-        'retro.macos98': '🍎 ¡Modo Mac OS 8/9 Platinum (1998) desbloqueado! Easter Egg en CSS puro — bienvenido a 1998.',
+        'retro.win98': '¡Modo Windows 98 desbloqueado! Easter Egg en CSS puro — bienvenido a 1998.',
+        'retro.macos98': '¡Modo Mac OS 8/9 Platinum (1998) desbloqueado! Easter Egg en CSS puro — bienvenido a 1998.',
         'retro.back': 'Volver a modo Claro',
         'hero.badgeFree': '100% Gratis para Mac',
         'hero.badgeOS': 'macOS 14+ · Apple Silicon e Intel',
         'hero.latestPrefix': 'Última versión:',
         'hero.title1': 'Todo lo cómodo de Windows,',
         'hero.title2': 'hecho para tu Mac.',
-        'hero.subtitle': 'Manejá tus carpetas con pestañas, sumá una <strong class="font-semibold text-slate-900 dark:text-white">barra de tareas con Menú Inicio</strong> abajo de la pantalla y cambiá de ventana en un segundo con <strong class="font-semibold text-slate-900 dark:text-white">AltTab</strong>. Simple, liviana y lista para usar.',
+        'hero.subtitle': 'Manejá tus carpetas con pestañas, personalizá tu <strong class="font-semibold text-slate-900 dark:text-white">Barra de tareas y Menú Inicio</strong>, cambiá de ventana con <strong class="font-semibold text-slate-900 dark:text-white">AltTab</strong> y editá archivos de <strong class="font-semibold text-slate-900 dark:text-white">Word, Excel, PowerPoint y CSV</strong> o envialos directo a Google Drive.',
         'hero.downloadBtn': 'Descargar MacFileExplorer',
         'hero.howToInstall': 'Ver cómo se instala',
         'hero.meta': 'Descarga liviana (~22 MB) · Sin cuentas ni suscripciones · Nativa en Apple Silicon (M1–M4) e Intel',
@@ -2319,6 +2421,7 @@
         'hero.tabTaskbar': 'Barra de tareas',
         'hero.tabStart': 'Menú Inicio',
         'hero.tabExplorer': 'Explorador',
+        'hero.tabOffice': 'Office y Drive',
         'hero.autoplayPause': 'Pausar rotación automática',
         'hero.autoplayPlay': 'Reanudar rotación automática',
         'hero.clickZoom': 'Clic para ampliar',
@@ -2327,7 +2430,7 @@
         'features.subtitle': 'Sin configuraciones complicadas. Activá solo lo que te sirve y disfrutá de un Mac más cómodo desde el primer minuto.',
         'modular.badge': 'Importante · Vos decidís qué usar',
         'modular.title': 'Todo se puede activar o desactivar con un clic',
-        'modular.desc': '¿Solo querés el <strong>Explorador</strong>? Dejá el resto apagado. Encendé o apagá la <strong>Barra de tareas</strong>, <strong>AltTab</strong> o el <strong>Portapapeles</strong> cuando quieras — nada es obligatorio.',
+        'modular.desc': '¿Solo querés el <strong>Explorador</strong>? Dejá el resto apagado. Encendé o apagá la <strong>Barra de tareas</strong>, <strong>AltTab</strong>, el <strong>Editor Office</strong> o el <strong>Portapapeles</strong> cuando quieras — nada es obligatorio.',
         'modular.tryIt': 'Probá encender o apagar',
         'modular.counter': '{n} de {total} activas',
         'modular.m1': 'Explorador',
@@ -2339,9 +2442,9 @@
         'pillar.easy': 'Súper fácil',
         'pillar1.title': 'Barra de tareas y Menú Inicio',
         'pillar1.desc': 'Mirá todas tus ventanas abiertas abajo de la pantalla igual que en Windows, fijá tus apps favoritas y abrí cualquier programa desde el <strong>Menú Inicio</strong>.',
-        'pillar1.b1': 'Vista previa al pasar el mouse con 4 animaciones elegibles',
-        'pillar1.b2': 'Avisos animados cuando tenés mensajes nuevos (Slack, Mail, WhatsApp)',
-        'pillar1.b3': '8 animaciones del Menú Inicio (incl. 0 ms), 12 íconos y hasta 5 pantallas',
+        'pillar1.b1': 'Arrastrá archivos sobre cualquier app de la barra 1 s para abrirla y soltar adentro',
+        'pillar1.b2': 'Ventanas de la misma app juntas lado a lado, modo Solo íconos o minimizadas compactas',
+        'pillar1.b3': 'Vistas previas al pasar el mouse, avisos animados, Isla flotante y 8 animaciones de Inicio',
         'pillar2.title': 'Selector rápido de ventanas (AltTab)',
         'pillar2.desc': 'Dejá de perder tiempo buscando ventanas escondidas. Con <kbd class="mac-kbd">⌥ + Tab</kbd> ves una miniatura grande de cada ventana abierta y saltás directo.',
         'pillar2.b1': 'Buscador incorporado para escribir y filtrar ventanas al vuelo',
@@ -2360,10 +2463,16 @@
         'extra3.desc': 'Con clic derecho podés quitar el fondo de una foto, borrar la ubicación GPS antes de enviarla, convertir formatos o recortar un video sin abrir otras apps.',
         'extra4.title': 'Historial de todo lo que copiás',
         'extra4.desc': 'No vuelvas a perder un texto, enlace o imagen que copiaste hace un rato. Abrí tu historial en cualquier app con <kbd class="mac-kbd">⌃⌘V</kbd> y pegalo directo.',
-        'extra5.title': 'Espiá archivos sin abrirlos',
-        'extra5.desc': 'Tocá la barra <kbd class="mac-kbd">Espacio</kbd> sobre cualquier documento, foto, código o carpeta para ver una vista previa rápida al momento.',
+        'extra5.title': 'Espiá fotos, PDFs, JSON y XML',
+        'extra5.desc': 'Tocá <kbd class="mac-kbd">Espacio</kbd> sobre cualquier foto, PDF, árbol JSON, XML, código o carpeta para ver una vista previa instantánea.',
         'extra6.title': 'Comprimí, renombrá y compartí',
         'extra6.desc': 'Abrí y creá archivos <strong>.zip</strong> o <strong>.rar</strong>, cambiá el nombre a muchos archivos juntos, pausá copias pesadas o compartí directo a Slack y Gemini.',
+        'extra7.title': 'Editá Word, Excel y PowerPoint en Vista Rápida',
+        'extra7.desc': 'Abre siempre en <strong>Vista original</strong> y en un clic pasa a un editor tipo LibreOffice para <strong>.docx</strong>, <strong>.xlsx</strong>, <strong>.xls</strong> clásicos y <strong>.pptx</strong> — con Copiar/Pegar, Guardar (<kbd class="mac-kbd">⌘S</kbd>), Guardar copia y conversión <strong>.xls → .xlsx</strong>.',
+        'extra8.title': 'Planillas CSV y TSV interactivas a máxima velocidad',
+        'extra8.desc': 'Revisá y editá archivos <strong>.csv</strong> enormes a 120 FPS sin abrir Excel: detecta separadores, congela encabezados, filtra y ordena en vivo, calcula Suma/Promedio y copia rangos directo a Excel o Sheets.',
+        'extra9.title': '«Enviar a Drive» y nuevo menú superior Office',
+        'extra9.desc': 'Subí cualquier archivo a la carpeta de Drive que elijas usando tu cuenta de Gmail conectada y abrilo automático en <strong>Google Sheets, Docs o Slides</strong> (en la app o en Chrome). Configurá todo desde el menú superior <strong>Office</strong>.',
         'icons.eyebrow': 'Personalizala a tu gusto',
         'icons.title': 'Elegí el ícono que querés ver en tu Mac',
         'icons.desc': 'Elegí entre <strong>5 íconos</strong> — tocá cualquiera para probarlo en vivo en el Dock y esta pestaña.',
@@ -2381,9 +2490,9 @@
         'demo.eyebrow': 'Recorrido visual',
         'demo.title': 'Mirala en acción',
         'demo.subtitle': 'Explorá cómo se ve y cómo se usa cada función en tu Mac. Tocá cualquier tarjeta para verla en grande.',
-        'demo.filterGifs': 'En movimiento (16)',
+        'demo.filterGifs': 'En movimiento (24)',
         'demo.filterShots': 'Imágenes (6)',
-        'demo.filterAll': 'Todo (22)',
+        'demo.filterAll': 'Todo (30)',
         'install.eyebrow': 'Listo en 1 minuto',
         'install.title': 'Cómo instalarla en tu Mac',
         'install.subtitle': 'No necesitás saber nada técnico ni escribir comandos. Seguí estos 3 pasos simples:',
@@ -2435,7 +2544,7 @@
       }
     };
 
-    const HERO_ORDER = ['taskbar', 'alttab', 'startmenu', 'explorer'];
+    const HERO_ORDER = ['taskbar', 'alttab', 'startmenu', 'explorer', 'office'];
 
     const HERO_PREVIEWS = {
       taskbar: {
@@ -2465,6 +2574,13 @@
         title: { en: 'Tabbed File Explorer: tabs, thumbnails & live search', es: 'Explorador con pestañas, miniaturas y búsqueda en vivo' },
         en: 'Familiar tabbed file explorer: switch folder tabs, toggle List or Thumbnails view, and filter files live as you type.',
         es: 'Explorador de archivos cómodo y familiar: cambiá entre pestañas, alterná entre Lista y Miniaturas y filtrá archivos mientras escribís.'
+      },
+      office: {
+        src: 'assets/office-quicklook-editor-demo.gif',
+        badge: { en: 'Office & Drive', es: 'Office y Drive' },
+        title: { en: 'Quick Look Office Editor (.docx, .xlsx, .xls, .pptx, .csv) & Send to Drive', es: 'Editor Office en Vista Rápida (.docx, .xlsx, .xls, .pptx, .csv) y Enviar a Drive' },
+        en: 'Preview Office & CSV files in crisp Original View, switch to the built-in Quick Editor with Save/Copy, or send straight to Google Drive & Sheets/Docs/Slides.',
+        es: 'Previsualizá Office y CSV en Vista original, pasá al Editor rápido con Guardar/Copiar o envialos automático a tu carpeta de Google Drive y Sheets/Docs/Slides.'
       }
     };
 
@@ -2477,6 +2593,78 @@
     };
 
     const DEMO_ITEMS = [
+      {
+        id: 'quicklook-media-actions-copy-gif', type: 'gifs', src: 'assets/quicklook-media-actions-copy-demo.gif',
+        badge: { en: 'Quick Look Media & PDF', es: 'Vista Rápida y PDF' },
+        title: { en: 'Free-moving Quick Look with Image/Video Quick Actions, Copy & Red PDF Icons', es: 'Vista Rápida libre con Acciones rápidas, Copiar (⌘C) e ícono rojo PDF' },
+        desc: {
+          en: 'Drag the Quick Look window freely outside MacFileExplorer or onto another display. Inside image & video previews, copy (⌘C) for chats or folders, remove backgrounds, convert, rotate 90°/180° live, trim, mute, or strip metadata — and spot PDFs instantly with the new red Acrobat-style icon.',
+          es: 'Arrastrá la ventana de Vista Rápida fuera de MacFileExplorer o a otro monitor sin frenos. En imágenes y videos tenés Copiar (⌘C), Eliminar fondo, Convertir, Rotar 90°/180° en vivo, Recortar, Silenciar y Limpiar metadatos, más un ícono rojo estilo Acrobat para distinguir los PDF al instante.'
+        }
+      },
+      {
+        id: 'csv-excel-drag-selection-gif', type: 'gifs', src: 'assets/csv-excel-drag-selection-demo.gif',
+        badge: { en: 'Multi-Row/Col Drag Select', es: 'Selección por arrastre' },
+        title: { en: 'Click & drag to select multiple rows and columns in CSV & Excel', es: 'Seleccioná varias filas y columnas arrastrando con el mouse en CSV y Excel' },
+        desc: {
+          en: 'Click and drag across cells, row numbers (#), or column headers (A, B, C…) inside CSV and Excel previews with smooth edge auto-scroll, live Count/Sum/Avg stats, and instant ⌘C copy to Excel or Google Sheets.',
+          es: 'Hacé clic y arrastrá sobre celdas, números de fila (#) o encabezados (A, B, C…) en CSV y Excel con desplazamiento automático, Conteo/Suma/Promedio en vivo y copiado directo a Excel o Google Sheets con ⌘C.'
+        }
+      },
+      {
+        id: 'taskbar-drag-hover-springload-gif', type: 'gifs', src: 'assets/taskbar-drag-hover-springload-demo.gif',
+        badge: { en: 'Drag to Taskbar', es: 'Arrastrar a la Barra' },
+        title: { en: 'Drag any file over a Taskbar app for 1 s to open & drop inside', es: 'Arrastrá un archivo sobre una app de la Barra 1 s para abrirla y soltarlo adentro' },
+        desc: {
+          en: 'Dragging a file from MacFileExplorer, Finder, or your Desktop? Hover and hold still for 1 second over any open, minimized, or pinned app on the bottom Taskbar — a progress bar fills, that window pops straight to the front without releasing your file, and you can drop it right inside.',
+          es: '¿Estás arrastrando un archivo desde MacFileExplorer, Finder o el Escritorio? Apoyá el puntero 1 segundo quieto sobre cualquier app o ventana de la barra inferior (incluso minimizada): se llena una barra de progreso, esa ventana pasa al frente sin soltar el archivo y lo podés soltar directo adentro.'
+        }
+      },
+      {
+        id: 'taskbar-grouping-compact-gif', type: 'gifs', src: 'assets/taskbar-grouping-compact-demo.gif',
+        badge: { en: 'Grouping & Compact Icons', es: 'Agrupación y Solo Íconos' },
+        title: { en: 'Keep same-app windows side by side, Icons Only & compact minimized icons', es: 'Agrupación lado a lado, modo Solo íconos y minimizadas compactas' },
+        desc: {
+          en: 'Toggle one-click grouping so all windows of the same app (like multiple Chrome windows) always sit next to each other, collapse minimized windows to compact icons to free space for open ones, or switch the whole Taskbar to Icons Only.',
+          es: 'Activá en un clic que las ventanas de la misma app (como varias de Chrome) queden siempre una al lado de la otra, compactá únicamente las ventanas minimizadas a solo su ícono para dar más lugar a las abiertas, o pasá toda la barra a «Solo íconos».'
+        }
+      },
+      {
+        id: 'office-quicklook-editor-gif', type: 'gifs', src: 'assets/office-quicklook-editor-demo.gif',
+        badge: { en: 'Office Editor', es: 'Editor Office' },
+        title: { en: 'Edit Word, Excel (.xlsx & .xls) & PowerPoint in Quick Look', es: 'Editá Word, Excel (.xlsx y .xls) y PowerPoint en Vista Rápida' },
+        desc: {
+          en: 'Opens cleanly in Original View by default and switches in one click to a LibreOffice-style editor with unified icons, Copy/Paste, floppy-disk Save (⌘S), Save Copy (⇧⌘S), and 1-click .xls → .xlsx conversion.',
+          es: 'Abre siempre en Vista original y en un clic pasa a un editor tipo LibreOffice con íconos unificados, Copiar/Pegar, Guardar con ícono de disquete (⌘S), Guardar copia (⇧⌘S) y conversión .xls → .xlsx.'
+        }
+      },
+      {
+        id: 'csv-spreadsheet-editor-gif', type: 'gifs', src: 'assets/csv-spreadsheet-editor-demo.gif',
+        badge: { en: 'CSV & TSV', es: 'Planillas CSV' },
+        title: { en: 'High-speed interactive CSV & TSV spreadsheet viewer & editor', es: 'Visor y editor interactivo de CSV y TSV a 120 FPS' },
+        desc: {
+          en: 'Open massive CSV files smoothly without launching Excel: auto-detects delimiters, freezes headers, filters rows live (⌘F), sorts any column, edits via formula bar, calculates Sum & Avg, and copies ranges directly to Excel or Google Sheets.',
+          es: 'Abrí archivos CSV enormes con total fluidez sin salir de la app: detecta separadores, congela encabezados, filtra en vivo (⌘F), ordena columnas, edita con barra de fórmula, calcula Suma/Promedio y copia rangos directo a Excel o Sheets.'
+        }
+      },
+      {
+        id: 'send-to-drive-office-menu-gif', type: 'gifs', src: 'assets/send-to-drive-office-menu-demo.gif',
+        badge: { en: 'Send to Drive & Office Menu', es: 'Enviar a Drive y Menú Office' },
+        title: { en: '«Send to Drive» auto-open & new top «Office» Menu Bar', es: '«Enviar a Drive» automático y nuevo menú superior «Office»' },
+        desc: {
+          en: 'Configure editing mode, default view, enabled formats, and Drive settings from the top Office menu. Send any file with your logged-in Gmail account to your chosen Drive folder and watch it open straight in Google Sheets, Docs, or Slides (in-app or external Chrome).',
+          es: 'Configurá el modo edición, vista por defecto, formatos habilitados y Drive desde el menú superior Office. Enviá cualquier archivo con tu cuenta de Gmail a tu carpeta destino y miralo abrirse automático en Google Sheets, Docs o Slides (en la app o Chrome).'
+        }
+      },
+      {
+        id: 'taskbar-appearance-gif', type: 'gifs', src: 'assets/taskbar-appearance-demo.gif',
+        badge: { en: 'Taskbar Appearance', es: 'Apariencia Barra' },
+        title: { en: 'Taskbar Floating Island, optional top divider & 5 visual styles', es: 'Barra Isla flotante, línea divisoria opcional y 5 ajustes visuales' },
+        desc: {
+          en: 'Customize your Taskbar live: show or hide the top divider line, switch between Edge-to-Edge and rounded Floating Island, choose Frosted Glass / Crystal / Solid Matte, pick Pill or Card buttons, and style the active window indicator in 6 colors.',
+          es: 'Personalizá tu Barra de tareas en vivo: activá o quitá la línea divisoria superior, elegí borde a borde o Isla flotante, cambiá el material de fondo, la forma de los botones y el estilo y color del indicador activo.'
+        }
+      },
       {
         id: 'taskbar-preview-gif', type: 'gifs', src: 'assets/taskbar-preview-demo.gif',
         badge: { en: 'Taskbar', es: 'Barra de tareas' },
@@ -2679,26 +2867,50 @@
 
     const STATIC_RELEASES = [
       {
+        tag: 'v2.5.0',
+        date: { en: 'Nov 25, 2026', es: '25 nov 2026' },
+        title: {
+          en: 'Office & CSV Drag-Select Editor, Free Quick Look with Media Quick Actions & Copy, Send to Drive in Status Bar, Red PDF Icons & Advanced Taskbar',
+          es: 'Editor Office/CSV con selección por arrastre, Vista Rápida libre con Acciones rápidas y Copiar, Enviar a Drive en barra inferior, ícono rojo PDF y Barra de tareas avanzada'
+        },
+        latest: true,
+        dmgUrl: `https://github.com/${REPO_OWNER}/${REPO_NAME}/raw/main/releases/MacFileExplorer-2.5.0.dmg`,
+        highlights: {
+          en: [
+            'Media Quick Actions & Copy (⌘C) inside Quick Look: copy image+file (or image-only / file-only), remove background, convert, rotate 90°/180° live, convert to MP4, trim, mute & strip metadata without leaving Preview.',
+            'Free-moving Quick Look window (drag smoothly outside MacFileExplorer and across displays) plus new distinctive red Acrobat-style icons for PDF files.',
+            'Click & drag multi-row and multi-column selection in CSV & Excel (.xlsx/.xls) previews with edge auto-scroll, live Count/Sum/Avg stats, and Excel/Sheets copy-paste.',
+            'Quick Look Office Editor (.docx, .xlsx, .xls, .pptx, .csv), top «Office» Menu Bar, and automatic «Send to Drive» with live progress discreetly shown in the bottom status bar.',
+            'Taskbar upgrades: 1 s drag-hover to raise apps while dragging files, keep same-app windows side by side, «Icons Only» & «Icon Only for Minimized Windows» modes, optional top divider & 5 visual styles.'
+          ],
+          es: [
+            'Acciones rápidas y Copiar (⌘C) dentro de la Vista Rápida de imágenes y videos: copiá imagen+archivo (o solo imagen / solo archivo), quitá fondos, convertí, rotá 90°/180° en vivo, pasá a MP4, recortá, silenciá y limpiá metadatos sin salir del Preview.',
+            'Ventana de Vista Rápida 100% libre para arrastrarla fuera de MacFileExplorer y entre monitores, más nuevo ícono rojo estilo Acrobat para distinguir los archivos PDF a simple vista.',
+            'Selección de múltiples filas y columnas arrastrando con el mouse en planillas CSV y Excel (.xlsx/.xls) con Conteo/Suma/Promedio en vivo y copiado directo a Excel o Google Sheets.',
+            'Editor Office en Vista Rápida (.docx, .xlsx, .xls, .pptx, .csv), menú superior «Office» y «Enviar a Drive» automático con progreso discreto en la barra de estado inferior.',
+            'Mejoras en la Barra de tareas: mantener un archivo 1 s sobre una app para abrirla y soltarlo adentro, agrupación lado a lado de ventanas de la misma app, modos «Solo íconos» y «Solo ícono en minimizadas», línea divisoria y 5 ajustes visuales.'
+          ]
+        }
+      },
+      {
         tag: 'v2.0.0',
         date: { en: 'Nov 25, 2026', es: '25 nov 2026' },
         title: {
-          en: '8 Start Menu animations (incl. 0 ms instant mode), instant folder switching & full bilingual polish',
-          es: '8 animaciones en el Menú Inicio (con modo 0 ms instantáneo), carpetas instantáneas y traducción completa'
+          en: '8 Start Menu Animations, Instant Folder Switching & Full Bilingual Polish',
+          es: '8 animaciones en el Menú Inicio, carpetas instantáneas y traducción total'
         },
-        latest: true,
+        latest: false,
         dmgUrl: `https://github.com/${REPO_OWNER}/${REPO_NAME}/raw/main/releases/MacFileExplorer-2.0.0.dmg`,
         highlights: {
           en: [
-            '8 selectable Start Menu opening animations (4 classic, 2 Pro, and 2 fun) plus an opening speed slider — pick 0 ms to open instantaneously with zero delay.',
-            'Instant switching between recently visited folders with zero loading flash, faster startup, and quicker duplicate & photo text search on Apple Silicon.',
-            'Complete English & Spanish polish across every menu, submenu, and right-click option, plus fixed live notification animations on the Taskbar.',
-            'Clear legal disclaimer added to About MacFileExplorer and simplified Brain icons for the Start button.'
+            '8 Start Menu opening animations & adjustable speed (including 0 ms instant mode) with live preview cards.',
+            'Instant switching between revisited folders with zero loading flash, plus Apple Silicon M1–M4 speed tuning.',
+            'Complete Spanish / English localization across menus, submenus, context menus, and notification badge animation fixes.'
           ],
           es: [
-            '8 animaciones elegibles al abrir el Menú Inicio (4 clásicas, 2 profesionales y 2 divertidas) y control de velocidad — elegí 0 ms para que abra al instante sin retraso.',
-            'Cambio instantáneo entre carpetas ya visitadas sin pantalla de carga, arranque más ágil y búsqueda más veloz de duplicados y texto en fotos.',
-            'Traducción completa en español e inglés en todos los menús, submenús y opciones de clic derecho, más corrección en las animaciones de notificaciones de la barra.',
-            'Aviso legal claro en Acerca de MacFileExplorer e íconos Brain simplificados para el botón Inicio.'
+            '8 animaciones de despliegue y velocidad ajustable para el Menú Inicio (incluye modo 0 ms instantáneo) con vista previa en vivo.',
+            'Cambio instantáneo entre carpetas ya visitadas sin parpadeo de carga y optimizaciones en Apple Silicon (M1–M4).',
+            'Traducción completa Español / Inglés en toda la app y corrección en las 6 animaciones de globos de notificaciones.'
           ]
         }
       },
@@ -2823,11 +3035,14 @@
     // =========================================================================
     // 2. THEME ENGINE (LIGHT DEFAULT · DARK · WINDOWS 98 · MACOS 98)
     // =========================================================================
+    const WIN98_SVG_INLINE = '<svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" aria-hidden="true"><use href="#logo-win98"/></svg>';
+    const APPLE98_SVG_INLINE = '<svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" aria-hidden="true"><use href="#logo-apple98"/></svg>';
+
     const THEME_META = {
-      light: { icon: '☀️', label: { en: 'Light', es: 'Claro' } },
-      dark: { icon: '🌙', label: { en: 'Dark', es: 'Oscuro' } },
-      win98: { icon: '🪟', label: { en: 'Win 98', es: 'Win 98' } },
-      macos98: { icon: '🍎', label: { en: 'Mac 98', es: 'Mac 98' } }
+      light: { iconHtml: '☀️', label: { en: 'Light', es: 'Claro' } },
+      dark: { iconHtml: '🌙', label: { en: 'Dark', es: 'Oscuro' } },
+      win98: { iconHtml: WIN98_SVG_INLINE, label: { en: 'Win 98', es: 'Win 98' } },
+      macos98: { iconHtml: APPLE98_SVG_INLINE, label: { en: 'Mac 98', es: 'Mac 98' } }
     };
 
     const themeTrigger = document.getElementById('theme-menu-trigger');
@@ -2841,7 +3056,7 @@
       document.documentElement.classList.toggle('dark', theme === 'dark');
 
       const meta = THEME_META[theme];
-      document.getElementById('theme-trigger-icon').textContent = meta.icon;
+      document.getElementById('theme-trigger-icon').innerHTML = meta.iconHtml;
       document.getElementById('theme-trigger-label').textContent = meta.label[currentLang];
 
       document.querySelectorAll('.theme-opt').forEach((btn) => {
@@ -2857,8 +3072,8 @@
 
       const retroText = document.getElementById('retro-banner-text');
       if (retroText) {
-        if (theme === 'win98') retroText.textContent = t('retro.win98');
-        if (theme === 'macos98') retroText.textContent = t('retro.macos98');
+        if (theme === 'win98') retroText.innerHTML = `${WIN98_SVG_INLINE}<span>${t('retro.win98')}</span>`;
+        if (theme === 'macos98') retroText.innerHTML = `${APPLE98_SVG_INLINE}<span>${t('retro.macos98')}</span>`;
       }
 
       // Reset parallax transforms cleanly when entering retro 1998 modes

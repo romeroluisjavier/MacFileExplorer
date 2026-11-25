@@ -78,6 +78,55 @@ final class TaskbarTests: XCTestCase {
         XCTAssertEqual(withSecondSafari.map(\.id), ["1-10", "1-11", "2-20"])
     }
 
+    func testWindowOrderEngineKeepsSameAppWindowsSideBySideAcrossLateOpensPWAsAndSpaces() {
+        var engine = TaskbarWindowOrderEngine()
+        let downloads = makeWindow(id: "10-1", windowID: 1, pid: 10, bundleID: "com.macfileexplorer.app", appName: "MacFileExplorer", title: "Downloads")
+        let slack = makeWindow(id: "20-1", windowID: 2, pid: 20, bundleID: "com.tinyspeck.slackmacgap", appName: "Slack", title: "Team")
+        let geminiPWA = makeWindow(id: "30-1", windowID: 3, pid: 30, bundleID: "com.google.Chrome.app.gemini", appName: "Gemini", title: "Gemini")
+        let chrome1 = makeWindow(id: "40-1", windowID: 4, pid: 40, bundleID: "com.google.Chrome", appName: "Google Chrome", title: "Emonk - C...")
+        let whatsapp = makeWindow(id: "50-1", windowID: 5, pid: 50, bundleID: "net.whatsapp.WhatsApp", appName: "WhatsApp", title: "WhatsApp")
+        let jiraPWA = makeWindow(id: "60-1", windowID: 6, pid: 60, bundleID: "com.google.Chrome.app.jira", appName: "Jira", title: "Jira")
+        let chrome2 = makeWindow(id: "40-2", windowID: 7, pid: 40, bundleID: "com.google.Chrome", appName: "Google Chrome", title: "em-3380-...")
+        let chrome3Later = makeWindow(id: "40-3", windowID: 8, pid: 40, bundleID: "com.google.Chrome", appName: "Google Chrome", title: "New Chrome Window")
+
+        // 1. Inicialmente sin agrupación: Chrome 1 y Chrome 2 separados al abrirse en momentos distintos
+        let ungrouped = engine.orderedWindows(
+            from: [downloads, slack, geminiPWA, chrome1, whatsapp, jiraPWA, chrome2],
+            groupByApp: false,
+            liveWindowIDsAcrossAllSpaces: ["10-1", "20-1", "30-1", "40-1", "50-1", "60-1", "40-2"]
+        )
+        XCTAssertEqual(ungrouped.map(\.id), ["10-1", "20-1", "30-1", "40-1", "50-1", "60-1", "40-2"])
+
+        // 2. Al activar agrupación lado a lado, Chrome 2 pasa inmediatamente al lado de Chrome 1; PWAs (Gemini/Jira) quedan independientes
+        let grouped = engine.orderedWindows(
+            from: [downloads, slack, geminiPWA, chrome1, whatsapp, jiraPWA, chrome2],
+            groupByApp: true,
+            liveWindowIDsAcrossAllSpaces: ["10-1", "20-1", "30-1", "40-1", "50-1", "60-1", "40-2"]
+        )
+        XCTAssertEqual(grouped.map(\.id), ["10-1", "20-1", "30-1", "40-1", "40-2", "50-1", "60-1"])
+
+        // 3. Abrir una tercera ventana de Chrome mucho después: debe quedar al lado de Chrome 1 y Chrome 2
+        let withThirdChrome = engine.orderedWindows(
+            from: [downloads, slack, geminiPWA, chrome1, whatsapp, jiraPWA, chrome2, chrome3Later],
+            groupByApp: true,
+            liveWindowIDsAcrossAllSpaces: ["10-1", "20-1", "30-1", "40-1", "50-1", "60-1", "40-2", "40-3"]
+        )
+        XCTAssertEqual(withThirdChrome.map(\.id), ["10-1", "20-1", "30-1", "40-1", "40-2", "40-3", "50-1", "60-1"])
+
+        // 4. Multi-Space: si WhatsApp vive en Space 2 (no visible ahora), NO se empuja al final al re-agrupar Space 1
+        let space1Only = engine.orderedWindows(
+            from: [downloads, slack, geminiPWA, chrome1, jiraPWA, chrome2, chrome3Later],
+            groupByApp: true,
+            liveWindowIDsAcrossAllSpaces: ["10-1", "20-1", "30-1", "40-1", "50-1", "60-1", "40-2", "40-3"]
+        )
+        XCTAssertEqual(space1Only.map(\.id), ["10-1", "20-1", "30-1", "40-1", "40-2", "40-3", "60-1"])
+        XCTAssertEqual(engine.orderedWindowIDs, ["10-1", "20-1", "30-1", "40-1", "40-2", "40-3", "50-1", "60-1"])
+
+        // 5. Drag-and-drop: arrastrar una ventana de Chrome después de Jira mueve todo el bloque de Chrome junto
+        engine.moveWindow(sourceID: "40-1", toTargetID: "60-1", visibleWindows: space1Only, groupByApp: true)
+        XCTAssertEqual(engine.orderedWindowIDs, ["10-1", "20-1", "30-1", "50-1", "60-1", "40-1", "40-2", "40-3"])
+    }
+
     // MARK: - 2. Geometría Multimonitor y Auto-Redimensionamiento
 
     func testCocoaToAXConversionAndMultiMonitorAssignment() {
@@ -360,5 +409,198 @@ final class TaskbarTests: XCTestCase {
         reloadedInstant.resetVisualDefaults()
         XCTAssertEqual(reloadedInstant.startMenuAnimation, .riseFromBar)
         XCTAssertEqual(reloadedInstant.startMenuAnimationDuration, TaskbarPreferences.defaultStartMenuAnimationDuration, accuracy: 0.0001)
+    }
+
+    // MARK: - 8. Línea Divisoria Superior y 5 Ajustes Visuales de la Barra
+
+    @MainActor
+    func testTaskbarVisualAppearanceSettingsPersistenceAndReset() {
+        let suiteName = "com.macfileexplorer.tests.visuals.\(UUID().uuidString)"
+        guard let testDefaults = UserDefaults(suiteName: suiteName) else {
+            XCTFail("Failed to create isolated UserDefaults suite")
+            return
+        }
+        defer { testDefaults.removePersistentDomain(forName: suiteName) }
+
+        let prefs = TaskbarPreferences(defaults: testDefaults)
+        XCTAssertTrue(prefs.showTopBorder)
+        XCTAssertEqual(prefs.barStyle, .docked)
+        XCTAssertEqual(prefs.backgroundMaterial, .frostedGlass)
+        XCTAssertEqual(prefs.buttonStyle, .roundedCard)
+        XCTAssertEqual(prefs.activeIndicatorStyle, .pill)
+        XCTAssertEqual(prefs.activeIndicatorColor, .systemAccent)
+
+        // Personalizar los 6 ajustes visuales y verificar persistencia al recargar
+        prefs.showTopBorder = false
+        prefs.barStyle = .floatingIsland
+        prefs.backgroundMaterial = .crystalBlur
+        prefs.buttonStyle = .pill
+        prefs.activeIndicatorStyle = .fullUnderline
+        prefs.activeIndicatorColor = .emerald
+
+        let reloaded = TaskbarPreferences(defaults: testDefaults)
+        XCTAssertFalse(reloaded.showTopBorder)
+        XCTAssertEqual(reloaded.barStyle, .floatingIsland)
+        XCTAssertEqual(reloaded.backgroundMaterial, .crystalBlur)
+        XCTAssertEqual(reloaded.buttonStyle, .pill)
+        XCTAssertEqual(reloaded.activeIndicatorStyle, .fullUnderline)
+        XCTAssertEqual(reloaded.activeIndicatorColor, .emerald)
+
+        // Restablecer valores visuales vuelve todo al estado de fábrica
+        reloaded.resetVisualDefaults()
+        XCTAssertTrue(reloaded.showTopBorder)
+        XCTAssertEqual(reloaded.barStyle, .docked)
+        XCTAssertEqual(reloaded.backgroundMaterial, .frostedGlass)
+        XCTAssertEqual(reloaded.buttonStyle, .roundedCard)
+        XCTAssertEqual(reloaded.activeIndicatorStyle, .pill)
+        XCTAssertEqual(reloaded.activeIndicatorColor, .systemAccent)
+    }
+
+    // MARK: - 9. Activación de Apps al Arrastrar y Mantener Quieto 1 s sobre la Barra (Spring-Loading)
+
+    func testDragDwellTrackerRequiresOneSecondStillnessWithJitterTolerance() {
+        var tracker = TaskbarDragDwellTracker()
+        XCTAssertEqual(tracker.dwellDuration, 1.0, accuracy: 0.0001)
+        XCTAssertEqual(tracker.jitterTolerance, 18.0, accuracy: 0.0001)
+
+        // 1. Paso rápido sobre el botón (< 1 s) y salida: nunca debe disparar
+        let enterState = tracker.begin(at: CGPoint(x: 40, y: 18), now: 100.0)
+        XCTAssertTrue(enterState.isHovering)
+        XCTAssertEqual(enterState.progress, 0.0, accuracy: 0.0001)
+        XCTAssertFalse(enterState.didActivate)
+
+        let midSweep = tracker.evaluate(now: 100.45)
+        XCTAssertFalse(midSweep.shouldTriggerNow)
+        XCTAssertEqual(midSweep.state.progress, 0.45, accuracy: 0.01)
+
+        let afterExit = tracker.reset()
+        XCTAssertEqual(afterExit, .idle)
+        XCTAssertFalse(tracker.evaluate(now: 102.0).shouldTriggerNow)
+
+        // 2. Movimiento amplio (> 18 pt) reinicia el contador hasta que el usuario se quede quieto
+        _ = tracker.begin(at: CGPoint(x: 10, y: 18), now: 200.0)
+        let movedFar = tracker.update(location: CGPoint(x: 55, y: 18), now: 200.60)
+        XCTAssertFalse(movedFar.shouldTriggerNow)
+        XCTAssertEqual(movedFar.state.progress, 0.0, accuracy: 0.0001)
+
+        // 3. Micro-temblor de la mano (<= 18 pt) NO reinicia el conteo y dispara al cumplirse 1.0 s desde 200.60
+        let tinyJitter = tracker.update(location: CGPoint(x: 62, y: 22), now: 201.10)
+        XCTAssertFalse(tinyJitter.shouldTriggerNow)
+        XCTAssertEqual(tinyJitter.state.progress, 0.50, accuracy: 0.01)
+
+        let justBefore = tracker.evaluate(now: 201.55)
+        XCTAssertFalse(justBefore.shouldTriggerNow)
+        XCTAssertFalse(justBefore.state.didActivate)
+
+        let atOneSecond = tracker.evaluate(now: 201.60)
+        XCTAssertTrue(atOneSecond.shouldTriggerNow)
+        XCTAssertTrue(atOneSecond.state.didActivate)
+        XCTAssertEqual(atOneSecond.state.progress, 1.0, accuracy: 0.0001)
+
+        // 4. Una vez disparado, permanecer sobre el botón NO vuelve a disparar ni reinicia progreso
+        let afterTriggerTick = tracker.evaluate(now: 202.50)
+        XCTAssertFalse(afterTriggerTick.shouldTriggerNow)
+        XCTAssertTrue(afterTriggerTick.state.didActivate)
+
+        let afterTriggerMove = tracker.update(location: CGPoint(x: 120, y: 18), now: 202.80)
+        XCTAssertFalse(afterTriggerMove.shouldTriggerNow)
+        XCTAssertTrue(afterTriggerMove.state.didActivate)
+
+        // 5. Salir y volver a entrar permite una nueva activación limpia
+        _ = tracker.reset()
+        _ = tracker.begin(at: CGPoint(x: 50, y: 18), now: 300.0)
+        let secondActivation = tracker.evaluate(now: 301.0)
+        XCTAssertTrue(secondActivation.shouldTriggerNow)
+    }
+
+    // MARK: - 10. Modo Solo Íconos y Minimizadas Compactas (Anchos Mixtos)
+
+    @MainActor
+    func testIconsOnlyAndMinimizedIconOnlyPreferencesAndLayout() {
+        let suiteName = "com.macfileexplorer.tests.minimized-icons.\(UUID().uuidString)"
+        guard let testDefaults = UserDefaults(suiteName: suiteName) else {
+            XCTFail("Failed to create isolated UserDefaults suite")
+            return
+        }
+        defer { testDefaults.removePersistentDomain(forName: suiteName) }
+
+        let prefs = TaskbarPreferences(defaults: testDefaults)
+        XCTAssertTrue(prefs.showWindowTitles)
+        XCTAssertFalse(prefs.iconsOnlyMode)
+        XCTAssertEqual(prefs.minimizedWindowDisplayMode, .sameAsNormal)
+
+        prefs.minimizedWindowDisplayMode = .iconOnly
+        prefs.iconsOnlyMode = true
+        XCTAssertFalse(prefs.showWindowTitles)
+
+        let reloaded = TaskbarPreferences(defaults: testDefaults)
+        XCTAssertTrue(reloaded.iconsOnlyMode)
+        XCTAssertFalse(reloaded.showWindowTitles)
+        XCTAssertEqual(reloaded.minimizedWindowDisplayMode, .iconOnly)
+
+        // Al desactivar "Solo íconos", se recuerda que las minimizadas estaban en modo solo ícono
+        reloaded.iconsOnlyMode = false
+        XCTAssertTrue(reloaded.showWindowTitles)
+        XCTAssertEqual(reloaded.minimizedWindowDisplayMode, .iconOnly)
+
+        // Layout mixto: 2 ventanas abiertas + 2 minimizadas/ocultas en 520 px de ancho
+        let open1 = makeWindow(id: "1-1", windowID: 1, pid: 1, bundleID: "com.google.Chrome", appName: "Chrome", title: "Work", isFocused: true)
+        let min1 = makeWindow(id: "2-1", windowID: 2, pid: 2, bundleID: "com.apple.Safari", appName: "Safari", title: "Desconectado", isMinimized: true)
+        let open2 = makeWindow(id: "3-1", windowID: 3, pid: 3, bundleID: "com.tinyspeck.slackmacgap", appName: "Slack", title: "Team")
+        let hidden1 = TaskbarWindowItem(
+            id: "4-1", windowID: 4, pid: 4, bundleIdentifier: "net.whatsapp.WhatsApp",
+            appName: "WhatsApp", appBundleURL: nil, title: "WhatsApp",
+            frameAX: CGRect(x: 0, y: 0, width: 800, height: 600), screenID: "screen-main",
+            isFocused: false, isMinimized: false, isAppHidden: true, isFullScreen: false
+        )
+        let row = [open1, min1, open2, hidden1]
+
+        // Caso A: Como ahora (todas con título)
+        let sameAsNormal = TaskbarButtonLayoutCalculator.computeLayout(
+            windows: row,
+            availableWidth: 520,
+            barHeight: 42,
+            showWindowTitles: true,
+            minimizedDisplayMode: .sameAsNormal,
+            groupWindowsByApp: false
+        )
+        XCTAssertEqual(sameAsNormal.showTitles, [true, true, true, true])
+        XCTAssertEqual(sameAsNormal.buttonWidths[0], sameAsNormal.buttonWidths[1])
+        XCTAssertFalse(sameAsNormal.needsHorizontalScroll)
+
+        // Caso B: Solo ícono en minimizadas -> min1 y hidden1 se compactan a 40 pt y las abiertas ganan más ancho
+        let compactMinimized = TaskbarButtonLayoutCalculator.computeLayout(
+            windows: row,
+            availableWidth: 520,
+            barHeight: 42,
+            showWindowTitles: true,
+            minimizedDisplayMode: .iconOnly,
+            groupWindowsByApp: false
+        )
+        XCTAssertEqual(compactMinimized.showTitles, [true, false, true, false])
+        XCTAssertEqual(compactMinimized.buttonWidths[1], 40)
+        XCTAssertEqual(compactMinimized.buttonWidths[3], 40)
+        XCTAssertGreaterThan(compactMinimized.buttonWidths[0], sameAsNormal.buttonWidths[0])
+        XCTAssertEqual(compactMinimized.buttonWidths[0], 212)
+        XCTAssertFalse(compactMinimized.needsHorizontalScroll)
+
+        // Caso C: Solo íconos global -> TODAS compactas a 40 pt
+        let allIcons = TaskbarButtonLayoutCalculator.computeLayout(
+            windows: row,
+            availableWidth: 520,
+            barHeight: 42,
+            showWindowTitles: false,
+            minimizedDisplayMode: .sameAsNormal,
+            groupWindowsByApp: false
+        )
+        XCTAssertEqual(allIcons.showTitles, [false, false, false, false])
+        XCTAssertEqual(allIcons.buttonWidths, [40, 40, 40, 40])
+        XCTAssertFalse(allIcons.needsHorizontalScroll)
+
+        // Restablecer valores visuales vuelve a fábrica
+        reloaded.resetVisualDefaults()
+        XCTAssertTrue(reloaded.showWindowTitles)
+        XCTAssertFalse(reloaded.iconsOnlyMode)
+        XCTAssertEqual(reloaded.minimizedWindowDisplayMode, .sameAsNormal)
     }
 }

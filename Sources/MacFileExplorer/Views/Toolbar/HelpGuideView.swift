@@ -730,24 +730,44 @@ extension HelpGuideView {
 
     private static let highlightedTopics: [HelpTopicCard] = [
         HelpTopicCard(
-            id: "hl-alttab-switcher",
-            icon: "rectangle.stack.fill",
-            badgeES: "Nuevo",
-            badgeEN: "New",
-            titleES: "Selector de ventanas AltTab (Menú superior «AltTab»)",
-            titleEN: "AltTab Window Switcher («AltTab» Top Menu)",
-            bodyES: "Alterna al instante entre cada ventana abierta individualmente (incluso varias ventanas de una misma app), mostrando ventanas minimizadas, ocultas y de otros Spaces con su etiqueta (Space 2, Minimizada, Oculta), vista previa a tamaño completo encima del resto, 3 estilos (Miniaturas, Íconos, Lista de títulos) con tamaño automático, buscador y hasta 5 atajos personalizables (⌥⇥ y ⌥` por defecto). Comparte el motor de ventanas y miniaturas con la Barra de tareas para máxima performance.",
-            bodyEN: "Switch instantly between individual windows (including multiple windows of the same app), showing minimized, hidden, and other-Space windows with clear badges (Space 2, Minimized, Hidden), full-size preview above other windows, 3 display styles (Thumbnails, App Icons, Compact Titles List) with auto-sizing, live search, and up to 5 custom shortcuts (⌥⇥ and ⌥` by default). Shares the window & thumbnail engine with Taskbar for peak performance."
+            id: "hl-quicklook-media-actions-free-move",
+            icon: "wand.and.stars",
+            badgeES: "Nuevo · v2.5",
+            badgeEN: "New · v2.5",
+            titleES: "Vista Rápida libre con Acciones rápidas, Copiar (⌘C) e ícono rojo para PDF",
+            titleEN: "Free-Moving Quick Look with Media Quick Actions, Copy (⌘C) & Red PDF Icon",
+            bodyES: "Al abrir cualquier imagen o video con Espacio, tenés una barra directa con Copiar (⌘C) y todas las Acciones rápidas del clic derecho: copiar imagen y archivo en un clic (o solo imagen / solo archivo), eliminar fondo a PNG transparente, convertir a JPG/PNG, rotar 90° izquierda/derecha o 180° viendo el cambio en vivo, convertir videos a MP4, recortar (Trim), silenciar audio y limpiar metadatos privados. Además, podés arrastrar libremente la ventana de Vista Rápida fuera de MacFileExplorer o hacia otro monitor sin que se frene, y los archivos PDF ahora se distinguen de un vistazo con un ícono rojo estilo Acrobat.",
+            bodyEN: "When previewing any image or video with Space, you get an action bar with Copy (⌘C) and every right-click Quick Action: copy both image and file in one click (or image-only / file-only), remove backgrounds into transparent PNGs, convert to JPG/PNG, rotate 90° left/right or 180° with instant live refresh, convert videos to MP4, trim clips, mute audio, and strip private metadata. You can also drag the Quick Look window freely outside MacFileExplorer or across displays without getting stuck, and PDF files stand out immediately with a crisp red Acrobat-style icon."
+        ),
+        HelpTopicCard(
+            id: "hl-office-quicklook-drive",
+            icon: "doc.richtext.fill",
+            badgeES: "Nuevo · v2.5",
+            badgeEN: "New · v2.5",
+            titleES: "Editor Office en Vista Rápida (.docx, .xlsx, .xls, .pptx, .csv) y «Enviar a Drive»",
+            titleEN: "Quick Look Office Editor (.docx, .xlsx, .xls, .pptx, .csv) & «Send to Drive»",
+            bodyES: "Tocá Espacio sobre documentos de Word, planillas de Excel (tanto .xlsx modernos como .xls clásicos), presentaciones de PowerPoint o archivos CSV/TSV para verlos en Vista original y pasar en un clic a un editor práctico tipo LibreOffice con Guardar (⌘S), Guardar copia (⇧⌘S), Copiar/Pegar y conversión .xls → .xlsx. En CSV y Excel podés arrastrar con el mouse sobre celdas, números de fila (#) o encabezados de columna para seleccionar múltiples filas y columnas con Conteo/Suma/Promedio en vivo, encabezados fijos, filtro rápido (⌘F) y ordenamiento. Además, con «Enviar a Drive» subís cualquier archivo a tu carpeta elegida en Google Drive y se abre automático en Sheets, Docs o Slides (en MacFileExplorer o en Chrome externo).",
+            bodyEN: "Press Space on Word documents, Excel spreadsheets (both modern .xlsx and classic .xls), PowerPoint decks, or CSV/TSV files to view them in Original View and switch in one click to a handy LibreOffice-style editor with Save (⌘S), Save Copy (⇧⌘S), Copy/Paste, and .xls → .xlsx conversion. In CSV and Excel you can click and drag across cells, row numbers (#), or column headers to select multiple rows and columns with live Count/Sum/Avg stats, frozen headers, live filtering (⌘F), and sorting. Plus, «Send to Drive» uploads any file straight to your chosen Google Drive folder and automatically opens it in Sheets, Docs, or Slides (in-app or external Chrome)."
         ),
         HelpTopicCard(
             id: "hl-windows-taskbar",
             icon: "dock.rectangle",
-            badgeES: "Nuevo",
-            badgeEN: "New",
-            titleES: "Barra de tareas estilo Windows (Menú superior «Barra de tareas»)",
-            titleEN: "Windows-Style Taskbar («Taskbar» Top Menu)",
-            bodyES: "Activable y desactivable desde el menú superior Barra de tareas (apagada por defecto y sin tocar el Dock original de macOS). Muestra un botón por cada ventana abierta, miniaturas en vivo al pasar el cursor, apps fijadas, Menú Inicio alfabético con buscador, soporte multimonitor (hasta 5 pantallas), sincronización con Spaces, drag-and-drop y restauración de emergencia del Dock.",
-            bodyEN: "Toggle on or off from the top Taskbar menu (off by default without touching your original macOS Dock). Shows one button per open window, live hover thumbnails, pinned apps, a searchable alphabetical Start Menu, multi-monitor support (up to 5 displays), Spaces sync, drag-and-drop reordering, and emergency Dock restore."
+            badgeES: "Nuevo · v2.5",
+            badgeEN: "New · v2.5",
+            titleES: "Barra de tareas estilo Windows: Arrastrar a apps (1 s), Agrupación, Solo íconos e Isla flotante",
+            titleEN: "Windows-Style Taskbar: Drag-to-Open (1 s), Grouping, Icons Only & Floating Island",
+            bodyES: "Activable desde el menú superior Barra de tareas (apagada por defecto y sin tocar el Dock original). Muestra un botón por ventana con miniaturas en vivo, apps fijadas, Menú Inicio con 8 animaciones (o 0 ms instantáneo), soporte hasta 5 monitores y 3 mejoras clave de productividad:\n• Arrastrar archivos sobre la barra: mantené un archivo quieto 1 segundo sobre cualquier app o ventana de la barra (incluso minimizada) para traerla al frente sin soltar el archivo y soltarlo directo adentro.\n• Agrupación lado a lado: mantené juntas todas las ventanas de una misma app (ej. varias ventanas de Chrome), incluso las que abrís más tarde.\n• Modo «Solo íconos» y «Solo ícono en ventanas minimizadas»: elegí si querés ver toda la barra solo con íconos o compactar únicamente las ventanas minimizadas u ocultas para dar más lugar a las abiertas.",
+            bodyEN: "Toggle on or off from the top Taskbar menu (off by default without touching your macOS Dock). Shows one button per window with live hover thumbnails, pinned apps, a searchable Start Menu with 8 animations (or 0 ms instant), up to 5 displays, and 3 key productivity upgrades:\n• Drag files onto the Taskbar: hover and hold still for 1 second over any app or window button (even if minimized) to bring it straight to the front without releasing your file, then drop it inside.\n• Keep same-app windows side by side: automatically keeps windows of the same app (such as multiple Chrome windows) next to each other, even ones opened later.\n• Icons-Only & Compact Minimized modes: switch the entire bar to icons only, or keep titles on open windows while collapsing minimized/hidden windows to compact icons."
+        ),
+        HelpTopicCard(
+            id: "hl-alttab-switcher",
+            icon: "rectangle.stack.fill",
+            badgeES: "v1.8 – v2.0",
+            badgeEN: "v1.8 – v2.0",
+            titleES: "Selector de ventanas AltTab (Menú superior «AltTab»)",
+            titleEN: "AltTab Window Switcher («AltTab» Top Menu)",
+            bodyES: "Alterna al instante entre cada ventana abierta individualmente (incluso varias ventanas de una misma app), mostrando ventanas minimizadas, ocultas y de otros Spaces con su etiqueta (Space 2, Minimizada, Oculta), vista previa a tamaño completo encima del resto, 3 estilos (Miniaturas, Íconos, Lista de títulos) con tamaño automático, buscador y hasta 5 atajos personalizables (⌥⇥ y ⌥` por defecto). Comparte el motor de ventanas y miniaturas con la Barra de tareas para máxima performance.",
+            bodyEN: "Switch instantly between individual windows (including multiple windows of the same app), showing minimized, hidden, and other-Space windows with clear badges (Space 2, Minimized, Hidden), full-size preview above other windows, 3 display styles (Thumbnails, App Icons, Compact Titles List) with auto-sizing, live search, and up to 5 custom shortcuts (⌥⇥ and ⌥` by default). Shares the window & thumbnail engine with Taskbar for peak performance."
         ),
         HelpTopicCard(
             id: "hl-address-bar",
@@ -885,18 +905,18 @@ extension HelpGuideView {
         HelpTopicCard(
             id: "af-views-columns",
             icon: "tablecells",
-            titleES: "Vistas Detalles, Iconos Grandes y Lista con 3 modos de icono",
-            titleEN: "Details, Large Icons & List Views with 3 Icon Modes",
-            bodyES: "En Detalles podés redimensionar columnas arrastrando los divisores (con cursor horizontal nativo y doble clic para restablecer). En Lista elegís entre icono Básico, Icono de app predeterminada o Miniatura visual. En Iconos Grandes disponés de deslizador inferior estilo Finder de 40 px a 192 px.",
-            bodyEN: "In Details view resize columns by dragging dividers (with native horizontal resize cursor and double-click reset). In List view pick Basic, App Icon, or Thumbnail mode. In Large Icons adjust icon sizes smoothly from 40 px to 192 px via the bottom slider."
+            titleES: "Vistas Detalles, Iconos Grandes, Lista con 3 modos e ícono rojo para PDF",
+            titleEN: "Details, Large Icons, List View (3 Icon Modes) & Red Acrobat-Style PDF Icon",
+            bodyES: "En Detalles podés redimensionar columnas arrastrando los divisores (con cursor horizontal nativo y doble clic para restablecer). En Lista elegís entre icono Básico, Icono de app predeterminada o Miniatura visual, y los archivos PDF siempre muestran un ícono rojo nítido estilo Acrobat para diferenciarlos al instante de las imágenes. En Iconos Grandes disponés de deslizador inferior estilo Finder de 40 px a 192 px.",
+            bodyEN: "In Details view resize columns by dragging dividers (with native horizontal resize cursor and double-click reset). In List view pick Basic, App Icon, or Thumbnail mode, and PDF files always display a crisp red Acrobat-style icon to stand out instantly from images. In Large Icons adjust icon sizes smoothly from 40 px to 192 px via the bottom slider."
         ),
         HelpTopicCard(
             id: "af-quicklook-properties",
             icon: "eye.fill",
-            titleES: "Vista Rápida enriquecida (Espacio) y Propiedades con EXIF (⌘I)",
-            titleEN: "Enhanced Quick Look (Space) & EXIF Properties (⌘I)",
-            bodyES: "La ventana de Vista Rápida es flotante, movible, redimensionable y maximizable con doble clic. Renderiza Markdown completo (tablas/frontmatter), JSON en árbol colapsable o texto plano, código fuente con números de línea, fotos/videos/PDF y resumen de carpetas. Propiedades (⌘I) muestra metadatos técnicos EXIF y multimedia.",
-            bodyEN: "The Quick Look preview is a movable, resizable floating window (double-click title bar to maximize). Renders rich Markdown, collapsible JSON tree or plain text, line-numbered code, media/PDFs, and folder statistics. Properties (⌘I) displays full EXIF camera and video/audio specs."
+            titleES: "Vista Rápida independiente (Espacio), Acciones rápidas multimedia y Propiedades EXIF (⌘I)",
+            titleEN: "Independent Quick Look (Space), Media Quick Actions & EXIF Properties (⌘I)",
+            bodyES: "La ventana de Vista Rápida es completamente independiente: podés moverla con libertad fuera de MacFileExplorer o hacia otro monitor, redimensionarla y maximizarla con doble clic. En imágenes y videos incluye barra con Copiar (⌘C), Eliminar fondo, Convertir, Rotar 90°/180° en vivo, Convertir a MP4, Recortar (Trim), Silenciar y Limpiar metadatos. También renderiza Office/CSV editables, Markdown, JSON colapsable, XML/código, PDF y carpetas. Propiedades (⌘I) muestra metadatos técnicos EXIF y multimedia.",
+            bodyEN: "The Quick Look window is completely independent: drag it freely outside MacFileExplorer or onto another display, resize it, or double-click its bar to maximize. Image and video previews include a built-in toolbar with Copy (⌘C), Remove Background, Convert, live 90°/180° Rotate, Convert to MP4, Trim, Mute, and Strip Metadata. It also renders editable Office/CSV files, Markdown, collapsible JSON, XML/code, PDFs, and folders. Properties (⌘I) displays full EXIF camera and video/audio specs."
         ),
         HelpTopicCard(
             id: "af-context-menu-integrations",
@@ -915,12 +935,20 @@ extension HelpGuideView {
             bodyEN: "Full Undo (⌘Z) / Redo (⇧⌘Z) for rename, move, paste, and Trash actions. Chrome-style web bookmarks bar (⇧⌘B) with favicons, pausable >1 GB transfer queue, hidden cache manager in the File menu, and GitHub upgrade checker."
         ),
         HelpTopicCard(
+            id: "af-office-csv-drive",
+            icon: "doc.richtext",
+            titleES: "Edición de Word, Excel (.xlsx y .xls), PowerPoint, CSV con selección por arrastre y «Enviar a Drive»",
+            titleEN: "Word, Excel (.xlsx & .xls), PowerPoint, Drag-Select CSV Editing & «Send to Drive»",
+            bodyES: "Al abrir archivos de Office con Espacio se muestran en Vista original fiel y permiten pasar en un clic al Editor rápido (formato de texto, tablas, hojas, diapositivas, notas del orador, Copiar/Pegar, Guardar ⌘S, Guardar copia ⇧⌘S y convertir .xls a .xlsx). En CSV, TSV y Excel podés hacer clic y arrastrar con el mouse sobre celdas, números de fila (#) o encabezados de columna para seleccionar bloques de filas y columnas con auto-desplazamiento, encabezados fijos, filtro en vivo (⌘F), ordenamiento, barra de valor, Suma/Promedio en vivo y copiado directo a Excel/Sheets. El botón con logo de Google Drive sube el archivo a tu carpeta destino y lo abre automáticamente en Sheets, Docs o Slides.",
+            bodyEN: "Pressing Space on Office files opens crisp Original View and lets you switch in one click to the Quick Editor (formatting, tables, sheets, slides, speaker notes, Copy/Paste, Save ⌘S, Save Copy ⇧⌘S, and .xls → .xlsx export). In CSV, TSV, and Excel you can click and drag with your mouse across cells, row numbers (#), or column headers to select multi-row/column blocks with edge auto-scroll, frozen headers, live filter (⌘F), sorting, formula bar, live Sum/Avg stats, and Excel/Sheets copy-paste. The Google Drive button uploads to your target folder and auto-opens in Sheets, Docs, or Slides."
+        ),
+        HelpTopicCard(
             id: "af-taskbar-full",
             icon: "dock.rectangle",
-            titleES: "Barra de tareas estilo Windows, Menú Inicio y Multimonitor",
-            titleEN: "Windows-Style Taskbar, Start Menu & Multi-Monitor",
-            bodyES: "Desde el menú Barra de tareas podés encender una barra inferior con un botón por ventana, vistas previas al pasar el mouse, apps fijadas, Menú Inicio con buscador/recientes/A–Z, hasta 5 monitores independientes o unificados, sincronización con Spaces, clic en ventana activa para minimizar, clic central para cerrar y auto-redimensionamiento de ventanas superpuestas.",
-            bodyEN: "Enable a bottom bar from the Taskbar menu with one button per window, live hover previews, pinned apps, searchable Start Menu with recent & A–Z apps, up to 5 independent or unified displays, Spaces sync, click active window to minimize, middle-click to close, and automatic overlap resizing."
+            titleES: "Barra de tareas: Arrastrar a apps (1 s), Agrupación, Solo íconos, Isla flotante y Multimonitor",
+            titleEN: "Taskbar: Drag-to-Open (1 s), Grouping, Icons Only, Floating Island & Multi-Monitor",
+            bodyES: "Desde el menú Barra de tareas encendé una barra inferior estilo Windows (borde a borde o Isla flotante) con un botón por ventana, vistas previas emergentes, apps fijadas, Menú Inicio con 8 animaciones, hasta 5 monitores y Spaces. Podés arrastrar cualquier archivo y dejarlo quieto 1 segundo sobre una app de la barra para que se abra al frente y soltar el archivo adentro, mantener ventanas de la misma app una al lado de la otra, y elegir entre «Ícono y título», «Solo íconos» o «Solo ícono en ventanas minimizadas».",
+            bodyEN: "Enable a Windows-style bottom bar (Edge-to-Edge or Floating Island) from the Taskbar menu with one button per window, hover previews, pinned apps, Start Menu with 8 animations, up to 5 displays, and Spaces sync. Drag any file and hold still for 1 second over a taskbar button to bring that app to the front and drop the file inside, keep same-app windows side by side, and switch between Icon & Title, Icons Only, or Icon Only for Minimized Windows."
         ),
         HelpTopicCard(
             id: "af-alttab-full",
@@ -945,7 +973,12 @@ extension HelpGuideView {
         HelpShortcutRow(id: "sc-view1", categoryES: "Vistas e Interfaz", categoryEN: "Views & UI", keys: "⌘ 1  /  ⌘ 2", actionES: "Cambiar a vista Detalles (⌘1) o Iconos Grandes (⌘2)", actionEN: "Switch to Details (⌘1) or Large Icons (⌘2) view"),
         HelpShortcutRow(id: "sc-hidden", categoryES: "Vistas e Interfaz", categoryEN: "Views & UI", keys: "⇧ ⌘ .", actionES: "Mostrar u ocultar archivos ocultos", actionEN: "Show or hide hidden files"),
         HelpShortcutRow(id: "sc-bookmarks", categoryES: "Vistas e Interfaz", categoryEN: "Views & UI", keys: "⇧ ⌘ B", actionES: "Mostrar u ocultar barra de marcadores web", actionEN: "Show or hide bookmarks bar"),
-        HelpShortcutRow(id: "sc-quicklook", categoryES: "Previsualización e Info", categoryEN: "Preview & Info", keys: "Espacio / Space", actionES: "Abrir o cerrar Vista Rápida (Quick Look / Propiedades de carpeta)", actionEN: "Toggle Quick Look (or folder properties)"),
+        HelpShortcutRow(id: "sc-quicklook", categoryES: "Previsualización e Info", categoryEN: "Preview & Info", keys: "Espacio / Space", actionES: "Abrir o cerrar Vista Rápida (arrastrable libremente fuera de la app y entre monitores)", actionEN: "Toggle Quick Look (freely draggable outside the app and across displays)"),
+        HelpShortcutRow(id: "sc-quicklook-copy-media", categoryES: "Previsualización e Info", categoryEN: "Preview & Info", keys: "⌘ C  (en Preview)", actionES: "Copiar imagen + archivo (o archivo de video) directamente desde la Vista Rápida", actionEN: "Copy image & file (or video file) directly from inside Quick Look Preview"),
+        HelpShortcutRow(id: "sc-office-drag-select", categoryES: "Editor Office y CSV", categoryEN: "Office & CSV Editor", keys: "Clic y arrastrar", actionES: "Seleccionar múltiples filas y columnas arrastrando en celdas, números (#) o encabezados (A, B, C) en CSV/Excel", actionEN: "Drag-select multiple rows & columns across cells, row numbers (#), or column headers (A, B, C) in CSV/Excel"),
+        HelpShortcutRow(id: "sc-office-save", categoryES: "Editor Office y CSV", categoryEN: "Office & CSV Editor", keys: "⌘ S  /  ⇧ ⌘ S", actionES: "Guardar cambios o Guardar copia dentro del Editor Office y CSV", actionEN: "Save changes or Save Copy inside the Quick Look Office & CSV editor"),
+        HelpShortcutRow(id: "sc-office-find", categoryES: "Editor Office y CSV", categoryEN: "Office & CSV Editor", keys: "⌘ F", actionES: "Filtrar filas en CSV o buscar texto dentro del Editor Office", actionEN: "Filter rows in CSV or find text inside the Office editor"),
+        HelpShortcutRow(id: "sc-taskbar-drag", categoryES: "Barra de tareas", categoryEN: "Taskbar", keys: "Arrastrar + 1 s", actionES: "Mantener un archivo quieto 1 s sobre un botón de la barra para abrir esa app y soltarlo adentro", actionEN: "Hold a dragged file still for 1 s over any Taskbar button to raise that app and drop inside"),
         HelpShortcutRow(id: "sc-info", categoryES: "Previsualización e Info", categoryEN: "Preview & Info", keys: "⌘ I", actionES: "Abrir ventana de Propiedades y metadatos EXIF / multimedia", actionEN: "Open Properties & EXIF / media metadata"),
         HelpShortcutRow(id: "sc-newfolder", categoryES: "Edición y Archivos", categoryEN: "Edit & Files", keys: "⇧ ⌘ N", actionES: "Crear nueva carpeta", actionEN: "Create new folder"),
         HelpShortcutRow(id: "sc-rename", categoryES: "Edición y Archivos", categoryEN: "Edit & Files", keys: "F2  o  Enter", actionES: "Renombrar (1 elemento en línea, varios con Renombrado masivo)", actionEN: "Rename (inline for 1 item, Bulk Rename for multiple)"),
@@ -972,12 +1005,20 @@ extension HelpGuideView {
             bodyEN: "Starts disabled by default. Under AltTab → Settings you can enable it, choose launch-on-startup behavior, record up to 5 shortcut profiles with custom filters, choose Thumbnails, App Icons, or Titles List with auto-sizing, toggle full-size window previews, and exclude specific apps."
         ),
         HelpTopicCard(
+            id: "cfg-office",
+            icon: "menubar.dock.rectangle",
+            titleES: "Menú superior «Office»: Edición en Vista Rápida y «Enviar a Drive»",
+            titleEN: "Top «Office» Menu: Quick Look Editing & «Send to Drive» Settings",
+            bodyES: "Desde el menú superior Office controlás todo en un clic: activar o desactivar el modo edición en Vista Rápida, elegir si los documentos abren en Vista original o directo en Editor, habilitar o deshabilitar Word, Excel (.xlsx/.xls), PowerPoint y CSV por separado, configurar encabezados fijos y ajuste de texto en planillas, y ajustar «Enviar a Drive» (activar/desactivar, cuenta de Google por defecto, carpeta destino en Drive y abrir Sheets/Docs/Slides en pestaña interna o en Google Chrome externo).",
+            bodyEN: "Manage everything in one click from the top Office menu: toggle Quick Look editing on or off, choose Original View or Quick Editor as default, enable or disable Word, Excel (.xlsx/.xls), PowerPoint, and CSV individually, configure frozen headers and text wrapping, and set up «Send to Drive» (enable/disable, default Google account, target Drive folder, and opening Sheets/Docs/Slides inside MacFileExplorer or in external Google Chrome)."
+        ),
+        HelpTopicCard(
             id: "cfg-taskbar",
             icon: "dock.rectangle",
-            titleES: "Barra de tareas, apariencia, monitores y Dock (Menú Barra de tareas)",
-            titleEN: "Taskbar, Appearance, Displays & Dock (Taskbar Menu)",
-            bodyES: "Arranca desactivada por defecto con el Dock original de macOS intacto. En Barra de tareas → Configuración podés elegir si se activa por defecto al abrir la app, ajustar altura, fuente, transparencia, tema claro/oscuro, solo íconos, apps fijadas/excluidas, comportamiento multimonitor y gestión opcional del Dock con botón de emergencia para restaurar el Dock original en un clic.",
-            bodyEN: "Starts disabled by default with your original macOS Dock untouched. Under Taskbar → Settings you can choose whether to launch enabled by default, customize height, font, opacity, light/dark theme, icon-only mode, pinned/excluded apps, multi-monitor rules, and optional Dock placement with a one-click emergency restore."
+            titleES: "Barra de tareas, apariencia, agrupación, solo íconos, monitores y Dock (Menú Barra de tareas)",
+            titleEN: "Taskbar, Appearance, Grouping, Icons Only, Displays & Dock (Taskbar Menu)",
+            bodyES: "Arranca desactivada por defecto con el Dock original de macOS intacto. Desde Barra de tareas → Configuración (o clic derecho sobre la barra) podés elegir inicio automático, Isla flotante o barra acoplada, línea divisoria superior, material de fondo, estilo de botones, indicador activo en 6 colores, «Solo íconos», «Solo ícono en ventanas minimizadas», «Agrupar ventanas de la misma app lado a lado», 8 animaciones del Menú Inicio (incluyendo 0 ms instantáneo), 5 íconos de MacFileExplorer, multimonitor y restauración de emergencia del Dock.",
+            bodyEN: "Starts disabled by default with your original macOS Dock untouched. Under Taskbar → Settings (or by right-clicking the bar) you can configure auto-launch, Floating Island vs Edge-to-Edge bar, top divider line, background material, button shapes, active indicator in 6 colors, «Icons Only», «Icon Only for Minimized Windows», «Keep Same-App Windows Side by Side», 8 Start Menu animations (including 0 ms instant), 5 MacFileExplorer app icons, multi-monitor rules, and one-click emergency Dock restore."
         ),
         HelpTopicCard(
             id: "cfg-language",

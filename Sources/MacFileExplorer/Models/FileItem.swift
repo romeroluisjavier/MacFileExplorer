@@ -226,13 +226,11 @@ public struct FileItem: Identifiable, Hashable, Sendable {
         )
     }
 
-    /// Obtiene el icono nativo del sistema para este archivo o carpeta.
+    /// Obtiene el icono representativo para este archivo o carpeta (con ícono rojo dedicado para PDF).
     /// Debe invocarse desde `@MainActor` cuando se renderiza en la interfaz.
     @MainActor
     public var systemIcon: NSImage {
-        let icon = NSWorkspace.shared.icon(forFile: url.path(percentEncoded: false))
-        icon.size = NSSize(width: 32, height: 32)
-        return icon
+        FileIconProvider.shared.icon(for: self, size: 32)
     }
 
     // MARK: - Ordenamiento Estilo Windows Explorer (Carpetas Primero)

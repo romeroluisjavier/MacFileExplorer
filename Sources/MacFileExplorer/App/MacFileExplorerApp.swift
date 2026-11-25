@@ -70,6 +70,9 @@ struct MacFileExplorerApp: App {
     @Bindable private var clipboardPrefs = ClipboardHistoryPreferences.shared
     @Bindable private var taskbarPrefs = TaskbarPreferences.shared
     @Bindable private var altTabPrefs = AltTabPreferences.shared
+    @Bindable private var officePrefs = OfficePreferences.shared
+    @Bindable private var drivePrefs = GoogleDriveUploadPreferences.shared
+    @Bindable private var googleManager = GoogleAccountsManager.shared
     @Bindable private var fileIconProvider = FileIconProvider.shared
     @FocusedValue(\.explorerViewModel) private var focusedExplorerViewModel
 
@@ -690,17 +693,31 @@ struct MacFileExplorerApp: App {
 
                 Toggle(isOn: $taskbarPrefs.groupWindowsByApp) {
                     Label(
-                        loc.text(es: "Agrupar ventanas por aplicación", en: "Group Windows by Application"),
-                        systemImage: "square.stack.3d.up"
+                        loc.text(
+                            es: "Mantener ventanas de la misma app juntas (lado a lado)",
+                            en: "Keep Same-App Windows Side by Side"
+                        ),
+                        systemImage: "rectangle.split.2x1"
                     )
                 }
 
-                Toggle(isOn: $taskbarPrefs.showWindowTitles) {
+                Toggle(isOn: $taskbarPrefs.iconsOnlyMode) {
                     Label(
-                        loc.text(es: "Mostrar títulos de ventanas", en: "Show Window Titles"),
-                        systemImage: "textformat"
+                        loc.text(es: "Mostrar solo íconos", en: "Show Icons Only"),
+                        systemImage: "square.grid.2x2"
                     )
                 }
+
+                Toggle(isOn: Binding(
+                    get: { taskbarPrefs.minimizedWindowDisplayMode == .iconOnly },
+                    set: { taskbarPrefs.minimizedWindowDisplayMode = $0 ? .iconOnly : .sameAsNormal }
+                )) {
+                    Label(
+                        loc.text(es: "Solo ícono en ventanas minimizadas", en: "Icon Only for Minimized Windows"),
+                        systemImage: "app.dashed"
+                    )
+                }
+                .disabled(taskbarPrefs.iconsOnlyMode)
 
                 Toggle(isOn: $taskbarPrefs.autoResizeOverlappingWindows) {
                     Label(
@@ -902,6 +919,78 @@ struct MacFileExplorerApp: App {
                         Label(
                             loc.text(es: "Animación del Menú Inicio", en: "Start Menu Animation"),
                             systemImage: "sparkles.rectangle.stack"
+                        )
+                    }
+
+                    Divider()
+
+                    Toggle(
+                        loc.text(es: "Mostrar línea divisoria superior", en: "Show Top Divider Line"),
+                        isOn: $taskbarPrefs.showTopBorder
+                    )
+
+                    Menu {
+                        Picker(
+                            loc.text(es: "Estilo de la barra", en: "Bar Style"),
+                            selection: $taskbarPrefs.barStyle
+                        ) {
+                            ForEach(TaskbarBarStyle.allCases) { style in
+                                Text(style.localizedTitle(using: loc)).tag(style)
+                            }
+                        }
+                        .pickerStyle(.inline)
+
+                        Divider()
+
+                        Picker(
+                            loc.text(es: "Material de fondo", en: "Background Material"),
+                            selection: $taskbarPrefs.backgroundMaterial
+                        ) {
+                            ForEach(TaskbarBackgroundMaterial.allCases) { material in
+                                Text(material.localizedTitle(using: loc)).tag(material)
+                            }
+                        }
+                        .pickerStyle(.inline)
+
+                        Divider()
+
+                        Picker(
+                            loc.text(es: "Estilo de botones", en: "Button Style"),
+                            selection: $taskbarPrefs.buttonStyle
+                        ) {
+                            ForEach(TaskbarButtonStyle.allCases) { style in
+                                Text(style.localizedTitle(using: loc)).tag(style)
+                            }
+                        }
+                        .pickerStyle(.inline)
+
+                        Divider()
+
+                        Picker(
+                            loc.text(es: "Indicador de ventana activa", en: "Active Window Indicator"),
+                            selection: $taskbarPrefs.activeIndicatorStyle
+                        ) {
+                            ForEach(TaskbarActiveIndicatorStyle.allCases) { style in
+                                Text(style.localizedTitle(using: loc)).tag(style)
+                            }
+                        }
+                        .pickerStyle(.inline)
+
+                        Divider()
+
+                        Picker(
+                            loc.text(es: "Color del indicador activo", en: "Active Indicator Color"),
+                            selection: $taskbarPrefs.activeIndicatorColor
+                        ) {
+                            ForEach(TaskbarActiveIndicatorColor.allCases) { color in
+                                Text(color.localizedTitle(using: loc)).tag(color)
+                            }
+                        }
+                        .pickerStyle(.inline)
+                    } label: {
+                        Label(
+                            loc.text(es: "Estilo visual de la barra", en: "Bar Visual Style"),
+                            systemImage: "slider.horizontal.below.rectangle"
                         )
                     }
 
@@ -1121,6 +1210,215 @@ struct MacFileExplorerApp: App {
                 } label: {
                     Label(loc.text(es: "Etiquetas y controles", en: "Badges & Controls"), systemImage: "tag")
                 }
+            }
+
+            CommandMenu("Office") {
+                Toggle(isOn: $officePrefs.isOfficeEditingEnabled) {
+                    Label(
+                        loc.text(es: "Activar modo edición en Vista Rápida", en: "Enable Editing Mode in Quick Look"),
+                        systemImage: "pencil.and.outline"
+                    )
+                }
+
+                Menu {
+                    Picker(
+                        loc.text(es: "Abrir documentos Office en", en: "Open Office Documents In"),
+                        selection: $officePrefs.defaultOpenMode
+                    ) {
+                        ForEach(OfficePreviewOpenMode.allCases) { mode in
+                            Label(mode.localizedTitle(using: loc), systemImage: mode.systemImage)
+                                .tag(mode)
+                        }
+                    }
+                    .pickerStyle(.inline)
+                } label: {
+                    Label(
+                        loc.text(es: "Modo de apertura por defecto", en: "Default Preview Mode"),
+                        systemImage: "eye"
+                    )
+                }
+                .disabled(!officePrefs.isOfficeEditingEnabled)
+
+                Menu {
+                    Toggle(isOn: $officePrefs.enableWordPreview) {
+                        Label(
+                            loc.text(es: "Word (.docx, .doc, .rtf, .odt)", en: "Word (.docx, .doc, .rtf, .odt)"),
+                            systemImage: OfficeDocumentKind.word.symbolName
+                        )
+                    }
+
+                    Toggle(isOn: $officePrefs.enableExcelPreview) {
+                        Label(
+                            loc.text(es: "Excel (.xlsx, .xls, .ods)", en: "Excel (.xlsx, .xls, .ods)"),
+                            systemImage: OfficeDocumentKind.excel.symbolName
+                        )
+                    }
+
+                    Toggle(isOn: $officePrefs.enablePowerPointPreview) {
+                        Label(
+                            loc.text(es: "PowerPoint (.pptx, .ppt, .odp)", en: "PowerPoint (.pptx, .ppt, .odp)"),
+                            systemImage: OfficeDocumentKind.powerpoint.symbolName
+                        )
+                    }
+
+                    Divider()
+
+                    Toggle(isOn: $officePrefs.isInteractiveCSVEnabled) {
+                        Label(
+                            loc.text(es: "Planillas CSV / TSV interactivas", en: "Interactive CSV / TSV Spreadsheets"),
+                            systemImage: OfficeDocumentKind.csv.symbolName
+                        )
+                    }
+                } label: {
+                    Label(loc.text(es: "Formatos habilitados", en: "Enabled Formats"), systemImage: "doc.richtext")
+                }
+
+                Menu {
+                    Toggle(isOn: $officePrefs.csvFirstRowIsHeaderByDefault) {
+                        Label(
+                            loc.text(es: "Primera fila como encabezado fijo en CSV", en: "Freeze First Row as Header in CSV"),
+                            systemImage: "rectangle.topthird.inset.filled"
+                        )
+                    }
+
+                    Toggle(isOn: $officePrefs.spreadsheetWrapTextByDefault) {
+                        Label(
+                            loc.text(es: "Ajustar texto en varias líneas (Wrap)", en: "Wrap Text in Cells by Default"),
+                            systemImage: "text.justify.left"
+                        )
+                    }
+                } label: {
+                    Label(loc.text(es: "Opciones de planillas (CSV / Excel)", en: "Spreadsheet Options (CSV / Excel)"), systemImage: "tablecells")
+                }
+
+                Divider()
+
+                Toggle(isOn: $officePrefs.isSendToDriveEnabled) {
+                    Label(
+                        loc.text(es: "Activar «Enviar a Drive»", en: "Enable \"Send to Drive\""),
+                        systemImage: "icloud.and.arrow.up"
+                    )
+                }
+
+                Menu {
+                    Picker(
+                        loc.text(es: "Abrir Google Sheets / Docs / Slides en", en: "Open Google Sheets / Docs / Slides In"),
+                        selection: $drivePrefs.openInExternalChrome
+                    ) {
+                        Label(
+                            loc.text(es: "Pestaña de MacFileExplorer (misma cuenta)", en: "MacFileExplorer Tab (Same Session)"),
+                            systemImage: "macwindow"
+                        )
+                        .tag(false)
+
+                        Label(
+                            loc.text(es: "Google Chrome externo", en: "External Google Chrome"),
+                            systemImage: "safari"
+                        )
+                        .tag(true)
+                    }
+                    .pickerStyle(.inline)
+                } label: {
+                    Label(
+                        loc.text(es: "Abrir Google Sheets / Docs / Slides en...", en: "Open Google Sheets / Docs / Slides In..."),
+                        systemImage: "arrow.up.right.square"
+                    )
+                }
+                .disabled(!officePrefs.isSendToDriveEnabled)
+
+                Menu {
+                    if googleManager.accounts.isEmpty {
+                        Button {
+                            googleManager.startAddGoogleAccount()
+                        } label: {
+                            Label(
+                                loc.text(es: "Conectar cuenta de Google…", en: "Sign in to Google Account…"),
+                                systemImage: "person.badge.plus"
+                            )
+                        }
+                    } else {
+                        let resolvedID = GoogleDriveUploadService.shared.resolvePreferredAccount()?.id
+                        ForEach(googleManager.accounts) { account in
+                            let folderLabel = drivePrefs.displayFolderName(for: account.id, using: loc)
+                            Button {
+                                drivePrefs.defaultAccountID = account.id
+                            } label: {
+                                Label(
+                                    "\(resolvedID == account.id ? "✓ " : "")\(account.displayLabel) · \(folderLabel)",
+                                    systemImage: "person.crop.circle"
+                                )
+                            }
+                        }
+
+                        Divider()
+
+                        Button {
+                            googleManager.startAddGoogleAccount()
+                        } label: {
+                            Label(
+                                loc.text(es: "Agregar otra cuenta de Google…", en: "Add Another Google Account…"),
+                                systemImage: "person.badge.plus"
+                            )
+                        }
+                    }
+                } label: {
+                    Label(
+                        loc.text(es: "Cuenta de Google para «Enviar a Drive»", en: "Google Account for \"Send to Drive\""),
+                        systemImage: "person.crop.circle"
+                    )
+                }
+                .disabled(!officePrefs.isSendToDriveEnabled)
+
+                Button {
+                    GoogleDriveSettingsWindowController.shared.show()
+                } label: {
+                    Label(
+                        loc.text(es: "Configurar «Enviar a Drive» y carpeta…", en: "Configure \"Send to Drive\" & Folder…"),
+                        systemImage: "folder.badge.gearshape"
+                    )
+                }
+                .disabled(!officePrefs.isSendToDriveEnabled)
+
+                if let preferredAccount = GoogleDriveUploadService.shared.resolvePreferredAccount() {
+                    let currentFolder = drivePrefs.displayFolderName(for: preferredAccount.id, using: loc)
+                    Button {
+                        let dest = drivePrefs.destination(for: preferredAccount.id)
+                        _ = googleManager.openOrFocusDriveFolderTab(url: dest.targetURL, for: preferredAccount.id)
+                    } label: {
+                        Label(
+                            loc.text(
+                                es: "Abrir carpeta destino en Drive (\(currentFolder))",
+                                en: "Open Target Folder in Drive (\(currentFolder))"
+                            ),
+                            systemImage: "folder"
+                        )
+                    }
+                    .disabled(!officePrefs.isSendToDriveEnabled)
+
+                    if drivePrefs.destination(for: preferredAccount.id).folderID != nil {
+                        Button {
+                            drivePrefs.setFolder(fromUserInput: "", customName: "", for: preferredAccount.id)
+                        } label: {
+                            Label(
+                                loc.text(es: "Restablecer carpeta destino a Mi unidad", en: "Reset Target Folder to My Drive"),
+                                systemImage: "arrow.counterclockwise"
+                            )
+                        }
+                        .disabled(!officePrefs.isSendToDriveEnabled)
+                    }
+                }
+
+                Divider()
+
+                Button {
+                    officePrefs.resetToDefaults()
+                } label: {
+                    Label(
+                        loc.text(es: "Restablecer ajustes de Office", en: "Reset Office Settings"),
+                        systemImage: "arrow.counterclockwise"
+                    )
+                }
+                .disabled(officePrefs.isDefaultConfiguration)
             }
 
             CommandMenu(loc.text(es: "Idioma", en: "Language")) {

@@ -468,6 +468,24 @@ public enum NativeWindowTabIconBuilder {
         return renderNSImage(from: view, size: CGSize(width: 16, height: 16))
     }
 
+    private static var cachedDriveMenuIcons: [Int: NSImage] = [:]
+
+    /// Devuelve el icono oficial multicolor de Google Drive renderizado como `NSImage` nítido para menús nativos.
+    public static func googleDriveMenuIcon(size: CGFloat = 15) -> NSImage? {
+        let key = Int(round(size * 10))
+        if let cached = cachedDriveMenuIcons[key] {
+            return cached
+        }
+        let view = GoogleServiceIconView(service: .drive, size: size)
+            .frame(width: size, height: size)
+        let image = renderNSImage(from: view, size: CGSize(width: size, height: size))
+        image?.isTemplate = false
+        if let image {
+            cachedDriveMenuIcons[key] = image
+        }
+        return image
+    }
+
     public static func webTabIcon(for tab: BrowserTabItem) -> NSImage? {
         let image: NSImage?
         if let service = tab.service {

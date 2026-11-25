@@ -1327,7 +1327,21 @@ public final class TaskbarWindowTracker {
         )
     }
 
-    // MARK: - Reordenamiento Manual (Drag & Drop para Taskbar)
+    // MARK: - Reordenamiento Manual y Agrupación Inmediata (Taskbar)
+
+    /// Reaplica de forma síncrona el orden/agrupación actual sobre las ventanas visibles (0 ms de espera al activar/desactivar la opción).
+    public func reapplyWindowOrderingImmediately() {
+        guard !windows.isEmpty else { return }
+        let liveIDs = Set(allWindowsAcrossSpaces.map(\.id)).union(windows.map(\.id))
+        let reordered = orderEngine.orderedWindows(
+            from: windows,
+            groupByApp: TaskbarPreferences.shared.groupWindowsByApp,
+            liveWindowIDsAcrossAllSpaces: liveIDs
+        )
+        if reordered != windows {
+            windows = reordered
+        }
+    }
 
     public func moveWindow(sourceID: String, toTargetID targetID: String) {
         orderEngine.moveWindow(
@@ -1435,6 +1449,7 @@ public final class TaskbarWindowTracker {
                 }
                 NSApp.unhide(nil)
                 NSApp.activate()
+                localWin.orderFrontRegardless()
                 localWin.makeKeyAndOrderFront(nil)
             } else {
                 GoogleAccountsManager.shared.openOrFocusMainWindow()

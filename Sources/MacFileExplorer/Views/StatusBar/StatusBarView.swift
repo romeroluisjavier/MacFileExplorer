@@ -6,6 +6,7 @@ import SwiftUI
 public struct StatusBarView: View {
     @Bindable var viewModel: ExplorerViewModel
     @Bindable private var transferQueue = TransferQueueManager.shared
+    @Bindable private var driveUploadService = GoogleDriveUploadService.shared
     @ViewState private var isTransferQueuePopoverPresented: Bool = false
 
     private var loc: LocalizationManager { LocalizationManager.shared }
@@ -69,8 +70,10 @@ public struct StatusBarView: View {
 
             Spacer(minLength: 8)
 
-            // 4. Barra de progreso lineal centrada (Cola de transferencias clicable o tareas en segundo plano)
-            if let activeJob = transferQueue.primaryActiveJob {
+            // 4. Barra de progreso lineal centrada (Subida a Drive en segundo plano, Cola de transferencias o tareas)
+            if let driveUpload = driveUploadService.activeUpload, driveUpload.tabID == nil {
+                driveUploadStatusPill(driveUpload)
+            } else if let activeJob = transferQueue.primaryActiveJob {
                 let extraCount = max(0, transferQueue.jobs.count - 1)
                 let label = extraCount > 0
                     ? "\(activeJob.title) (+\(extraCount))"
@@ -254,5 +257,80 @@ public struct StatusBarView: View {
             Capsule(style: .continuous)
                 .fill(tint.opacity(0.08))
         )
+    }
+
+    @ViewBuilder
+    private func driveUploadStatusPill(_ upload: GoogleDriveActiveUpload) -> some View {
+        let isFailed: Bool = {
+            if case .failed = upload.stage { return true }
+            return false
+        }()
+        let isCompleted = (upload.stage == .completed)
+        let tint: Color = isFailed ? .red : (isCompleted ? .green : .accentColor)
+        let fullMessage = upload.stage.localizedDescription(
+            fileName: upload.fileURL.lastPathComponent,
+            folderName: upload.folderName,
+            target: upload.editorTarget,
+            openedInExternalChrome: upload.openInExternalChrome,
+            using: loc
+        )
+
+        HStack(spacing: 6) {
+            GoogleServiceIconView(service: .drive, size: 13)
+
+            if !upload.stage.isTerminal {
+                ProgressView()
+                    .controlSize(.mini)
+            } else {
+                Image(systemName: isFailed ? "exclamationmark.triangle.fill" : "checkmark.circle.fill")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(tint)
+            }
+
+            Text(fullMessage)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(.primary.opacity(0.9))
+                .lineLimit(1)
+                .truncationMode(.middle)
+
+            if isFailed {
+                Button {
+                    let dest = GoogleDriveUploadPreferences.shared.destination(for: upload.accountID)
+                    let email = GoogleAccountsManager.shared.accounts.first(where: { $0.id == upload.accountID })?.email
+                    let chromeURL = GoogleDriveUploadService.urlWithAuthUser(dest.targetURL, email: email)
+                    BookmarksManager.shared.openURLInGoogleChrome(chromeURL, newWindow: false)
+                } label: {
+                    Text(loc.text(es: "Abrir Drive", en: "Open Drive"))
+                        .font(.system(size: 10.5, weight: .semibold))
+                        .foregroundStyle(Color.accentColor)
+                }
+                .buttonStyle(.plain)
+            }
+
+            Button {
+                driveUploadService.cancelActiveUpload()
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 9.5, weight: .bold))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 14, height: 14)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .help(upload.stage.isTerminal
+                ? loc.text(es: "Cerrar aviso", en: "Dismiss")
+                : loc.text(es: "Cancelar subida a Drive", en: "Cancel Drive upload"))
+        }
+        .padding(.horizontal, 9)
+        .padding(.vertical, 2.5)
+        .background(
+            Capsule(style: .continuous)
+                .fill(tint.opacity(0.11))
+        )
+        .overlay(
+            Capsule(style: .continuous)
+                .strokeBorder(tint.opacity(0.28), lineWidth: 0.6)
+        )
+        .help(fullMessage)
     }
 }

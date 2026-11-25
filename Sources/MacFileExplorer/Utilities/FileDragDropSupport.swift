@@ -735,7 +735,7 @@ public final class DragCanvasNSView: NSView, NSDraggingSource {
     ) -> NSDragOperation {
         switch context {
         case .withinApplication:
-            return [.move, .copy]
+            return [.move, .copy, .generic]
         case .outsideApplication:
             // Incluir `.move` y `.copy` sin `.every` permite a Finder mover archivos en el mismo volumen
             // (o copiar manteniendo `⌥`) y a otras apps (Mail, Slack, Chrome, VS Code) recibir el archivo.

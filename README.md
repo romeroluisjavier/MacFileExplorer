@@ -5,18 +5,18 @@ Un explorador de archivos nativo, ágil y moderno para macOS, inspirado en la pr
 ![macOS 14+](https://img.shields.io/badge/macOS-14.0%2B-blue?logo=apple)
 ![Swift 6](https://img.shields.io/badge/Swift-6.0-orange?logo=swift)
 ![Architecture](https://img.shields.io/badge/Architecture-Universal%20(Apple%20Silicon%20%2B%20Intel)-brightgreen)
-![Release](https://img.shields.io/badge/Release-v2.0.0-blueviolet)
+![Release](https://img.shields.io/badge/Release-v2.5.0-blueviolet)
 
 🌐 **Sitio web oficial con demos en vivo e instalación paso a paso:** [romeroluisjavier.github.io/MacFileExplorer](https://romeroluisjavier.github.io/MacFileExplorer/)
 
 ---
 
-## ✨ Novedades recientes (v2.0.0)
+## ✨ Novedades recientes (v2.5.0)
 
-- 🪄 **8 animaciones de despliegue y velocidad ajustable para el Menú Inicio (con modo `0 ms` instantáneo)**: elegí entre **4 estilos clásicos** (*Suave*, *Desde la barra*, *Rebote elástico* y *Giro 3D*), **2 estilos Pro** (*Cortina ejecutiva* y *Enfoque Spotlight*) y **2 divertidos** (*Gelatina* y *Genio giratorio*). Regulá la duración de `0 ms` a `600 ms` — con `0 ms` el Menú Inicio abre al instante sin animación — con tarjetas animadas en vivo y botón **Probar ahora** desde Configuración o clic derecho sobre el botón Inicio.
-- ⚡ **Cambio instantáneo entre carpetas ya visitadas y mayor velocidad en Apple Silicon (M1–M4)**: volvé a carpetas abiertas anteriormente sin que parpadee ninguna pantalla de carga, junto con arranque más ágil, detección paralela de duplicados y búsqueda de texto en imágenes más veloz manteniendo `~0%` CPU en reposo.
-- 🌐 **Traducción completa Español / Inglés y corrección de avisos animados**: todos los menús, submenús, menús contextuales y ventanas abiertas cambian en vivo entre español e inglés; se corrigieron las 6 animaciones de globos rojos de notificaciones en la barra de tareas, se simplificaron los íconos *Brain* y se sumó el aviso legal en *Acerca de MacFileExplorer*.
-- 🎨 **Web renovada y 5 íconos seleccionables (`v1.8.1` incluido)**: sitio web actualizado con resumen animado automático, nuevos GIFs (borrado `⌘+Delete`, Acciones rápidas de imagen/video con recorte, visor JSON/XML), 4 temas (*Light*, *Dark*, *Windows 98* y *macOS 98*) y reporte directo de errores a GitHub.
+- 🖼️ **Acciones rápidas y Copiar (`⌘C`) dentro de la Vista Rápida de imágenes y videos**: copiá imagen y archivo en un clic (o elegí solo imagen / solo archivo para pegar en chats, documentos o carpetas), eliminá fondos a PNG transparente, convertí a JPG/PNG, rotá 90°/180° viendo el cambio al instante, pasá videos a MP4, recortá (*Trim*), silenciá audio y limpiá metadatos privados sin salir del Preview.
+- 🪟 **Vista Rápida libre e íconos rojos estilo Acrobat para PDF**: arrastrá libremente la ventana de Vista Rápida fuera de `MacFileExplorer` y entre monitores sin frenos, y distinguí a simple vista tus PDFs de las imágenes gracias al nuevo ícono rojo vectorial estilo Acrobat.
+- 📊 **Editor Office (`.docx`, `.xlsx`, `.xls`, `.pptx`, `.csv`) con selección por arrastre, Menú «Office» y «Enviar a Drive» en barra inferior**: seleccioná múltiples filas y columnas arrastrando con el mouse en CSV y Excel (con Conteo/Suma/Promedio en vivo y copiado directo a Excel/Sheets), editá documentos Office en un clic y subí archivos a Google Drive con progreso discreto en la barra de estado inferior y apertura automática en Sheets, Docs o Slides (en la app o Chrome externo).
+- 🧭 **Barra de tareas avanzada**: mantené un archivo 1 segundo sobre cualquier app de la barra para abrirla y soltarlo adentro, agrupá ventanas de la misma app lado a lado, activá los modos «Solo íconos» o «Solo ícono en minimizadas» y personalizá Isla flotante, línea divisoria y 5 estilos visuales.
 
 ---
 
@@ -53,12 +53,12 @@ Un explorador de archivos nativo, ágil y moderno para macOS, inspirado en la pr
 
 ### 1. Descargar el instalador
 Descarga la versión más reciente en formato `.dmg` directamente desde este repositorio:
-- 👉 **[Descargar MacFileExplorer-2.0.0.dmg](https://github.com/romeroluisjavier/MacFileExplorer/raw/main/releases/MacFileExplorer-2.0.0.dmg)** *(ubicado en la carpeta [`releases/`](./releases) — también podés ver el historial en [`releases/README.md`](./releases/README.md))*
+- 👉 **[Descargar MacFileExplorer-2.5.0.dmg](https://github.com/romeroluisjavier/MacFileExplorer/raw/main/releases/MacFileExplorer-2.5.0.dmg)** *(ubicado en la carpeta [`releases/`](./releases) — también podés ver el historial en [`releases/README.md`](./releases/README.md))*
 
 ---
 
 ### 2. Instalación en tu Mac
-1. Haz doble clic en el archivo descargado **`MacFileExplorer-2.0.0.dmg`**.
+1. Haz doble clic en el archivo descargado **`MacFileExplorer-2.5.0.dmg`**.
 2. Arrastra el icono de **MacFileExplorer** a la carpeta **Applications** (Aplicaciones).
 
 ---

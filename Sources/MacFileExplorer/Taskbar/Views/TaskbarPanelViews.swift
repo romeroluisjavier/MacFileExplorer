@@ -51,19 +51,34 @@ public final class TaskbarPanel: NSPanel {
 private struct TaskbarVisualEffectBackground: NSViewRepresentable {
     let themeMode: TaskbarThemeMode
     let opacity: Double
+    let backgroundMaterial: TaskbarBackgroundMaterial
+    let cornerRadius: CGFloat
+
+    private var resolvedMaterial: NSVisualEffectView.Material {
+        switch backgroundMaterial {
+        case .frostedGlass: return .hudWindow
+        case .crystalBlur: return .popover
+        case .solid: return .hudWindow
+        }
+    }
 
     func makeNSView(context: Context) -> NSVisualEffectView {
         let view = NSVisualEffectView()
         view.blendingMode = .behindWindow
         view.state = .active
-        view.material = .hudWindow
+        view.material = resolvedMaterial
+        view.wantsLayer = true
         return view
     }
 
     func updateNSView(_ nsView: NSVisualEffectView, context: Context) {
-        nsView.material = .hudWindow
+        nsView.material = resolvedMaterial
         nsView.state = .active
-        nsView.alphaValue = CGFloat(min(max(opacity, 0.25), 1.0))
+        let alphaFactor: Double = (backgroundMaterial == .crystalBlur) ? 0.86 : 1.0
+        nsView.alphaValue = CGFloat(min(max(opacity * alphaFactor, 0.25), 1.0))
+        nsView.wantsLayer = true
+        nsView.layer?.cornerRadius = cornerRadius
+        nsView.layer?.masksToBounds = cornerRadius > 0
         switch themeMode {
         case .system:
             nsView.appearance = nil
@@ -103,13 +118,28 @@ public struct TaskbarBarView: View {
     }
 
     private var barTintColor: Color {
-        effectiveDark
-            ? Color(white: 0.11).opacity(prefs.opacity * 0.72)
-            : Color(white: 0.94).opacity(prefs.opacity * 0.76)
+        switch prefs.backgroundMaterial {
+        case .frostedGlass:
+            return effectiveDark
+                ? Color(white: 0.11).opacity(prefs.opacity * 0.72)
+                : Color(white: 0.94).opacity(prefs.opacity * 0.76)
+        case .crystalBlur:
+            return effectiveDark
+                ? Color(white: 0.15).opacity(prefs.opacity * 0.34)
+                : Color.white.opacity(prefs.opacity * 0.44)
+        case .solid:
+            return effectiveDark
+                ? Color(white: 0.105).opacity(prefs.opacity)
+                : Color(white: 0.955).opacity(prefs.opacity)
+        }
     }
 
     private var topBorderColor: Color {
         effectiveDark ? Color.white.opacity(0.14) : Color.black.opacity(0.12)
+    }
+
+    private var barCornerRadius: CGFloat {
+        prefs.barStyle == .floatingIsland ? min(15, max(10, CGFloat(prefs.barHeight) * 0.32)) : 0
     }
 
     private var windows: [TaskbarWindowItem] {
@@ -117,18 +147,41 @@ public struct TaskbarBarView: View {
     }
 
     public var body: some View {
+        let isFloating = (prefs.barStyle == .floatingIsland)
+        let cornerRadius = barCornerRadius
+
         GeometryReader { geo in
             ZStack(alignment: .top) {
-                TaskbarVisualEffectBackground(themeMode: prefs.themeMode, opacity: prefs.opacity)
-                    .overlay(barTintColor)
+                if prefs.backgroundMaterial == .solid {
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                        .fill(barTintColor)
+                } else {
+                    TaskbarVisualEffectBackground(
+                        themeMode: prefs.themeMode,
+                        opacity: prefs.opacity,
+                        backgroundMaterial: prefs.backgroundMaterial,
+                        cornerRadius: cornerRadius
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                            .fill(barTintColor)
+                    )
+                }
 
-                // Fondo interactivo para clic derecho sobre espacio libre de la barra
-                TaskbarEmptyBackgroundMouseOverlay(displayID: displayID)
+                // Fondo interactivo para clic derecho y soltado de apps `.app` sobre espacio libre de la barra
+                TaskbarEmptyBackgroundMouseOverlay(
+                    displayID: displayID,
+                    onAppDropTargetedChanged: { targeted in
+                        isDropTargeted = targeted
+                    }
+                )
 
-                // Borde superior sutil
-                Rectangle()
-                    .fill(topBorderColor)
-                    .frame(height: 0.75)
+                // Línea divisoria superior configurable (en modo acoplado)
+                if prefs.showTopBorder && !isFloating {
+                    Rectangle()
+                        .fill(topBorderColor)
+                        .frame(height: 0.75)
+                }
 
                 HStack(spacing: 6) {
                     // 1. Botón Inicio a la izquierda
@@ -148,16 +201,21 @@ public struct TaskbarBarView: View {
                     // 3. Botones de ventanas (un botón por ventana)
                     windowButtonsSection(availableWidth: max(120, geo.size.width - leadingReservedWidth))
                 }
-                .padding(.horizontal, 8)
+                .padding(.horizontal, isFloating ? 10 : 8)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
             }
+            .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 4)
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .stroke(
+                        (isFloating && prefs.showTopBorder) ? topBorderColor : Color.clear,
+                        lineWidth: (isFloating && prefs.showTopBorder) ? 0.9 : 0
+                    )
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: max(4, cornerRadius), style: .continuous)
                     .stroke(Color.accentColor.opacity(isDropTargeted ? 0.85 : 0), lineWidth: 2)
             )
-            .onDrop(of: [.fileURL], isTargeted: $isDropTargeted) { providers in
-                handleDropAppProviders(providers)
-            }
         }
         .preferredColorScheme(preferredScheme)
     }
@@ -190,8 +248,9 @@ public struct TaskbarBarView: View {
             return 1.0
         }()
 
+        let btnCornerRadius: CGFloat = (prefs.buttonStyle == .pill) ? (btnSide * 0.5) : 7
         return ZStack(alignment: .center) {
-            RoundedRectangle(cornerRadius: 7, style: .continuous)
+            RoundedRectangle(cornerRadius: btnCornerRadius, style: .continuous)
                 .fill(
                     isOpenHere
                         ? (effectiveDark ? Color.white.opacity(0.22) : Color.black.opacity(0.12))
@@ -245,6 +304,8 @@ public struct TaskbarBarView: View {
                     pinned: pinned,
                     barHeight: CGFloat(prefs.barHeight),
                     effectiveDark: effectiveDark,
+                    buttonStyle: prefs.buttonStyle,
+                    activeIndicatorColor: prefs.activeIndicatorColor,
                     isRunning: tracker.isAppRunning(bundleIdentifier: pinned.bundleIdentifier, bundlePath: pinned.bundlePath),
                     isFocused: isFocusedApp,
                     badgeLabel: prefs.showNotificationBadges
@@ -295,42 +356,45 @@ public struct TaskbarBarView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
-            let buttonSpacing: CGFloat = 5
-            let count = max(1, windows.count)
-            let totalSpacing = CGFloat(max(0, count - 1)) * buttonSpacing
-            let iconOnlyWidth = max(34, CGFloat(prefs.barHeight) - 2)
-            let maxButtonWidth: CGFloat = prefs.showWindowTitles ? 215 : iconOnlyWidth
-            let minButtonWidth: CGFloat = prefs.showWindowTitles ? 96 : iconOnlyWidth
-            let idealWidth = floor((availableWidth - totalSpacing) / CGFloat(count))
-            let computedButtonWidth = min(maxButtonWidth, max(minButtonWidth, idealWidth))
-            let needsHorizontalScroll = (computedButtonWidth * CGFloat(count) + totalSpacing) > availableWidth
+            let layout = TaskbarButtonLayoutCalculator.computeLayout(
+                windows: windows,
+                availableWidth: availableWidth,
+                barHeight: CGFloat(prefs.barHeight),
+                showWindowTitles: prefs.showWindowTitles,
+                minimizedDisplayMode: prefs.minimizedWindowDisplayMode,
+                groupWindowsByApp: prefs.groupWindowsByApp
+            )
 
-            let buttonsRow = HStack(spacing: buttonSpacing) {
-                if prefs.alignment == .center && !needsHorizontalScroll {
+            let buttonsRow = HStack(spacing: 0) {
+                if prefs.alignment == .center && !layout.needsHorizontalScroll {
                     Spacer(minLength: 0)
                 }
-                ForEach(windows) { item in
+                ForEach(Array(windows.enumerated()), id: \.element.id) { idx, item in
                     TaskbarWindowButtonView(
                         item: item,
                         displayID: displayID,
-                        buttonWidth: computedButtonWidth,
+                        buttonWidth: layout.buttonWidths[idx],
                         barHeight: CGFloat(prefs.barHeight),
                         fontSize: CGFloat(prefs.fontSize),
-                        showTitle: prefs.showWindowTitles,
+                        showTitle: layout.showTitles[idx],
                         showMinimizedIndicator: prefs.showMinimizedIndicator,
                         showNotificationBadges: prefs.showNotificationBadges,
                         notificationAnimation: prefs.notificationAnimation,
                         notificationCadence: prefs.notificationAnimationCadence,
+                        buttonStyle: prefs.buttonStyle,
+                        activeIndicatorStyle: prefs.activeIndicatorStyle,
+                        activeIndicatorColor: prefs.activeIndicatorColor,
                         effectiveDark: effectiveDark,
                         isDragging: manager.draggingWindowID == item.id
                     )
+                    .padding(.leading, layout.leadingSpacings[idx])
                 }
-                if prefs.alignment == .center && !needsHorizontalScroll {
+                if prefs.alignment == .center && !layout.needsHorizontalScroll {
                     Spacer(minLength: 0)
                 }
             }
 
-            if needsHorizontalScroll {
+            if layout.needsHorizontalScroll {
                 ScrollView(.horizontal, showsIndicators: false) {
                     buttonsRow
                         .frame(maxHeight: .infinity)
@@ -341,35 +405,6 @@ public struct TaskbarBarView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: prefs.alignment == .center ? .center : .leading)
             }
         }
-    }
-
-    private func handleDropAppProviders(_ providers: [NSItemProvider]) -> Bool {
-        var accepted = false
-        for provider in providers where provider.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) {
-            accepted = true
-            provider.loadItem(forTypeIdentifier: UTType.fileURL.identifier, options: nil) { item, _ in
-                let url: URL?
-                if let data = item as? Data {
-                    url = URL(dataRepresentation: data, relativeTo: nil)
-                } else if let direct = item as? URL {
-                    url = direct
-                } else {
-                    url = nil
-                }
-                guard let appURL = url?.standardizedFileURL,
-                      appURL.pathExtension.caseInsensitiveCompare("app") == .orderedSame else {
-                    return
-                }
-                Task { @MainActor in
-                    let bundle = Bundle(url: appURL)
-                    let bundleID = bundle?.bundleIdentifier ?? ""
-                    let name = FileManager.default.displayName(atPath: appURL.path(percentEncoded: false))
-                        .replacingOccurrences(of: ".app", with: "", options: [.caseInsensitive, .anchored, .backwards])
-                    TaskbarPreferences.shared.pinApp(bundleIdentifier: bundleID, bundleURL: appURL, displayName: name)
-                }
-            }
-        }
-        return accepted
     }
 }
 
@@ -600,6 +635,8 @@ private struct TaskbarPinnedAppButtonView: View {
     let pinned: TaskbarPinnedApp
     let barHeight: CGFloat
     let effectiveDark: Bool
+    let buttonStyle: TaskbarButtonStyle
+    let activeIndicatorColor: TaskbarActiveIndicatorColor
     let isRunning: Bool
     let isFocused: Bool
     let badgeLabel: String?
@@ -608,11 +645,15 @@ private struct TaskbarPinnedAppButtonView: View {
     let isBeingDragged: Bool
 
     @ViewState private var isHovered = false
+    @ViewState private var dragHoverState: TaskbarDragHoverState = .idle
 
     var body: some View {
         let height = max(26, barHeight - 8)
+        let cornerRadius: CGFloat = (buttonStyle == .pill) ? (height * 0.5) : 7
         let iconSize = max(16, min(24, barHeight * 0.52))
         let maxJumpUp = TaskbarNotificationAnimationEngine.safeMaxJumpUp(forBarHeight: barHeight, iconSize: iconSize)
+        let isDragHovering = dragHoverState.isHovering
+        let dragTint: Color = dragHoverState.didActivate ? Color.green : Color.accentColor
 
         TaskbarNotificationAnimatedSlot(
             badgeLabel: badgeLabel,
@@ -622,25 +663,36 @@ private struct TaskbarPinnedAppButtonView: View {
             maxJumpUp: maxJumpUp
         ) { animFrame in
             ZStack(alignment: .center) {
-                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                     .fill(
                         isHovered
                             ? (effectiveDark ? Color.white.opacity(0.14) : Color.black.opacity(0.08))
                             : Color.clear
                     )
                     .overlay(
-                        RoundedRectangle(cornerRadius: 7, style: .continuous)
+                        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                             .fill(
                                 Color(red: 1.0, green: 0.34, blue: 0.22)
                                     .opacity((effectiveDark ? 0.34 : 0.24) * animFrame.buttonGlowIntensity)
                             )
                     )
                     .overlay(
-                        RoundedRectangle(cornerRadius: 7, style: .continuous)
+                        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                            .fill(
+                                dragTint.opacity(
+                                    isDragHovering
+                                        ? (dragHoverState.didActivate ? (effectiveDark ? 0.30 : 0.22) : (effectiveDark ? 0.22 : 0.15))
+                                        : 0
+                                )
+                            )
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                             .stroke(
-                                Color(red: 1.0, green: 0.42, blue: 0.28)
-                                    .opacity(0.85 * animFrame.buttonGlowIntensity),
-                                lineWidth: animFrame.buttonGlowIntensity > 0.05 ? 1.25 : 0
+                                isDragHovering
+                                    ? dragTint.opacity(0.95)
+                                    : Color(red: 1.0, green: 0.42, blue: 0.28).opacity(0.85 * animFrame.buttonGlowIntensity),
+                                lineWidth: isDragHovering ? 1.5 : (animFrame.buttonGlowIntensity > 0.05 ? 1.25 : 0)
                             )
                     )
 
@@ -660,15 +712,31 @@ private struct TaskbarPinnedAppButtonView: View {
                 .offset(x: animFrame.iconOffsetX, y: animFrame.iconOffsetY)
             }
             .frame(width: height, height: height)
+            .shadow(color: isDragHovering ? dragTint.opacity(0.35) : .clear, radius: isDragHovering ? 4 : 0)
+            .scaleEffect(dragHoverState.didActivate ? 1.05 : 1.0)
+            .animation(.spring(response: 0.20, dampingFraction: 0.65), value: dragHoverState.didActivate)
             .overlay(alignment: .bottom) {
-                if isRunning {
+                if isDragHovering {
+                    let trackWidth = max(14, height - 10)
+                    ZStack(alignment: .leading) {
+                        Capsule()
+                            .fill(dragTint.opacity(effectiveDark ? 0.26 : 0.20))
+                            .frame(width: trackWidth, height: 3.0)
+                        Capsule()
+                            .fill(dragTint)
+                            .frame(width: max(4, trackWidth * max(0, min(1, dragHoverState.progress))), height: 3.0)
+                    }
+                    .padding(.bottom, 1.5)
+                } else if isRunning {
                     Capsule()
                         .fill(
                             animFrame.buttonGlowIntensity > 0.25
                                 ? Color(red: 1.0, green: 0.42, blue: 0.28)
-                                : (effectiveDark ? Color.white.opacity(0.75) : Color.accentColor)
+                                : (isFocused
+                                    ? activeIndicatorColor.resolvedColor(effectiveDark: effectiveDark)
+                                    : (effectiveDark ? Color.white.opacity(0.75) : activeIndicatorColor.resolvedColor(effectiveDark: effectiveDark).opacity(0.75)))
                         )
-                        .frame(width: 10, height: 2.5)
+                        .frame(width: isFocused ? 13 : 10, height: 2.5)
                         .padding(.bottom, 1.5)
                 }
             }
@@ -679,6 +747,9 @@ private struct TaskbarPinnedAppButtonView: View {
                 pinned: pinned,
                 onHoverChanged: { hovered in
                     isHovered = hovered
+                },
+                onDragHoverChanged: { state in
+                    dragHoverState = state
                 }
             )
         )
@@ -699,16 +770,34 @@ private struct TaskbarWindowButtonView: View {
     let showNotificationBadges: Bool
     let notificationAnimation: TaskbarNotificationAnimation
     let notificationCadence: TaskbarNotificationAnimationCadence
+    let buttonStyle: TaskbarButtonStyle
+    let activeIndicatorStyle: TaskbarActiveIndicatorStyle
+    let activeIndicatorColor: TaskbarActiveIndicatorColor
     let effectiveDark: Bool
     let isDragging: Bool
 
     @ViewState private var isHovered = false
+    @ViewState private var dragHoverState: TaskbarDragHoverState = .idle
 
     private var isInactiveOrHidden: Bool {
         item.isMinimized || item.isAppHidden || item.isWindowlessApp
     }
 
     private var backgroundFill: Color {
+        if buttonStyle == .minimalBorderless {
+            if item.isFocused {
+                return effectiveDark
+                    ? Color.white.opacity(0.15)
+                    : Color.white.opacity(0.78)
+            }
+            if isHovered {
+                return effectiveDark
+                    ? Color.white.opacity(0.08)
+                    : Color.white.opacity(0.38)
+            }
+            return Color.clear
+        }
+
         if item.isFocused {
             return effectiveDark
                 ? Color.white.opacity(0.22)
@@ -725,6 +814,9 @@ private struct TaskbarWindowButtonView: View {
     }
 
     private var borderColor: Color {
+        if buttonStyle == .minimalBorderless {
+            return Color.clear
+        }
         if item.isFocused {
             return effectiveDark
                 ? Color.white.opacity(0.28)
@@ -737,9 +829,13 @@ private struct TaskbarWindowButtonView: View {
 
     var body: some View {
         let height = max(26, barHeight - 8)
+        let cornerRadius: CGFloat = (buttonStyle == .pill) ? (height * 0.5) : 7
         let iconSize = max(16, min(24, barHeight * 0.52))
         let activeBadge: String? = showNotificationBadges ? item.badgeLabel : nil
         let maxJumpUp = TaskbarNotificationAnimationEngine.safeMaxJumpUp(forBarHeight: barHeight, iconSize: iconSize)
+        let indicatorAccent = activeIndicatorColor.resolvedColor(effectiveDark: effectiveDark)
+        let isDragHovering = dragHoverState.isHovering
+        let dragTint: Color = dragHoverState.didActivate ? Color.green : Color.accentColor
 
         TaskbarNotificationAnimatedSlot(
             badgeLabel: activeBadge,
@@ -749,11 +845,13 @@ private struct TaskbarWindowButtonView: View {
             maxJumpUp: maxJumpUp
         ) { animFrame in
             let isButtonGlowing = animFrame.buttonGlowIntensity > 0.1
-            let buttonShadowColor: Color = isButtonGlowing
-                ? Color(red: 1.0, green: 0.36, blue: 0.24).opacity(0.35 * animFrame.buttonGlowIntensity)
-                : (item.isFocused ? Color.black.opacity(effectiveDark ? 0.28 : 0.10) : .clear)
-            let buttonShadowRadius: CGFloat = isButtonGlowing ? 4.0 : (item.isFocused ? 2.5 : 0.0)
-            let buttonShadowY: CGFloat = isButtonGlowing ? 0.0 : (item.isFocused ? 1.0 : 0.0)
+            let buttonShadowColor: Color = isDragHovering
+                ? dragTint.opacity(0.38)
+                : (isButtonGlowing
+                    ? Color(red: 1.0, green: 0.36, blue: 0.24).opacity(0.35 * animFrame.buttonGlowIntensity)
+                    : (item.isFocused && buttonStyle != .minimalBorderless ? Color.black.opacity(effectiveDark ? 0.28 : 0.10) : .clear))
+            let buttonShadowRadius: CGFloat = isDragHovering ? 4.5 : (isButtonGlowing ? 4.0 : (item.isFocused && buttonStyle != .minimalBorderless ? 2.5 : 0.0))
+            let buttonShadowY: CGFloat = isDragHovering ? 0.0 : (isButtonGlowing ? 0.0 : (item.isFocused && buttonStyle != .minimalBorderless ? 1.0 : 0.0))
 
             HStack(spacing: showTitle ? 7 : 0) {
                 ZStack(alignment: .topTrailing) {
@@ -788,16 +886,26 @@ private struct TaskbarWindowButtonView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
-            .padding(.horizontal, showTitle ? 9 : 4)
+            .padding(.horizontal, showTitle ? (buttonStyle == .pill ? 11 : 9) : 4)
             .frame(width: buttonWidth, height: height, alignment: showTitle ? .leading : .center)
             .background(
-                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                     .fill(backgroundFill)
                     .overlay(
-                        RoundedRectangle(cornerRadius: 7, style: .continuous)
+                        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                             .fill(
                                 Color(red: 1.0, green: 0.34, blue: 0.22)
                                     .opacity((effectiveDark ? 0.30 : 0.22) * animFrame.buttonGlowIntensity)
+                            )
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                            .fill(
+                                dragTint.opacity(
+                                    isDragHovering
+                                        ? (dragHoverState.didActivate ? (effectiveDark ? 0.30 : 0.22) : (effectiveDark ? 0.20 : 0.14))
+                                        : 0
+                                )
                             )
                     )
                     .shadow(
@@ -807,20 +915,50 @@ private struct TaskbarWindowButtonView: View {
                     )
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                     .stroke(
-                        animFrame.buttonGlowIntensity > 0.05
-                            ? Color(red: 1.0, green: 0.42, blue: 0.28).opacity(0.85 * animFrame.buttonGlowIntensity)
-                            : borderColor,
-                        lineWidth: animFrame.buttonGlowIntensity > 0.05 ? 1.25 : 0.75
+                        isDragHovering
+                            ? dragTint.opacity(0.95)
+                            : (animFrame.buttonGlowIntensity > 0.05
+                                ? Color(red: 1.0, green: 0.42, blue: 0.28).opacity(0.85 * animFrame.buttonGlowIntensity)
+                                : borderColor),
+                        lineWidth: isDragHovering ? 1.5 : (animFrame.buttonGlowIntensity > 0.05 ? 1.25 : 0.75)
                     )
             )
+            .scaleEffect(dragHoverState.didActivate ? 1.03 : 1.0)
+            .animation(.spring(response: 0.20, dampingFraction: 0.65), value: dragHoverState.didActivate)
             .overlay(alignment: .bottom) {
-                if item.isFocused {
-                    Capsule()
-                        .fill(Color.accentColor)
-                        .frame(width: showTitle ? min(28, buttonWidth * 0.25) : 14, height: 2.5)
-                        .padding(.bottom, 1.5)
+                if isDragHovering {
+                    let trackWidth = max(14, buttonWidth - (buttonStyle == .pill ? 24 : 14))
+                    ZStack(alignment: .leading) {
+                        Capsule()
+                            .fill(dragTint.opacity(effectiveDark ? 0.26 : 0.20))
+                            .frame(width: trackWidth, height: 3.0)
+                        Capsule()
+                            .fill(dragTint)
+                            .frame(width: max(4, trackWidth * max(0, min(1, dragHoverState.progress))), height: 3.0)
+                    }
+                    .padding(.bottom, 1.5)
+                } else if item.isFocused {
+                    switch activeIndicatorStyle {
+                    case .pill:
+                        Capsule()
+                            .fill(indicatorAccent)
+                            .frame(width: showTitle ? min(28, buttonWidth * 0.25) : 14, height: 2.5)
+                            .padding(.bottom, 1.5)
+                    case .fullUnderline:
+                        Capsule()
+                            .fill(indicatorAccent)
+                            .frame(width: max(16, buttonWidth - (buttonStyle == .pill ? 24 : 14)), height: 2.5)
+                            .padding(.bottom, 1.5)
+                    case .dot:
+                        Circle()
+                            .fill(indicatorAccent)
+                            .frame(width: 5, height: 5)
+                            .padding(.bottom, 1.5)
+                    case .none:
+                        EmptyView()
+                    }
                 } else if animFrame.buttonGlowIntensity > 0.2 {
                     Capsule()
                         .fill(Color(red: 1.0, green: 0.40, blue: 0.26).opacity(animFrame.buttonGlowIntensity))
@@ -846,6 +984,9 @@ private struct TaskbarWindowButtonView: View {
                 displayID: displayID,
                 onHoverChanged: { hovered in
                     isHovered = hovered
+                },
+                onDragHoverChanged: { state in
+                    dragHoverState = state
                 }
             )
         )
@@ -860,25 +1001,230 @@ private struct TaskbarWindowButtonView: View {
     }
 }
 
+// MARK: - Controlador de Activación por Permanencia al Arrastrar (Spring-Loading 1 s)
+
+@MainActor
+private final class TaskbarDragSpringLoader {
+    static let acceptedPasteboardTypes: [NSPasteboard.PasteboardType] = [
+        .fileURL,
+        .URL,
+        .string,
+        .tiff,
+        .png,
+        NSPasteboard.PasteboardType(UTType.fileURL.identifier),
+        NSPasteboard.PasteboardType(UTType.item.identifier),
+        NSPasteboard.PasteboardType(UTType.data.identifier)
+    ]
+
+    private var tracker = TaskbarDragDwellTracker()
+    nonisolated(unsafe) private var timer: Timer?
+    private var lastReportedState: TaskbarDragHoverState = .idle
+    private weak var hostView: NSView?
+
+    var onStateChanged: ((TaskbarDragHoverState) -> Void)?
+    var onActivate: (() -> Void)?
+
+    init(hostView: NSView) {
+        self.hostView = hostView
+    }
+
+    deinit {
+        timer?.invalidate()
+    }
+
+    static func appBundleURLs(from pasteboard: NSPasteboard) -> [URL] {
+        let options: [NSPasteboard.ReadingOptionKey: Any] = [.urlReadingFileURLsOnly: true]
+        guard let urls = pasteboard.readObjects(forClasses: [NSURL.self], options: options) as? [URL],
+              !urls.isEmpty else {
+            return []
+        }
+        let appURLs = urls.map(\.standardizedFileURL).filter {
+            $0.pathExtension.caseInsensitiveCompare("app") == .orderedSame
+        }
+        // Solo tratar como "fijar aplicación" si todos los ítems arrastrados son paquetes `.app`
+        return appURLs.count == urls.count ? appURLs : []
+    }
+
+    @discardableResult
+    static func pinAppBundlesIfPresent(from pasteboard: NSPasteboard) -> Bool {
+        let appURLs = appBundleURLs(from: pasteboard)
+        guard !appURLs.isEmpty else { return false }
+        for appURL in appURLs {
+            let bundle = Bundle(url: appURL)
+            let bundleID = bundle?.bundleIdentifier ?? ""
+            let name = FileManager.default.displayName(atPath: appURL.path(percentEncoded: false))
+                .replacingOccurrences(of: ".app", with: "", options: [.caseInsensitive, .anchored, .backwards])
+            TaskbarPreferences.shared.pinApp(bundleIdentifier: bundleID, bundleURL: appURL, displayName: name)
+        }
+        return true
+    }
+
+    static func hoverDragOperation(for sender: NSDraggingInfo) -> NSDragOperation {
+        let mask = sender.draggingSourceOperationMask
+        if !appBundleURLs(from: sender.draggingPasteboard).isEmpty, mask.contains(.copy) {
+            return .copy
+        }
+        if mask.contains(.generic) { return .generic }
+        if mask.contains(.copy) { return .copy }
+        if mask.contains(.link) { return .link }
+        if mask.contains(.move) { return .move }
+        return mask.isEmpty ? [] : .generic
+    }
+
+    func handleDraggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
+        let op = Self.hoverDragOperation(for: sender)
+        guard !op.isEmpty else {
+            cancel()
+            return []
+        }
+        TaskbarPreviewPanelController.shared.hideImmediately()
+        let point = localPoint(from: sender)
+        let state = tracker.begin(at: point, now: ProcessInfo.processInfo.systemUptime)
+        publishIfChanged(state)
+        startTimer()
+        return op
+    }
+
+    func handleDraggingUpdated(_ sender: NSDraggingInfo) -> NSDragOperation {
+        let op = Self.hoverDragOperation(for: sender)
+        guard !op.isEmpty else {
+            cancel()
+            return []
+        }
+        let point = localPoint(from: sender)
+        let result = tracker.update(location: point, now: ProcessInfo.processInfo.systemUptime)
+        publishIfChanged(result.state)
+        if timer == nil {
+            startTimer()
+        }
+        if result.shouldTriggerNow {
+            triggerActivation()
+        }
+        return op
+    }
+
+    func handlePrepareForDragOperation(_ sender: NSDraggingInfo) -> Bool {
+        let isPinDrop = !Self.appBundleURLs(from: sender.draggingPasteboard).isEmpty
+        if !isPinDrop {
+            cancel()
+        }
+        return isPinDrop
+    }
+
+    func handlePerformDragOperation(_ sender: NSDraggingInfo) -> Bool {
+        defer { cancel() }
+        return Self.pinAppBundlesIfPresent(from: sender.draggingPasteboard)
+    }
+
+    func cancel(deferNotification: Bool = false) {
+        stopTimer()
+        let wasHovering = tracker.isActive || lastReportedState.isHovering
+        _ = tracker.reset()
+        lastReportedState = .idle
+        guard wasHovering else { return }
+        if deferNotification {
+            let callback = onStateChanged
+            DispatchQueue.main.async {
+                callback?(.idle)
+            }
+        } else {
+            onStateChanged?(.idle)
+        }
+    }
+
+    private func localPoint(from sender: NSDraggingInfo) -> CGPoint {
+        if let hostView {
+            return hostView.convert(sender.draggingLocation, from: nil)
+        }
+        return sender.draggingLocation
+    }
+
+    private func startTimer() {
+        stopTimer()
+        // `.common` incluye `RunLoop.Mode.eventTracking`, indispensable durante sesiones activas de arrastre (`NSDraggingSession`)
+        let newTimer = Timer(timeInterval: 0.04, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated {
+                self?.handleTick()
+            }
+        }
+        RunLoop.main.add(newTimer, forMode: .common)
+        RunLoop.main.add(newTimer, forMode: .eventTracking)
+        timer = newTimer
+    }
+
+    private func stopTimer() {
+        timer?.invalidate()
+        timer = nil
+    }
+
+    private func handleTick() {
+        guard tracker.isActive else {
+            stopTimer()
+            return
+        }
+        guard let hostView, let window = hostView.window, window.isVisible else {
+            cancel()
+            return
+        }
+        let screenRect = window.convertToScreen(hostView.convert(hostView.bounds, to: nil))
+        if !screenRect.insetBy(dx: -14, dy: -14).contains(NSEvent.mouseLocation) {
+            cancel()
+            return
+        }
+        if tracker.didTrigger {
+            return
+        }
+        let result = tracker.evaluate(now: ProcessInfo.processInfo.systemUptime)
+        publishIfChanged(result.state)
+        if result.shouldTriggerNow {
+            triggerActivation()
+        }
+    }
+
+    private func triggerActivation() {
+        NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now)
+        TaskbarPreviewPanelController.shared.hideImmediately()
+        onActivate?()
+    }
+
+    private func publishIfChanged(_ next: TaskbarDragHoverState) {
+        let changed = next.isHovering != lastReportedState.isHovering
+            || next.didActivate != lastReportedState.didActivate
+            || abs(next.progress - lastReportedState.progress) >= 0.015
+            || (next.progress == 0 && lastReportedState.progress != 0)
+            || (next.progress == 1 && lastReportedState.progress != 1)
+        guard changed else { return }
+        lastReportedState = next
+        onStateChanged?(next)
+    }
+}
+
 // MARK: - Interceptores Nativos de Mouse AppKit (Clic Izq, Clic Central, Clic Derecho, Hover y Drag & Drop)
 
 private struct TaskbarWindowButtonMouseOverlay: NSViewRepresentable {
     let item: TaskbarWindowItem
     let displayID: String
     let onHoverChanged: (Bool) -> Void
+    let onDragHoverChanged: (TaskbarDragHoverState) -> Void
 
     func makeNSView(context: Context) -> TaskbarWindowMouseNSView {
         let view = TaskbarWindowMouseNSView()
         view.item = item
         view.displayID = displayID
         view.onHoverChanged = onHoverChanged
+        view.onDragHoverChanged = onDragHoverChanged
         return view
     }
 
     func updateNSView(_ nsView: TaskbarWindowMouseNSView, context: Context) {
+        let itemChanged = nsView.item?.id != item.id
         nsView.item = item
         nsView.displayID = displayID
         nsView.onHoverChanged = onHoverChanged
+        nsView.onDragHoverChanged = onDragHoverChanged
+        if itemChanged {
+            nsView.resetDragSpringLoaderDeferred()
+        }
     }
 }
 
@@ -886,10 +1232,43 @@ private final class TaskbarWindowMouseNSView: NSView {
     var item: TaskbarWindowItem?
     var displayID: String = ""
     var onHoverChanged: ((Bool) -> Void)?
+    var onDragHoverChanged: ((TaskbarDragHoverState) -> Void)?
 
     private var trackingArea: NSTrackingArea?
     private var mouseDownLocation: NSPoint?
     private var didStartDragging = false
+    private lazy var springLoader: TaskbarDragSpringLoader = {
+        let loader = TaskbarDragSpringLoader(hostView: self)
+        loader.onStateChanged = { [weak self] state in
+            self?.onDragHoverChanged?(state)
+        }
+        loader.onActivate = { [weak self] in
+            guard let self, let item = self.item else { return }
+            TaskbarWindowTracker.shared.focusWindow(item)
+        }
+        return loader
+    }()
+
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        registerForDraggedTypes(TaskbarDragSpringLoader.acceptedPasteboardTypes)
+    }
+
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+        registerForDraggedTypes(TaskbarDragSpringLoader.acceptedPasteboardTypes)
+    }
+
+    override func viewWillMove(toWindow newWindow: NSWindow?) {
+        if newWindow == nil {
+            springLoader.cancel(deferNotification: true)
+        }
+        super.viewWillMove(toWindow: newWindow)
+    }
+
+    func resetDragSpringLoaderDeferred() {
+        springLoader.cancel(deferNotification: true)
+    }
 
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
@@ -995,6 +1374,34 @@ private final class TaskbarWindowMouseNSView: NSView {
         NSMenu.popUpContextMenu(menu, with: event, for: self)
     }
 
+    // MARK: - `NSDraggingDestination` (Spring-Loading 1 s + Fijado de `.app`)
+
+    override func wantsPeriodicDraggingUpdates() -> Bool { true }
+
+    override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
+        springLoader.handleDraggingEntered(sender)
+    }
+
+    override func draggingUpdated(_ sender: NSDraggingInfo) -> NSDragOperation {
+        springLoader.handleDraggingUpdated(sender)
+    }
+
+    override func draggingExited(_ sender: NSDraggingInfo?) {
+        springLoader.cancel()
+    }
+
+    override func draggingEnded(_ sender: NSDraggingInfo) {
+        springLoader.cancel()
+    }
+
+    override func prepareForDragOperation(_ sender: NSDraggingInfo) -> Bool {
+        springLoader.handlePrepareForDragOperation(sender)
+    }
+
+    override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
+        springLoader.handlePerformDragOperation(sender)
+    }
+
     private func buttonScreenRect() -> NSRect? {
         guard let window else { return nil }
         let inWindow = convert(bounds, to: nil)
@@ -1005,26 +1412,69 @@ private final class TaskbarWindowMouseNSView: NSView {
 private struct TaskbarPinnedMouseOverlay: NSViewRepresentable {
     let pinned: TaskbarPinnedApp
     let onHoverChanged: (Bool) -> Void
+    let onDragHoverChanged: (TaskbarDragHoverState) -> Void
 
     func makeNSView(context: Context) -> TaskbarPinnedMouseNSView {
         let view = TaskbarPinnedMouseNSView()
         view.pinned = pinned
         view.onHoverChanged = onHoverChanged
+        view.onDragHoverChanged = onDragHoverChanged
         return view
     }
 
     func updateNSView(_ nsView: TaskbarPinnedMouseNSView, context: Context) {
+        let pinnedChanged = nsView.pinned?.id != pinned.id
         nsView.pinned = pinned
         nsView.onHoverChanged = onHoverChanged
+        nsView.onDragHoverChanged = onDragHoverChanged
+        if pinnedChanged {
+            nsView.resetDragSpringLoaderDeferred()
+        }
     }
 }
 
 private final class TaskbarPinnedMouseNSView: NSView {
     var pinned: TaskbarPinnedApp?
     var onHoverChanged: ((Bool) -> Void)?
+    var onDragHoverChanged: ((TaskbarDragHoverState) -> Void)?
     private var trackingArea: NSTrackingArea?
     private var mouseDownLocation: NSPoint?
     private var didStartDragging = false
+    private lazy var springLoader: TaskbarDragSpringLoader = {
+        let loader = TaskbarDragSpringLoader(hostView: self)
+        loader.onStateChanged = { [weak self] state in
+            self?.onDragHoverChanged?(state)
+        }
+        loader.onActivate = { [weak self] in
+            guard let self, let pinned = self.pinned else { return }
+            TaskbarWindowTracker.shared.launchOrFocusApplication(
+                bundleIdentifier: pinned.bundleIdentifier,
+                bundleURL: pinned.bundleURL
+            )
+        }
+        return loader
+    }()
+
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        registerForDraggedTypes(TaskbarDragSpringLoader.acceptedPasteboardTypes)
+    }
+
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+        registerForDraggedTypes(TaskbarDragSpringLoader.acceptedPasteboardTypes)
+    }
+
+    override func viewWillMove(toWindow newWindow: NSWindow?) {
+        if newWindow == nil {
+            springLoader.cancel(deferNotification: true)
+        }
+        super.viewWillMove(toWindow: newWindow)
+    }
+
+    func resetDragSpringLoaderDeferred() {
+        springLoader.cancel(deferNotification: true)
+    }
 
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
@@ -1100,6 +1550,34 @@ private final class TaskbarPinnedMouseNSView: NSView {
         TaskbarPreviewPanelController.shared.hideImmediately()
         let menu = TaskbarContextMenuBuilder.buildPinnedAppMenu(for: pinned)
         NSMenu.popUpContextMenu(menu, with: event, for: self)
+    }
+
+    // MARK: - `NSDraggingDestination` (Spring-Loading 1 s + Fijado de `.app`)
+
+    override func wantsPeriodicDraggingUpdates() -> Bool { true }
+
+    override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
+        springLoader.handleDraggingEntered(sender)
+    }
+
+    override func draggingUpdated(_ sender: NSDraggingInfo) -> NSDragOperation {
+        springLoader.handleDraggingUpdated(sender)
+    }
+
+    override func draggingExited(_ sender: NSDraggingInfo?) {
+        springLoader.cancel()
+    }
+
+    override func draggingEnded(_ sender: NSDraggingInfo) {
+        springLoader.cancel()
+    }
+
+    override func prepareForDragOperation(_ sender: NSDraggingInfo) -> Bool {
+        springLoader.handlePrepareForDragOperation(sender)
+    }
+
+    override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
+        springLoader.handlePerformDragOperation(sender)
     }
 }
 
@@ -1180,20 +1658,34 @@ private final class TaskbarStartButtonMouseNSView: NSView {
 
 private struct TaskbarEmptyBackgroundMouseOverlay: NSViewRepresentable {
     let displayID: String
+    let onAppDropTargetedChanged: (Bool) -> Void
 
     func makeNSView(context: Context) -> TaskbarEmptyBackgroundMouseNSView {
         let view = TaskbarEmptyBackgroundMouseNSView()
         view.displayID = displayID
+        view.onAppDropTargetedChanged = onAppDropTargetedChanged
         return view
     }
 
     func updateNSView(_ nsView: TaskbarEmptyBackgroundMouseNSView, context: Context) {
         nsView.displayID = displayID
+        nsView.onAppDropTargetedChanged = onAppDropTargetedChanged
     }
 }
 
 private final class TaskbarEmptyBackgroundMouseNSView: NSView {
     var displayID: String = ""
+    var onAppDropTargetedChanged: ((Bool) -> Void)?
+
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        registerForDraggedTypes([.fileURL, NSPasteboard.PasteboardType(UTType.fileURL.identifier)])
+    }
+
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+        registerForDraggedTypes([.fileURL, NSPasteboard.PasteboardType(UTType.fileURL.identifier)])
+    }
 
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
@@ -1201,6 +1693,35 @@ private final class TaskbarEmptyBackgroundMouseNSView: NSView {
         TaskbarPreviewPanelController.shared.hideImmediately()
         let menu = TaskbarContextMenuBuilder.buildBarBackgroundMenu(displayID: displayID)
         NSMenu.popUpContextMenu(menu, with: event, for: self)
+    }
+
+    override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
+        let canPin = !TaskbarDragSpringLoader.appBundleURLs(from: sender.draggingPasteboard).isEmpty
+        onAppDropTargetedChanged?(canPin)
+        return canPin ? .copy : []
+    }
+
+    override func draggingUpdated(_ sender: NSDraggingInfo) -> NSDragOperation {
+        let canPin = !TaskbarDragSpringLoader.appBundleURLs(from: sender.draggingPasteboard).isEmpty
+        onAppDropTargetedChanged?(canPin)
+        return canPin ? .copy : []
+    }
+
+    override func draggingExited(_ sender: NSDraggingInfo?) {
+        onAppDropTargetedChanged?(false)
+    }
+
+    override func draggingEnded(_ sender: NSDraggingInfo) {
+        onAppDropTargetedChanged?(false)
+    }
+
+    override func prepareForDragOperation(_ sender: NSDraggingInfo) -> Bool {
+        !TaskbarDragSpringLoader.appBundleURLs(from: sender.draggingPasteboard).isEmpty
+    }
+
+    override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
+        onAppDropTargetedChanged?(false)
+        return TaskbarDragSpringLoader.pinAppBundlesIfPresent(from: sender.draggingPasteboard)
     }
 }
 
@@ -1314,6 +1835,43 @@ private enum TaskbarContextMenuBuilder {
                 prefs.excludeApp(bundleIdentifier: item.bundleIdentifier)
             })
         }
+
+        let groupToggleItem = makeItem(
+            title: loc.text(
+                es: "Mantener ventanas de la misma app juntas (lado a lado)",
+                en: "Keep Same-App Windows Side by Side"
+            ),
+            symbol: "rectangle.split.2x1"
+        ) {
+            prefs.groupWindowsByApp.toggle()
+        }
+        groupToggleItem.state = prefs.groupWindowsByApp ? .on : .off
+        menu.addItem(groupToggleItem)
+
+        let iconsOnlyItem = makeItem(
+            title: loc.text(
+                es: "Mostrar solo íconos",
+                en: "Show Icons Only"
+            ),
+            symbol: "square.grid.2x2"
+        ) {
+            prefs.iconsOnlyMode.toggle()
+        }
+        iconsOnlyItem.state = prefs.iconsOnlyMode ? .on : .off
+        menu.addItem(iconsOnlyItem)
+
+        let minimizedIconOnlyItem = makeItem(
+            title: loc.text(
+                es: "Solo ícono en ventanas minimizadas",
+                en: "Icon Only for Minimized Windows"
+            ),
+            symbol: "app.dashed",
+            isEnabled: prefs.showWindowTitles
+        ) {
+            prefs.minimizedWindowDisplayMode = (prefs.minimizedWindowDisplayMode == .iconOnly) ? .sameAsNormal : .iconOnly
+        }
+        minimizedIconOnlyItem.state = (prefs.minimizedWindowDisplayMode == .iconOnly) ? .on : .off
+        menu.addItem(minimizedIconOnlyItem)
 
         menu.addItem(.separator())
 
@@ -1486,6 +2044,43 @@ private enum TaskbarContextMenuBuilder {
     private static func appendCommonBarItems(to menu: NSMenu, displayID: String) {
         let loc = LocalizationManager.shared
         let prefs = TaskbarPreferences.shared
+
+        let groupToggleItem = makeItem(
+            title: loc.text(
+                es: "Mantener ventanas de la misma app juntas (lado a lado)",
+                en: "Keep Same-App Windows Side by Side"
+            ),
+            symbol: "rectangle.split.2x1"
+        ) {
+            prefs.groupWindowsByApp.toggle()
+        }
+        groupToggleItem.state = prefs.groupWindowsByApp ? .on : .off
+        menu.addItem(groupToggleItem)
+
+        let iconsOnlyItem = makeItem(
+            title: loc.text(
+                es: "Mostrar solo íconos",
+                en: "Show Icons Only"
+            ),
+            symbol: "square.grid.2x2"
+        ) {
+            prefs.iconsOnlyMode.toggle()
+        }
+        iconsOnlyItem.state = prefs.iconsOnlyMode ? .on : .off
+        menu.addItem(iconsOnlyItem)
+
+        let minimizedIconOnlyItem = makeItem(
+            title: loc.text(
+                es: "Solo ícono en ventanas minimizadas",
+                en: "Icon Only for Minimized Windows"
+            ),
+            symbol: "app.dashed",
+            isEnabled: prefs.showWindowTitles
+        ) {
+            prefs.minimizedWindowDisplayMode = (prefs.minimizedWindowDisplayMode == .iconOnly) ? .sameAsNormal : .iconOnly
+        }
+        minimizedIconOnlyItem.state = (prefs.minimizedWindowDisplayMode == .iconOnly) ? .on : .off
+        menu.addItem(minimizedIconOnlyItem)
 
         menu.addItem(makeItem(
             title: loc.text(es: "Configuración de la barra de tareas…", en: "Taskbar Settings…"),

@@ -290,6 +290,11 @@ public final class ExplorerViewModel {
     /// Indica si el panel flotante de Vista Rápida (Quick Look con Barra Espaciadora) está abierto.
     public var isQuickLookPresented: Bool = false
 
+    /// Token incremental para mostrar confirmación visual ("Copiado") en Vista Rápida al copiar con botón o `⌘C`.
+    public var quickLookCopyFeedbackToken: Int = 0
+    /// Último modo de copia usado en Vista Rápida (para mostrar el texto de confirmación exacto).
+    public var quickLookLastCopyMode: ClipboardManager.MediaCopyMode = .imageAndFile
+
     /// Elemento cuyo diálogo modal de "Propiedades" (estilo Windows 11 Explorer) está abierto actualmente.
     public var propertiesTargetItem: FileItem? = nil
 
@@ -1510,6 +1515,23 @@ public final class ExplorerViewModel {
     public func copySelectedItems() {
         guard !selectedItemIDs.isEmpty else { return }
         clipboardManager.copy(Array(selectedItemIDs))
+    }
+
+    /// Copia el archivo de imagen o video abierto actualmente en Vista Rápida (botón «Copiar» o `⌘C`).
+    /// En imágenes copia píxeles PNG/TIFF + archivo (o el modo explícito elegido); en videos copia el archivo.
+    public func copyQuickLookMedia(
+        _ url: URL,
+        isImage: Bool,
+        mode: ClipboardManager.MediaCopyMode? = nil
+    ) {
+        let resolvedMode: ClipboardManager.MediaCopyMode = mode ?? (isImage ? .imageAndFile : .fileOnly)
+        quickLookLastCopyMode = resolvedMode
+        if isImage {
+            clipboardManager.copyImageMedia(url, mode: resolvedMode)
+        } else {
+            clipboardManager.copy([url])
+        }
+        quickLookCopyFeedbackToken &+= 1
     }
 
     /// Pega los elementos del portapapeles en la carpeta actual (`Cmd+V`).

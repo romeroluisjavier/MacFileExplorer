@@ -311,10 +311,20 @@ public struct TaskbarSettingsView: View {
                     isOn: $prefs.middleClickClosesWindow
                 )
 
-                Toggle(
-                    loc.text(es: "Mantener juntas las ventanas de una misma aplicación", en: "Group windows of the same application together"),
-                    isOn: $prefs.groupWindowsByApp
-                )
+                Toggle(isOn: $prefs.groupWindowsByApp) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(loc.text(
+                            es: "Agrupar ventanas de la misma aplicación una al lado de la otra",
+                            en: "Keep windows of the same app side by side"
+                        ))
+                        Text(loc.text(
+                            es: "Las ventanas abiertas de una misma app (por ejemplo varias ventanas de Chrome) quedan siempre juntas, incluso si abrís otra ventana mucho después. Cada ventana mantiene su propio botón.",
+                            en: "Windows from the same app (such as multiple Chrome windows) always stay next to each other, even if you open another one later. Each window keeps its own button."
+                        ))
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                    }
+                }
 
                 Toggle(isOn: $prefs.showWindowlessRunningApps) {
                     VStack(alignment: .leading, spacing: 2) {
@@ -558,12 +568,89 @@ public struct TaskbarSettingsView: View {
                 }
                 .pickerStyle(.segmented)
 
+                Picker(loc.text(es: "Estilo de la barra:", en: "Bar Style:"), selection: $prefs.barStyle) {
+                    ForEach(TaskbarBarStyle.allCases) { style in
+                        Text(style.localizedTitle(using: loc)).tag(style)
+                    }
+                }
+                .pickerStyle(.segmented)
+
+                Picker(loc.text(es: "Material de fondo:", en: "Background Material:"), selection: $prefs.backgroundMaterial) {
+                    ForEach(TaskbarBackgroundMaterial.allCases) { material in
+                        Text(material.localizedTitle(using: loc)).tag(material)
+                    }
+                }
+                .pickerStyle(.segmented)
+
+                Picker(loc.text(es: "Estilo de botones:", en: "Button Style:"), selection: $prefs.buttonStyle) {
+                    ForEach(TaskbarButtonStyle.allCases) { style in
+                        Text(style.localizedTitle(using: loc)).tag(style)
+                    }
+                }
+                .pickerStyle(.segmented)
+
                 Picker(loc.text(es: "Alineación de botones:", en: "Button Alignment:"), selection: $prefs.alignment) {
                     ForEach(TaskbarAlignment.allCases) { align in
                         Text(align.localizedTitle(using: loc)).tag(align)
                     }
                 }
                 .pickerStyle(.segmented)
+
+                Picker(loc.text(es: "Indicador de ventana activa:", en: "Active Window Indicator:"), selection: $prefs.activeIndicatorStyle) {
+                    ForEach(TaskbarActiveIndicatorStyle.allCases) { style in
+                        Text(style.localizedTitle(using: loc)).tag(style)
+                    }
+                }
+                .pickerStyle(.segmented)
+
+                if prefs.activeIndicatorStyle != .none {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(loc.text(es: "Color del indicador activo", en: "Active Indicator Color"))
+                            .font(.system(size: 12.5))
+
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 84, maximum: 130), spacing: 6)], alignment: .leading, spacing: 6) {
+                            ForEach(TaskbarActiveIndicatorColor.allCases) { option in
+                                let isSelected = prefs.activeIndicatorColor == option
+                                let swatchColor = option.resolvedColor(effectiveDark: previewDark)
+                                Button {
+                                    prefs.activeIndicatorColor = option
+                                } label: {
+                                    HStack(spacing: 5) {
+                                        Circle()
+                                            .fill(swatchColor)
+                                            .frame(width: 10, height: 10)
+                                            .overlay(
+                                                Circle()
+                                                    .stroke(Color.primary.opacity(0.22), lineWidth: 0.7)
+                                            )
+                                        Text(option.localizedTitle(using: loc))
+                                            .font(.system(size: 11, weight: isSelected ? .semibold : .regular))
+                                            .foregroundStyle(isSelected ? Color.primary : Color.secondary)
+                                            .lineLimit(1)
+                                            .minimumScaleFactor(0.85)
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 5)
+                                    .background(
+                                        Capsule()
+                                            .fill(isSelected ? swatchColor.opacity(0.18) : Color.primary.opacity(0.045))
+                                    )
+                                    .overlay(
+                                        Capsule()
+                                            .stroke(
+                                                isSelected ? swatchColor.opacity(0.8) : Color.primary.opacity(0.08),
+                                                lineWidth: isSelected ? 1.2 : 0.7
+                                            )
+                                    )
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    }
+                }
+
+                Divider()
 
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
@@ -601,9 +688,52 @@ public struct TaskbarSettingsView: View {
                 Divider()
 
                 Toggle(
-                    loc.text(es: "Mostrar títulos de ventanas (desactivar para mostrar solo íconos)", en: "Show window titles (turn off for icons only)"),
-                    isOn: $prefs.showWindowTitles
+                    loc.text(
+                        es: "Mostrar línea divisoria superior (borde sobre la barra)",
+                        en: "Show top divider line (border above the taskbar)"
+                    ),
+                    isOn: $prefs.showTopBorder
                 )
+
+                Divider()
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Picker(
+                        loc.text(es: "Botones de ventanas:", en: "Window Buttons:"),
+                        selection: $prefs.iconsOnlyMode
+                    ) {
+                        Text(loc.text(es: "Ícono y título", en: "Icon & Title")).tag(false)
+                        Text(loc.text(es: "Solo íconos", en: "Icons Only")).tag(true)
+                    }
+                    .pickerStyle(.segmented)
+
+                    Picker(
+                        loc.text(es: "Ventanas minimizadas:", en: "Minimized Windows:"),
+                        selection: $prefs.minimizedWindowDisplayMode
+                    ) {
+                        ForEach(TaskbarMinimizedWindowDisplayMode.allCases) { mode in
+                            Text(mode.localizedTitle(using: loc)).tag(mode)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .disabled(prefs.iconsOnlyMode)
+                    .opacity(prefs.iconsOnlyMode ? 0.55 : 1.0)
+
+                    Text(
+                        prefs.iconsOnlyMode
+                            ? loc.text(
+                                es: "Todas las ventanas (abiertas y minimizadas) se muestran solo con su ícono para ocupar el mínimo espacio.",
+                                en: "All windows (open and minimized) show icons only for the most compact taskbar."
+                            )
+                            : loc.text(
+                                es: "Elegí si las ventanas minimizadas u ocultas se muestran con título como ahora, o compactadas a solo su ícono para dejar más lugar a las ventanas abiertas.",
+                                en: "Choose whether minimized or hidden windows keep their title like now, or collapse to an icon only to free space for open windows."
+                            )
+                    )
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                }
 
                 Toggle(
                     loc.text(es: "Indicar visualmente ventanas minimizadas u ocultas", en: "Visually indicate minimized or hidden windows"),

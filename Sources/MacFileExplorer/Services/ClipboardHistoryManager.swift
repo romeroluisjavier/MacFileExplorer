@@ -552,6 +552,13 @@ public final class ClipboardHistoryManager {
 
     // MARK: - Captura del Portapapeles (`NSPasteboard`)
 
+    /// Sincroniza el contador del portapapeles del sistema tras una escritura interna para evitar registros duplicados.
+    public func acknowledgeSystemPasteboardChange() {
+        let current = NSPasteboard.general.changeCount
+        lastSelfWrittenChangeCount = current
+        lastObservedChangeCount = current
+    }
+
     /// Verifica si `NSPasteboard.general.changeCount` cambió y registra el nuevo contenido si corresponde.
     public func checkGeneralPasteboardIfChanged() {
         guard ClipboardHistoryPreferences.shared.isEnabled else { return }

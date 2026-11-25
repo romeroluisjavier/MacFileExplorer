@@ -206,17 +206,26 @@ public struct ExplorerKeyEventMonitorModifier: ViewModifier {
             return false
         }
         if let activeWin = eventWindow ?? NSApp.keyWindow {
-            let isChildQuickLook = (activeWin is QuickLookPreviewPanel) && (activeWin.parent === hostWindow)
+            // Si hay una hoja modal abierta (p. ej. Convertir imagen/video o Recortar video en Quick Look),
+            // dejar que el modal maneje Escape, Espacio, flechas y escritura sin interferencias.
+            if activeWin.attachedSheet != nil || activeWin.sheetParent != nil {
+                return false
+            }
+            let isOwnedQuickLook = (activeWin as? QuickLookPreviewPanel)?.ownerHostWindow === hostWindow
             let sameActiveTabGroup = (hostWindow.tabGroup != nil && activeWin.tabGroup === hostWindow.tabGroup)
-            guard activeWin === hostWindow || sameActiveTabGroup || isChildQuickLook else {
+            guard activeWin === hostWindow || sameActiveTabGroup || isOwnedQuickLook else {
                 return false
             }
         }
 
         // Si un NSTextView / TextField está editando texto activamente, solo interceptamos Escape
         let activeResponderWindow = selectedInGroup
+        let keyOrActiveWindow = NSApp.keyWindow ?? activeResponderWindow
+        let isQuickLookKey = (eventWindow ?? NSApp.keyWindow) is QuickLookPreviewPanel
+        let isInteractiveOfficeQuickLook = viewModel.isQuickLookPresented
+            && (viewModel.quickLookItem.map { OfficePreviewSupport.supportsOfficePreview(for: $0.url) } ?? false)
         let isEditingText: Bool = {
-            guard let firstResponder = (NSApp.keyWindow ?? activeResponderWindow).firstResponder else { return false }
+            guard let firstResponder = keyOrActiveWindow.firstResponder else { return false }
             return firstResponder is NSTextView || firstResponder is NSText
         }()
 
@@ -238,6 +247,11 @@ public struct ExplorerKeyEventMonitorModifier: ViewModifier {
 
         // Escape (keyCode 53)
         if keyCode == 53 {
+            if isQuickLookKey && isEditingText {
+                // Primer Escape dentro de un editor de Quick Look (CSV, Word, Excel, PowerPoint): salir de la edición de texto sin cerrar el panel
+                KeyboardShortcuts.resignTextFocus(in: keyOrActiveWindow)
+                return true
+            }
             if viewModel.isQuickLookPresented {
                 viewModel.closeQuickLook()
                 return true
@@ -281,6 +295,26 @@ public struct ExplorerKeyEventMonitorModifier: ViewModifier {
         if keyCode == 49 && cleanFlags.isEmpty {
             if viewModel.isQuickLookPresented || viewModel.quickLookItem != nil {
                 viewModel.toggleQuickLook()
+                return true
+            }
+        }
+
+        // Si el foco está dentro de un editor interactivo de Quick Look (CSV, Excel, Word o PowerPoint),
+        // NO interceptar flechas, Delete, Enter, Cmd+Z ni atajos de edición del explorador de fondo.
+        if isQuickLookKey && isInteractiveOfficeQuickLook {
+            return false
+        }
+
+        // Cmd+C dentro de Vista Rápida de imágenes y videos -> Copiar inteligente al portapapeles (imagen+archivo o archivo de video)
+        if isQuickLookKey,
+           (characters == "c" || keyCode == 8),
+           flags.intersection([.shift, .command, .option, .control]) == .command,
+           let currentItem = viewModel.quickLookItem,
+           !currentItem.isNavigableFolder {
+            let isImage = QuickActionsService.isImageURL(currentItem.url)
+            let isVideo = QuickActionsService.isVideoURL(currentItem.url)
+            if isImage || isVideo {
+                viewModel.copyQuickLookMedia(currentItem.url, isImage: isImage)
                 return true
             }
         }
