@@ -4,6 +4,7 @@ import SwiftUI
 public struct MainExplorerView: View {
     @ViewState private var viewModel: ExplorerViewModel
     @Bindable private var slackPrefs: SlackPreferences = .shared
+    @Bindable private var monthlySupportManager: MonthlySupportCheckManager = .shared
     @Environment(\.colorScheme) private var colorScheme
 
     private var loc: LocalizationManager { LocalizationManager.shared }
@@ -66,7 +67,23 @@ public struct MainExplorerView: View {
                 // 4. Barra de Estado Inferior (Conteo total, seleccionados, suma de tamaños y conmutador de vista)
                 StatusBarView(viewModel: viewModel)
             }
+
+            // 5. Aviso mensual flotante no invasivo (Comprobación automática de actualizaciones + propina opcional Ko-fi)
+            if monthlySupportManager.isPopupVisible {
+                VStack {
+                    Spacer()
+                    HStack {
+                        Spacer()
+                        MonthlySupportFloatingToastView()
+                            .padding(.trailing, 16)
+                            .padding(.bottom, 38)
+                    }
+                }
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .zIndex(50)
+            }
         }
+        .animation(.spring(response: 0.34, dampingFraction: 0.86), value: monthlySupportManager.isPopupVisible)
         .navigationTitle(viewModel.currentFolderTitle)
         .explorerKeyboardShortcuts(viewModel: viewModel)
         .background {
@@ -85,6 +102,7 @@ public struct MainExplorerView: View {
             MouseNavigationManager.shared.installIfNeeded()
             ClipboardHistoryManager.shared.installIfNeeded()
             ExplorerWindowRegistry.shared.lastActiveViewModel = viewModel
+            monthlySupportManager.scheduleStartupEvaluationIfNeeded()
         }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             viewModel.checkCurrentDirectoryForExternalChanges()

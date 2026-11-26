@@ -1,6 +1,22 @@
 # MacFileExplorer Releases
 
-## Versión 2.5.0 (Versión Actual)
+> ☕ **MacFileExplorer es 100% gratis y sin anuncios.** Si te resulta útil y querés colaborar con una **propina opcional** para apoyar el desarrollo, podés invitar un café en [**ko-fi.com/luisjavierromero**](https://ko-fi.com/luisjavierromero) *(o escanear el código QR desde *Acerca de MacFileExplorer* o *Ayuda → Historial de releases* dentro de la app)*.
+
+## Versión 2.5.1 (Versión Actual)
+
+- **Instalador:** [`MacFileExplorer-2.5.1.dmg`](./MacFileExplorer-2.5.1.dmg)
+- **Tamaño:** ~24 MB
+- **Arquitectura:** Binario Universal (`arm64` Apple Silicon + `x86_64` Intel)
+- **Requisitos del sistema:** macOS 14.0 (Sonoma) o posterior
+
+### Novedades principales en la v2.5.1:
+1. **El botón Inicio ya no trae al frente la ventana de MacFileExplorer**: abrir el Menú Inicio desde la Barra de tareas mientras usás otra aplicación (Chrome, Slack, etc.) ahora despliega el menú encima con el buscador listo para escribir manteniendo en primer plano tu app activa.
+2. **Propina opcional en Ko-fi y aviso mensual discreto con comprobación automática de actualizaciones**: MacFileExplorer sigue siendo 100% gratis y sin anuncios; se agregó botón + QR de Ko-fi en *Acerca de* y en *Historial de releases*, además de una tarjeta flotante no invasiva 1 vez cada 30 días en la esquina inferior derecha que también comprueba automáticamente si hay actualizaciones disponibles.
+3. **Ventana «Acerca de» más ancha y horizontal + ícono «Mono Oscuro» por defecto**: rediseño horizontal de *Acerca de MacFileExplorer* (redimensionable y con el doble de espacio para novedades) e ícono *Mono Oscuro* como diseño predeterminado en la app, el `.dmg` y la web.
+
+---
+
+## Versión 2.5.0
 
 - **Instalador:** [`MacFileExplorer-2.5.0.dmg`](./MacFileExplorer-2.5.0.dmg)
 - **Tamaño:** ~23 MB

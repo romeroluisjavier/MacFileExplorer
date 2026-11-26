@@ -25,11 +25,12 @@ public final class AboutWindowController {
         }
 
         let createdWindow = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 540, height: 720),
-            styleMask: [.titled, .closable, .fullSizeContentView],
+            contentRect: NSRect(x: 0, y: 0, width: 740, height: 700),
+            styleMask: [.titled, .closable, .resizable, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
+        createdWindow.minSize = NSSize(width: 660, height: 560)
         createdWindow.title = title
         createdWindow.titlebarAppearsTransparent = true
         createdWindow.titleVisibility = .hidden
@@ -75,9 +76,13 @@ public struct AboutAppView: View {
     public var body: some View {
         VStack(spacing: 0) {
             headerSection
-                .padding(.horizontal, 28)
+                .padding(.horizontal, 26)
                 .padding(.top, 26)
-                .padding(.bottom, 18)
+                .padding(.bottom, 14)
+
+            KoFiSupportCardView(compact: true)
+                .padding(.horizontal, 26)
+                .padding(.bottom, 14)
 
             Divider()
 
@@ -86,18 +91,18 @@ public struct AboutAppView: View {
             Divider()
 
             legalDisclaimerSection
-                .padding(.horizontal, 24)
+                .padding(.horizontal, 26)
                 .padding(.vertical, 10)
                 .background(Color.primary.opacity(0.025))
 
             Divider()
 
             footerSection
-                .padding(.horizontal, 24)
+                .padding(.horizontal, 26)
                 .padding(.vertical, 12)
                 .background(Color(nsColor: .windowBackgroundColor).opacity(0.6))
         }
-        .frame(width: 540, height: 720)
+        .frame(minWidth: 660, idealWidth: 740, minHeight: 560, idealHeight: 700)
         .background(Color(nsColor: .windowBackgroundColor))
         .onExitCommand {
             closeWindow()
@@ -105,83 +110,92 @@ public struct AboutAppView: View {
     }
 
     private var versionLabel: String {
-        "\(AppVersionInfo.currentVersion) (Build \(AppVersionInfo.currentBuild) • Swift 6)"
+        "v\(AppVersionInfo.currentVersion) (Build \(AppVersionInfo.currentBuild) • Swift 6)"
     }
 
     private var headerSection: some View {
-        VStack(spacing: 8) {
-            Group {
-                if let appIcon = iconProvider.appIcon(for: colorScheme) {
-                    Image(nsImage: appIcon)
-                        .resizable()
-                        .interpolation(.high)
-                        .scaledToFit()
-                        .frame(width: 78, height: 78)
-                } else {
-                    Image(systemName: "folder.fill.badge.gearshape")
-                        .font(.system(size: 42, weight: .semibold))
-                        .foregroundStyle(Color.accentColor)
-                        .frame(width: 78, height: 78)
+        HStack(alignment: .center, spacing: 18) {
+            // 1. Ícono de la app + botón rápido para cambiarlo
+            VStack(spacing: 6) {
+                Group {
+                    if let appIcon = iconProvider.appIcon(for: colorScheme) {
+                        Image(nsImage: appIcon)
+                            .resizable()
+                            .interpolation(.high)
+                            .scaledToFit()
+                            .frame(width: 72, height: 72)
+                    } else {
+                        Image(systemName: "folder.fill.badge.gearshape")
+                            .font(.system(size: 40, weight: .semibold))
+                            .foregroundStyle(Color.accentColor)
+                            .frame(width: 72, height: 72)
+                    }
                 }
-            }
-            .onTapGesture {
-                AppIconPickerWindowController.shared.show()
-            }
-            .help(loc.text(es: "Clic para cambiar el ícono de MacFileExplorer", en: "Click to change the MacFileExplorer app icon"))
+                .onTapGesture {
+                    AppIconPickerWindowController.shared.show()
+                }
+                .help(loc.text(es: "Clic para cambiar el ícono de MacFileExplorer", en: "Click to change the MacFileExplorer app icon"))
 
-            Button {
-                AppIconPickerWindowController.shared.show()
-            } label: {
-                Label(
-                    loc.text(es: "Cambiar ícono…", en: "Change Icon…"),
-                    systemImage: "app.badge.checkmark"
-                )
-                .font(.system(size: 11, weight: .medium))
-            }
-            .buttonStyle(.bordered)
-            .controlSize(.small)
-
-            VStack(spacing: 5) {
-                Text("MacFileExplorer")
-                    .font(.system(size: 19, weight: .bold))
-                    .foregroundStyle(.primary)
-
-                Text(loc.text(
-                    es: "Versión \(versionLabel)",
-                    en: "Version \(versionLabel)"
-                ))
-                .font(.system(size: 11.5, weight: .medium))
-                .foregroundStyle(.secondary)
-
-                checkUpgradesControl
-                    .padding(.top, 2)
+                Button {
+                    AppIconPickerWindowController.shared.show()
+                } label: {
+                    Label(
+                        loc.text(es: "Cambiar ícono…", en: "Change Icon…"),
+                        systemImage: "app.badge.checkmark"
+                    )
+                    .font(.system(size: 10.5, weight: .medium))
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.mini)
             }
 
-            VStack(spacing: 2) {
+            // 2. Identidad, versión, autor y descripción en formato horizontal ancho (sin cortes)
+            VStack(alignment: .leading, spacing: 5) {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text("MacFileExplorer")
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundStyle(.primary)
+
+                    Text(versionLabel)
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 2.5)
+                        .background(
+                            Capsule(style: .continuous)
+                                .fill(Color.primary.opacity(0.07))
+                        )
+                }
+
                 HStack(spacing: 4) {
                     Text(loc.text(es: "Desarrollado por", en: "Developed by"))
                         .foregroundStyle(.secondary)
                     Text("Luis Javier Romero")
                         .fontWeight(.bold)
                         .foregroundStyle(.primary)
+                    Text("·")
+                        .foregroundStyle(.tertiary)
+                    Text(loc.text(es: "Creador y Arquitecto de Software", en: "Creator & Software Architect"))
+                        .foregroundStyle(.secondary)
                 }
-                .font(.system(size: 12.5))
+                .font(.system(size: 12))
 
-                Text(loc.text(es: "Creador y Arquitecto de Software", en: "Creator & Software Architect"))
-                    .font(.system(size: 11.5))
-                    .foregroundStyle(.secondary)
+                Text(loc.text(
+                    es: "Explorador de Archivos estilo Windows 11 con estética nativa para macOS. Construido con Swift 6, SwiftUI y AppKit.",
+                    en: "Windows 11 Style File Explorer with native macOS aesthetics. Built with Swift 6, SwiftUI & AppKit."
+                ))
+                .font(.system(size: 11.5))
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .lineSpacing(1.5)
             }
-            .padding(.top, 2)
+            .frame(maxWidth: .infinity, alignment: .leading)
 
-            Text(loc.text(
-                es: "Explorador de Archivos estilo Windows 11 con estética nativa para macOS.\nConstruido con Swift 6, SwiftUI y AppKit.",
-                en: "Windows 11 Style File Explorer with native macOS aesthetics.\nBuilt with Swift 6, SwiftUI & AppKit."
-            ))
-            .font(.system(size: 11.5))
-            .foregroundStyle(.secondary)
-            .multilineTextAlignment(.center)
-            .lineSpacing(2)
-            .padding(.top, 2)
+            // 3. Control de búsqueda de actualizaciones alineado a la derecha
+            VStack(alignment: .trailing, spacing: 5) {
+                checkUpgradesControl
+            }
+            .fixedSize()
         }
     }
 
@@ -318,7 +332,7 @@ public struct AboutAppView: View {
 
     @ViewBuilder
     private var checkUpgradesControl: some View {
-        HStack(spacing: 8) {
+        VStack(alignment: .trailing, spacing: 5) {
             Button {
                 UpdateWindowController.shared.showAndCheck()
             } label: {

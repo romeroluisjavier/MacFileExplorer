@@ -33,6 +33,9 @@ public final class TaskbarStartMenuController: NSObject, NSWindowDelegate {
 
     private var panel: TaskbarStartMenuPanel?
     private var keyMonitor: Any?
+    private var globalClickMonitor: Any?
+    private var localClickMonitor: Any?
+    private var activeAnchorButtonRect: NSRect?
     private var currentDisplayID: String?
     private var animationTask: Task<Void, Never>?
     private var isClosingWithAnimation: Bool = false
@@ -86,6 +89,7 @@ public final class TaskbarStartMenuController: NSObject, NSWindowDelegate {
         searchQuery = ""
         selectedAppID = nil
         currentDisplayID = displayID
+        activeAnchorButtonRect = anchorButtonRect
         activeAnimationStyle = style
         TaskbarManager.shared.openStartMenuDisplayID = displayID
 
@@ -124,8 +128,12 @@ public final class TaskbarStartMenuController: NSObject, NSWindowDelegate {
         targetPanel.contentView?.layoutSubtreeIfNeeded()
         presentationToken &+= 1
         installKeyMonitorIfNeeded()
-        NSApplication.shared.activate(ignoringOtherApps: true)
-        targetPanel.makeKeyAndOrderFront(nil)
+        installClickOutsideMonitorsIfNeeded()
+        // Panel `.nonactivatingPanel`: mostrar y dar foco de teclado para el buscador SIN llamar a
+        // `NSApplication.shared.activate(...)`, manteniendo intacto el foco en la app donde estaba el usuario
+        // sin traer al frente las ventanas de carpetas de MacFileExplorer.
+        targetPanel.orderFrontRegardless()
+        targetPanel.makeKey()
 
         if duration > 0.001 {
             startOneShotAnimation(from: 0.0, to: 1.0, duration: duration, orderOutOnFinish: false)
@@ -134,6 +142,8 @@ public final class TaskbarStartMenuController: NSObject, NSWindowDelegate {
 
     public func close(animated: Bool = false) {
         removeKeyMonitor()
+        removeClickOutsideMonitors()
+        activeAnchorButtonRect = nil
         currentDisplayID = nil
         TaskbarManager.shared.openStartMenuDisplayID = nil
 
@@ -217,6 +227,7 @@ public final class TaskbarStartMenuController: NSObject, NSWindowDelegate {
         )
         created.delegate = self
         created.isFloatingPanel = true
+        created.becomesKeyOnlyIfNeeded = false
         created.hidesOnDeactivate = false
         created.isOpaque = false
         created.backgroundColor = .clear
@@ -225,7 +236,7 @@ public final class TaskbarStartMenuController: NSObject, NSWindowDelegate {
         created.isReleasedWhenClosed = false
         created.tabbingMode = .disallowed
         created.level = .popUpMenu
-        created.collectionBehavior = [.canJoinAllSpaces, .transient, .ignoresCycle]
+        created.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient, .ignoresCycle]
         created.contentView = NSHostingView(rootView: TaskbarStartMenuView())
         panel = created
         return created
@@ -269,6 +280,60 @@ public final class TaskbarStartMenuController: NSObject, NSWindowDelegate {
         if let keyMonitor {
             NSEvent.removeMonitor(keyMonitor)
             self.keyMonitor = nil
+        }
+    }
+
+    private func installClickOutsideMonitorsIfNeeded() {
+        if globalClickMonitor == nil {
+            globalClickMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
+                Task { @MainActor [weak self] in
+                    guard let self, self.isVisible, let panel = self.panel else { return }
+                    let mouseLoc = NSEvent.mouseLocation
+                    if panel.frame.contains(mouseLoc) {
+                        return
+                    }
+                    if let anchor = self.activeAnchorButtonRect, anchor.insetBy(dx: -4, dy: -4).contains(mouseLoc) {
+                        return
+                    }
+                    self.close(animated: true)
+                }
+            }
+        }
+        if localClickMonitor == nil {
+            localClickMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
+                guard let self else { return event }
+                MainActor.assumeIsolated {
+                    guard self.isVisible, let panel = self.panel else { return }
+                    if event.window === panel {
+                        return
+                    }
+                    // No cerrar si el clic pertenece a un menú contextual propio del Menú Inicio
+                    if let win = event.window, win.level == .popUpMenu {
+                        return
+                    }
+                    let mouseLoc = NSEvent.mouseLocation
+                    if panel.frame.contains(mouseLoc) {
+                        return
+                    }
+                    // Si el clic es sobre el botón Inicio de la Barra de tareas, dejar que `toggle()` lo cierre limpiamente
+                    if let anchor = self.activeAnchorButtonRect, anchor.insetBy(dx: -4, dy: -4).contains(mouseLoc) {
+                        return
+                    }
+                    self.close(animated: true)
+                }
+                return event
+            }
+        }
+    }
+
+    private func removeClickOutsideMonitors() {
+        if let globalClickMonitor {
+            NSEvent.removeMonitor(globalClickMonitor)
+            self.globalClickMonitor = nil
+        }
+        if let localClickMonitor {
+            NSEvent.removeMonitor(localClickMonitor)
+            self.localClickMonitor = nil
         }
     }
 

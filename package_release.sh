@@ -37,6 +37,7 @@ cp "Sources/MacFileExplorer/Resources/AppIcon-MonoDark.png" "${RELEASE_APP}/Cont
 cp "Sources/MacFileExplorer/Resources/AppIcon-MonoLight.png" "${RELEASE_APP}/Contents/Resources/AppIcon-MonoLight.png"
 cp "Sources/MacFileExplorer/Resources/AppIcon-GlassLayers.png" "${RELEASE_APP}/Contents/Resources/AppIcon-GlassLayers.png"
 cp "Sources/MacFileExplorer/Resources/StartIcon-Brain.png" "${RELEASE_APP}/Contents/Resources/StartIcon-Brain.png"
+cp "Sources/MacFileExplorer/Resources/KoFi-QR.png" "${RELEASE_APP}/Contents/Resources/KoFi-QR.png"
 
 if [ -d "${BIN_PATH}/${APP_NAME}_${APP_NAME}.bundle" ]; then
     cp -R "${BIN_PATH}/${APP_NAME}_${APP_NAME}.bundle" "${RELEASE_APP}/Contents/Resources/"

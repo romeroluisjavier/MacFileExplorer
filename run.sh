@@ -26,6 +26,7 @@ cp Sources/MacFileExplorer/Resources/AppIcon-MonoLight.png MacFileExplorer.app/C
 cp Sources/MacFileExplorer/Resources/AppIcon-GlassLayers.png MacFileExplorer.app/Contents/Resources/AppIcon-GlassLayers.png
 find MacFileExplorer.app/Contents/Resources -maxdepth 1 -name 'StartIcon-*.png' -delete
 cp Sources/MacFileExplorer/Resources/StartIcon-Brain.png MacFileExplorer.app/Contents/Resources/StartIcon-Brain.png
+cp Sources/MacFileExplorer/Resources/KoFi-QR.png MacFileExplorer.app/Contents/Resources/KoFi-QR.png
 
 mkdir -p MacFileExplorer.app/Contents/Resources/en.lproj
 mkdir -p MacFileExplorer.app/Contents/Resources/es.lproj

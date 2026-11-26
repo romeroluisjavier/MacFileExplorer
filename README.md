@@ -5,18 +5,42 @@ Un explorador de archivos nativo, ágil y moderno para macOS, inspirado en la pr
 ![macOS 14+](https://img.shields.io/badge/macOS-14.0%2B-blue?logo=apple)
 ![Swift 6](https://img.shields.io/badge/Swift-6.0-orange?logo=swift)
 ![Architecture](https://img.shields.io/badge/Architecture-Universal%20(Apple%20Silicon%20%2B%20Intel)-brightgreen)
-![Release](https://img.shields.io/badge/Release-v2.5.0-blueviolet)
+![Release](https://img.shields.io/badge/Release-v2.5.1-blueviolet)
+[![Support me on Ko-fi](https://img.shields.io/badge/Ko--fi-Support%20me%20(Optional%20Tip)-F57373?logo=ko-fi&logoColor=white)](https://ko-fi.com/luisjavierromero)
 
 🌐 **Sitio web oficial con demos en vivo e instalación paso a paso:** [romeroluisjavier.github.io/MacFileExplorer](https://romeroluisjavier.github.io/MacFileExplorer/)
 
 ---
 
-## ✨ Novedades recientes (v2.5.0)
+## ☕ Support me *(100% Free · Propina opcional)*
 
-- 🖼️ **Acciones rápidas y Copiar (`⌘C`) dentro de la Vista Rápida de imágenes y videos**: copiá imagen y archivo en un clic (o elegí solo imagen / solo archivo para pegar en chats, documentos o carpetas), eliminá fondos a PNG transparente, convertí a JPG/PNG, rotá 90°/180° viendo el cambio al instante, pasá videos a MP4, recortá (*Trim*), silenciá audio y limpiá metadatos privados sin salir del Preview.
-- 🪟 **Vista Rápida libre e íconos rojos estilo Acrobat para PDF**: arrastrá libremente la ventana de Vista Rápida fuera de `MacFileExplorer` y entre monitores sin frenos, y distinguí a simple vista tus PDFs de las imágenes gracias al nuevo ícono rojo vectorial estilo Acrobat.
-- 📊 **Editor Office (`.docx`, `.xlsx`, `.xls`, `.pptx`, `.csv`) con selección por arrastre, Menú «Office» y «Enviar a Drive» en barra inferior**: seleccioná múltiples filas y columnas arrastrando con el mouse en CSV y Excel (con Conteo/Suma/Promedio en vivo y copiado directo a Excel/Sheets), editá documentos Office en un clic y subí archivos a Google Drive con progreso discreto en la barra de estado inferior y apertura automática en Sheets, Docs o Slides (en la app o Chrome externo).
-- 🧭 **Barra de tareas avanzada**: mantené un archivo 1 segundo sobre cualquier app de la barra para abrirla y soltarlo adentro, agrupá ventanas de la misma app lado a lado, activá los modos «Solo íconos» o «Solo ícono en minimizadas» y personalizá Isla flotante, línea divisoria y 5 estilos visuales.
+<table>
+  <tr>
+    <td>
+      <strong>MacFileExplorer es y seguirá siendo 100% gratis, libre de anuncios y sin funciones bloqueadas.</strong><br/><br/>
+      Si la app te ahorra tiempo todos los días y querés darme una mano para seguir mejorándola, podés dejarme una <strong>propina opcional</strong> invitándome un café en Ko-fi o escaneando el código QR desde tu celular.<br/><br/>
+      <em>MacFileExplorer is 100% free and ad-free forever. Ko-fi is purely an optional tip if you'd like to support ongoing development.</em><br/><br/>
+      <a href="https://ko-fi.com/luisjavierromero" target="_blank">
+        <img src="https://img.shields.io/badge/☕%20Support%20me%20on%20Ko--fi-ko--fi.com%2Fluisjavierromero-F57373?style=for-the-badge" alt="Support me on Ko-fi" />
+      </a>
+    </td>
+    <td align="center" width="150">
+      <a href="https://ko-fi.com/luisjavierromero" target="_blank">
+        <img src="./GithubPages/assets/kofi-qr.png" width="124" alt="Ko-fi QR Code" />
+      </a><br/>
+      <sub>Escaneá el QR · Scan QR</sub>
+    </td>
+  </tr>
+</table>
+
+---
+
+## ✨ Novedades recientes (v2.5.1)
+
+- 🧭 **Botón Inicio sin robar foco**: al abrir el Menú Inicio desde la Barra de tareas mientras trabajás en otra app (Chrome, Slack, etc.), se despliega encima con el buscador listo para escribir manteniendo en primer plano la aplicación donde estabas, sin traer al frente las ventanas de `MacFileExplorer`.
+- ☕ **Propina opcional en Ko-fi y aviso mensual discreto con chequeo de actualizaciones**: tarjeta con botón Ko-fi y QR en *Acerca de* (ahora más ancha, redimensionable y en formato horizontal) y en *Historial de releases*, más un aviso flotante no invasivo 1 vez cada 30 días que también comprueba automáticamente si existe una nueva versión disponible.
+- 🖤 **Nuevo ícono predeterminado «Mono Oscuro»**: diseño minimalista blanco sobre negro como ícono oficial por defecto en la app (`.icns`), el instalador `.dmg` y el sitio web (manteniendo los 5 diseños seleccionables).
+- 🖼️ **Todo lo de v2.5.0 incluido**: Acciones rápidas y Copiar (`⌘C`) dentro del Preview de imágenes y videos, Vista Rápida libre entre monitores, íconos rojos estilo Acrobat para PDFs, editor Office/CSV con selección de múltiples filas y columnas arrastrando con el mouse, «Enviar a Drive» en la barra de estado inferior y Barra de tareas con 1 s drag-hover, agrupación lado a lado y modo Solo íconos.
 
 ---
 
@@ -53,12 +77,12 @@ Un explorador de archivos nativo, ágil y moderno para macOS, inspirado en la pr
 
 ### 1. Descargar el instalador
 Descarga la versión más reciente en formato `.dmg` directamente desde este repositorio:
-- 👉 **[Descargar MacFileExplorer-2.5.0.dmg](https://github.com/romeroluisjavier/MacFileExplorer/raw/main/releases/MacFileExplorer-2.5.0.dmg)** *(ubicado en la carpeta [`releases/`](./releases) — también podés ver el historial en [`releases/README.md`](./releases/README.md))*
+- 👉 **[Descargar MacFileExplorer-2.5.1.dmg](https://github.com/romeroluisjavier/MacFileExplorer/raw/main/releases/MacFileExplorer-2.5.1.dmg)** *(ubicado en la carpeta [`releases/`](./releases) — también podés ver el historial en [`releases/README.md`](./releases/README.md))*
 
 ---
 
 ### 2. Instalación en tu Mac
-1. Haz doble clic en el archivo descargado **`MacFileExplorer-2.5.0.dmg`**.
+1. Haz doble clic en el archivo descargado **`MacFileExplorer-2.5.1.dmg`**.
 2. Arrastra el icono de **MacFileExplorer** a la carpeta **Applications** (Aplicaciones).
 
 ---

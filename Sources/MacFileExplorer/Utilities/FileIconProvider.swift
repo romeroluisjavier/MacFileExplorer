@@ -87,7 +87,7 @@ public final class FileIconProvider {
            let stored = MacFileExplorerAppIcon(rawValue: raw) {
             selectedAppIcon = stored
         } else {
-            selectedAppIcon = .classic
+            selectedAppIcon = .monoDark
         }
         cachedLightAppIcon = loadBundledImage(named: "AppIcon-Light")
         cachedDarkAppIcon = loadBundledImage(named: "AppIcon-Dark")

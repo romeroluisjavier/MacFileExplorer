@@ -9,7 +9,7 @@
   <meta property="og:description" content="Tabbed file explorer, customizable Taskbar & Start Menu, fast AltTab switcher, Quick Look Office & CSV editor, automatic Send to Drive, and right-click quick actions. Free for macOS." />
   <meta property="og:image" content="assets/taskbar-overview.png" />
   <meta property="og:type" content="website" />
-  <link id="page-favicon" rel="icon" type="image/png" href="assets/app-icon.png" />
+  <link id="page-favicon" rel="icon" type="image/png" href="assets/app-icon-mono-dark.png" />
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -1162,14 +1162,14 @@
        MODERN RESPONSIVE NAVBAR (DESKTOP + MOBILE DRAWER)
   ========================================================== -->
   <header class="fixed top-2.5 sm:top-3 inset-x-0 z-50 px-3 sm:px-4">
-    <div class="max-w-[74rem] mx-auto">
+    <div class="max-w-[82rem] mx-auto">
       <nav class="mac-nav rounded-2xl px-3.5 sm:px-5 h-14 flex items-center justify-between gap-2 shadow-lg shadow-slate-900/5 dark:shadow-black/35">
         <!-- Brand -->
         <a href="#top" class="flex items-center gap-2.5 group shrink-0 min-w-0">
-          <img id="nav-app-icon" src="assets/app-icon.png" alt="MacFileExplorer" class="w-8 h-8 rounded-lg shadow-sm group-hover:scale-105 transition-transform shrink-0" />
+          <img id="nav-app-icon" src="assets/app-icon-mono-dark.png" alt="MacFileExplorer" class="w-8 h-8 rounded-lg shadow-sm group-hover:scale-105 transition-transform shrink-0" />
           <div class="flex items-center gap-2 min-w-0">
             <span class="font-bold tracking-tight text-[15px] text-slate-900 dark:text-white truncate">MacFileExplorer</span>
-            <span id="nav-version-pill" class="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-brand-500/12 text-brand-600 dark:text-brand-400 border border-brand-500/20">v2.5.0</span>
+            <span id="nav-version-pill" class="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-brand-500/12 text-brand-600 dark:text-brand-400 border border-brand-500/20">v2.5.1</span>
           </div>
         </a>
 
@@ -1180,6 +1180,7 @@
           <a href="#install" class="nav-link whitespace-nowrap px-2.5 py-1.5 rounded-xl hover:bg-slate-900/5 dark:hover:bg-white/10 hover:text-slate-950 dark:hover:text-white transition-colors" data-i18n="nav.install">Install</a>
           <a href="#report-issue" class="nav-link whitespace-nowrap px-2.5 py-1.5 rounded-xl hover:bg-slate-900/5 dark:hover:bg-white/10 hover:text-slate-950 dark:hover:text-white transition-colors" data-i18n="nav.report">Report issue</a>
           <a href="#releases" class="nav-link whitespace-nowrap px-2.5 py-1.5 rounded-xl hover:bg-slate-900/5 dark:hover:bg-white/10 hover:text-slate-950 dark:hover:text-white transition-colors" data-i18n="nav.releases">Releases</a>
+          <a href="#support" class="nav-link whitespace-nowrap px-2.5 py-1.5 rounded-xl hover:bg-rose-500/10 hover:text-rose-600 dark:hover:text-rose-400 transition-colors" data-i18n="nav.support">Tip (Ko-fi)</a>
         </div>
 
         <!-- Right Controls (Language + 4-Theme Selector + CTA + Mobile Menu Button) -->
@@ -1226,8 +1227,20 @@
             </div>
           </div>
 
+          <!-- Desktop Support me (Ko-fi Optional Tip) CTA -->
+          <a id="nav-kofi-cta" href="https://ko-fi.com/luisjavierromero" target="_blank" rel="noopener noreferrer"
+            title="MacFileExplorer is 100% Free — Optional tip on Ko-fi"
+            class="hidden md:inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-[12.5px] font-semibold text-white bg-gradient-to-b from-[#F57373] to-[#D9534F] hover:brightness-110 shadow-md shadow-rose-500/25 transition-all whitespace-nowrap">
+            <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M3.5 7.5h11.8c.7 0 1.2.5 1.2 1.2v4.6c0 3.1-2.4 5.7-5.6 5.7H9.1c-3.2 0-5.6-2.6-5.6-5.7V8.7c0-.7.5-1.2 1.2-1.2Z" fill="#fff"/>
+              <path d="M16.2 9.2h1.6c1.6 0 2.9 1.2 2.9 2.8s-1.3 2.8-2.9 2.8h-1.6" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+              <path d="M10 15.8c-.2 0-3-1.8-3-3.7 0-1 .8-1.8 1.7-1.8.6 0 1.1.3 1.3.8.2-.5.7-.8 1.3-.8.9 0 1.7.8 1.7 1.8 0 1.9-2.8 3.7-3 3.7Z" fill="#F57373"/>
+            </svg>
+            <span>Support me</span>
+          </a>
+
           <!-- Desktop Download CTA -->
-          <a id="nav-download-cta" href="https://github.com/romeroluisjavier/MacFileExplorer/raw/main/releases/MacFileExplorer-2.5.0.dmg"
+          <a id="nav-download-cta" href="https://github.com/romeroluisjavier/MacFileExplorer/raw/main/releases/MacFileExplorer-2.5.1.dmg"
             class="btn-primary hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[12.5px] font-semibold text-white bg-gradient-to-b from-[#1A90FF] to-[#0071E3] hover:brightness-110 shadow-md shadow-brand-600/25 transition-all whitespace-nowrap">
             <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2.3" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v11m0 0-4-4m4 4 4-4M4 19h16"/>
@@ -1256,7 +1269,8 @@
             <a href="#demo" class="mobile-nav-link px-3 py-2.5 rounded-xl bg-slate-900/[0.05] dark:bg-white/[0.07] text-slate-900 dark:text-slate-100" data-i18n="nav.demo">See it in action</a>
             <a href="#install" class="mobile-nav-link px-3 py-2.5 rounded-xl bg-slate-900/[0.05] dark:bg-white/[0.07] text-slate-900 dark:text-slate-100" data-i18n="nav.install">Install</a>
             <a href="#report-issue" class="mobile-nav-link px-3 py-2.5 rounded-xl bg-slate-900/[0.05] dark:bg-white/[0.07] text-slate-900 dark:text-slate-100" data-i18n="nav.report">Report issue</a>
-            <a href="#releases" class="mobile-nav-link col-span-2 px-3 py-2.5 rounded-xl bg-slate-900/[0.05] dark:bg-white/[0.07] text-slate-900 dark:text-slate-100" data-i18n="nav.releases">Releases</a>
+            <a href="#releases" class="mobile-nav-link px-3 py-2.5 rounded-xl bg-slate-900/[0.05] dark:bg-white/[0.07] text-slate-900 dark:text-slate-100" data-i18n="nav.releases">Releases</a>
+            <a href="#support" class="mobile-nav-link px-3 py-2.5 rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-300" data-i18n="nav.support">Tip (Ko-fi)</a>
           </div>
 
           <div class="pt-2 border-t border-slate-900/10 dark:border-white/10">
@@ -1269,12 +1283,22 @@
             </div>
           </div>
 
-          <a id="mobile-download-cta" href="https://github.com/romeroluisjavier/MacFileExplorer/raw/main/releases/MacFileExplorer-2.5.0.dmg"
+          <a id="mobile-download-cta" href="https://github.com/romeroluisjavier/MacFileExplorer/raw/main/releases/MacFileExplorer-2.5.1.dmg"
             class="btn-primary w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold text-white bg-gradient-to-b from-[#1A90FF] to-[#0071E3] shadow-md">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.3" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v11m0 0-4-4m4 4 4-4M4 19h16"/>
             </svg>
             <span data-i18n="nav.download">Download Free</span>
+          </a>
+
+          <a href="https://ko-fi.com/luisjavierromero" target="_blank" rel="noopener noreferrer"
+            class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-gradient-to-b from-[#F57373] to-[#D9534F] shadow-md">
+            <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M3.5 7.5h11.8c.7 0 1.2.5 1.2 1.2v4.6c0 3.1-2.4 5.7-5.6 5.7H9.1c-3.2 0-5.6-2.6-5.6-5.7V8.7c0-.7.5-1.2 1.2-1.2Z" fill="#fff"/>
+              <path d="M16.2 9.2h1.6c1.6 0 2.9 1.2 2.9 2.8s-1.3 2.8-2.9 2.8h-1.6" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+              <path d="M10 15.8c-.2 0-3-1.8-3-3.7 0-1 .8-1.8 1.7-1.8.6 0 1.1.3 1.3.8.2-.5.7-.8 1.3-.8.9 0 1.7.8 1.7 1.8 0 1.9-2.8 3.7-3 3.7Z" fill="#F57373"/>
+            </svg>
+            <span>Support me (Ko-fi · Optional tip)</span>
           </a>
         </div>
       </div>
@@ -1307,7 +1331,7 @@
           </span>
           <span id="hero-release-badge" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold mac-glass text-indigo-700 dark:text-indigo-300">
             <span class="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
-            <span id="hero-release-badge-text">Latest version: v2.5.0</span>
+            <span id="hero-release-badge-text">Latest version: v2.5.1</span>
           </span>
         </div>
 
@@ -1325,12 +1349,12 @@
 
         <!-- Primary CTAs (stack cleanly on mobile) -->
         <div class="mt-7 sm:mt-9 flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 max-w-md sm:max-w-none mx-auto">
-          <a id="hero-download-cta" href="https://github.com/romeroluisjavier/MacFileExplorer/raw/main/releases/MacFileExplorer-2.5.0.dmg"
+          <a id="hero-download-cta" href="https://github.com/romeroluisjavier/MacFileExplorer/raw/main/releases/MacFileExplorer-2.5.1.dmg"
             class="btn-primary inline-flex items-center justify-center gap-2.5 px-7 py-3.5 rounded-2xl text-[15px] font-semibold text-white bg-gradient-to-b from-[#1A90FF] to-[#0071E3] hover:brightness-110 shadow-xl shadow-brand-600/25 transition-all hover:-translate-y-0.5">
             <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v12m0 0-4.5-4.5M12 15l4.5-4.5M4 20h16"/>
             </svg>
-            <span id="hero-download-label">Download MacFileExplorer v2.5.0</span>
+            <span id="hero-download-label">Download MacFileExplorer v2.5.1</span>
           </a>
 
           <a href="#install"
@@ -1690,35 +1714,35 @@
                   <span class="w-5 h-5 rounded-md bg-gradient-to-b from-sky-400 to-blue-600 opacity-75 flex items-center justify-center text-white text-[9px] font-bold">F</span>
                   <span class="w-5 h-5 rounded-md bg-gradient-to-b from-amber-300 to-amber-500 opacity-75 flex items-center justify-center text-white text-[9px] font-bold">N</span>
                   <span class="flex flex-col items-center gap-0.5 px-0.5">
-                    <img id="dock-live-icon" src="assets/app-icon-macos.png" alt="Selected Dock Icon" class="w-7 h-7 rounded-md shadow transition-transform duration-200 hover:scale-110" />
+                    <img id="dock-live-icon" src="assets/app-icon-mono-dark.png" alt="Selected Dock Icon" class="w-7 h-7 rounded-md shadow transition-transform duration-200 hover:scale-110" />
                     <span class="w-1 h-1 rounded-full bg-sky-400"></span>
                   </span>
                   <span class="w-5 h-5 rounded-md bg-gradient-to-b from-emerald-400 to-green-600 opacity-75 flex items-center justify-center text-white text-[9px] font-bold">M</span>
                   <span class="w-5 h-5 rounded-md bg-gradient-to-b from-slate-400 to-slate-600 opacity-75 flex items-center justify-center text-white text-[9px] font-bold">⚙</span>
                 </div>
-                <span id="dock-live-label" class="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Dock preview: macOS Style</span>
+                <span id="dock-live-label" class="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Dock preview: Dark Mono</span>
               </div>
             </div>
 
             <!-- Open Borderless 5-Icon Shelf -->
             <div class="flex-1 grid grid-cols-3 sm:grid-cols-5 gap-2 sm:gap-3 items-start">
-              <button type="button" data-app-icon-id="macos" data-app-icon-src="assets/app-icon-macos.png"
-                class="app-icon-choice active group flex flex-col items-center py-1.5 px-1 text-center focus:outline-none">
-                <span class="icon-wrap inline-flex items-center justify-center">
-                  <img src="assets/app-icon-macos.png" alt="macOS Style Icon" class="w-12 h-12 sm:w-14 sm:h-14 object-contain drop-shadow-md" />
-                </span>
-                <span class="icon-label mt-2 text-xs font-bold text-slate-900 dark:text-white transition-colors" data-i18n="icon.macos.name">macOS Style</span>
-                <span class="icon-sub text-[10px] text-slate-500 dark:text-slate-400 leading-tight mt-0.5" data-i18n="icon.macos.sub">Native Apple blue</span>
-                <span class="icon-active-bar mt-1.5 h-0.5 w-6 rounded-full bg-brand-600 dark:bg-brand-400"></span>
-              </button>
-
               <button type="button" data-app-icon-id="monodark" data-app-icon-src="assets/app-icon-mono-dark.png"
-                class="app-icon-choice group flex flex-col items-center py-1.5 px-1 text-center focus:outline-none">
+                class="app-icon-choice active group flex flex-col items-center py-1.5 px-1 text-center focus:outline-none">
                 <span class="icon-wrap inline-flex items-center justify-center">
                   <img src="assets/app-icon-mono-dark.png" alt="Dark Mono Icon" class="w-12 h-12 sm:w-14 sm:h-14 object-contain drop-shadow-md" />
                 </span>
-                <span class="icon-label mt-2 text-xs font-bold text-slate-800 dark:text-slate-100 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors" data-i18n="icon.monodark.name">Dark Mono</span>
+                <span class="icon-label mt-2 text-xs font-bold text-slate-900 dark:text-white transition-colors" data-i18n="icon.monodark.name">Dark Mono</span>
                 <span class="icon-sub text-[10px] text-slate-500 dark:text-slate-400 leading-tight mt-0.5" data-i18n="icon.monodark.sub">White on obsidian</span>
+                <span class="icon-active-bar mt-1.5 h-0.5 w-6 rounded-full bg-brand-600 dark:bg-brand-400"></span>
+              </button>
+
+              <button type="button" data-app-icon-id="macos" data-app-icon-src="assets/app-icon-macos.png"
+                class="app-icon-choice group flex flex-col items-center py-1.5 px-1 text-center focus:outline-none">
+                <span class="icon-wrap inline-flex items-center justify-center">
+                  <img src="assets/app-icon-macos.png" alt="macOS Style Icon" class="w-12 h-12 sm:w-14 sm:h-14 object-contain drop-shadow-md" />
+                </span>
+                <span class="icon-label mt-2 text-xs font-bold text-slate-800 dark:text-slate-100 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors" data-i18n="icon.macos.name">macOS Style</span>
+                <span class="icon-sub text-[10px] text-slate-500 dark:text-slate-400 leading-tight mt-0.5" data-i18n="icon.macos.sub">Native Apple blue</span>
                 <span class="icon-active-bar mt-1.5 h-0.5 w-6 rounded-full bg-brand-600 dark:bg-brand-400"></span>
               </button>
 
@@ -1891,7 +1915,7 @@
             <button type="button" data-demo-filter="gifs"
               class="demo-filter-btn active shrink-0 px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all bg-brand-600 text-white shadow-sm inline-flex items-center gap-1.5">
               <span class="w-1.5 h-1.5 rounded-full bg-emerald-300"></span>
-              <span data-i18n="demo.filterGifs">In motion (24)</span>
+              <span data-i18n="demo.filterGifs">In motion (25)</span>
             </button>
             <button type="button" data-demo-filter="screenshots"
               class="demo-filter-btn shrink-0 px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all text-slate-600 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white">
@@ -1899,7 +1923,7 @@
             </button>
             <button type="button" data-demo-filter="all"
               class="demo-filter-btn shrink-0 px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all text-slate-600 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white">
-              <span data-i18n="demo.filterAll">All (30)</span>
+              <span data-i18n="demo.filterAll">All (31)</span>
             </button>
           </div>
         </div>
@@ -1939,12 +1963,12 @@
                     Click the blue button below. The installer file will land in your <strong>Downloads</strong> folder in just a few seconds.
                   </p>
                 </div>
-                <a id="install-download-cta" href="https://github.com/romeroluisjavier/MacFileExplorer/raw/main/releases/MacFileExplorer-2.5.0.dmg"
+                <a id="install-download-cta" href="https://github.com/romeroluisjavier/MacFileExplorer/raw/main/releases/MacFileExplorer-2.5.1.dmg"
                   class="btn-primary inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-gradient-to-b from-[#1A90FF] to-[#0071E3] hover:brightness-110 shadow-md shadow-brand-600/25 transition-all shrink-0 self-start sm:self-center">
                   <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v11m0 0-4-4m4 4 4-4M4 19h16"/>
                   </svg>
-                  <span id="install-download-label">Download v2.5.0 (.dmg)</span>
+                  <span id="install-download-label">Download v2.5.1 (.dmg)</span>
                 </a>
               </div>
             </div>
@@ -1963,7 +1987,7 @@
                   </p>
                 </div>
                 <div class="install-drag-cue inline-flex items-center gap-2.5 px-3.5 py-2 rounded-xl bg-slate-900/[0.05] dark:bg-white/[0.07] border border-slate-900/10 dark:border-white/10 shrink-0 self-start sm:self-center">
-                  <img src="assets/app-icon.png" alt="" class="w-7 h-7 rounded-md shadow-sm" />
+                  <img src="assets/app-icon-mono-dark.png" alt="" class="w-7 h-7 rounded-md shadow-sm" />
                   <svg class="w-4 h-4 text-brand-600 dark:text-brand-400" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"/>
                   </svg>
@@ -2145,6 +2169,62 @@
         </div>
       </div>
     </section>
+
+    <!-- =========================================================
+         SUPPORT / OPTIONAL TIP ON KO-FI (#support)
+    ========================================================== -->
+    <section id="support" class="section-band py-16 sm:py-20 px-4 sm:px-6 scroll-mt-24">
+      <div class="max-w-4xl mx-auto">
+        <div class="reveal mac-glass rounded-3xl p-6 sm:p-9 border border-rose-500/20 shadow-xl">
+          <div class="flex flex-col md:flex-row items-center gap-7 sm:gap-10">
+            <div class="flex-1 text-center md:text-left">
+              <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25 mb-3">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                <span data-i18n="support.badge">100% Free · Optional Tip</span>
+              </div>
+
+              <h2 class="desktop-heading text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-950 dark:text-white" data-i18n="support.title">
+                Enjoying MacFileExplorer? Leave an optional tip
+              </h2>
+
+              <p class="desktop-subtext mt-3 text-sm sm:text-[15px] text-slate-600 dark:text-slate-300 leading-relaxed" data-i18n-html="support.desc">
+                MacFileExplorer is and will always remain <strong>100% free</strong>, ad-free, with zero locked features. Ko-fi is purely an <strong>optional tip</strong> in case the app saves you time every day and you'd like to buy me a coffee to support future updates.
+              </p>
+
+              <div class="mt-5 flex flex-col sm:flex-row items-center md:items-center justify-center md:justify-start gap-3.5">
+                <!-- Fixed Ko-fi Script Widget -->
+                <div id="kofi-fixed-widget" class="inline-flex items-center justify-center min-h-[40px]">
+                  <script type='text/javascript' src='https://storage.ko-fi.com/cdn/widget/Widget_2.js'></script>
+                  <script type='text/javascript'>if (typeof kofiwidget2 !== 'undefined') { kofiwidget2.init('Support me on Ko-fi', '#F57373', 'S5U62BAGY7'); kofiwidget2.draw(); }</script>
+                </div>
+
+                <!-- Graceful fallback button if Ko-fi CDN is blocked by an adblocker -->
+                <a id="kofi-fallback-btn" href="https://ko-fi.com/luisjavierromero" target="_blank" rel="noopener noreferrer"
+                  class="hidden inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-gradient-to-b from-[#F57373] to-[#D9534F] hover:brightness-110 shadow-md transition-all">
+                  <span>☕</span>
+                  <span data-i18n="support.fallbackBtn">Support me on Ko-fi</span>
+                </a>
+
+                <span class="text-xs text-slate-500 dark:text-slate-400" data-i18n="support.note">
+                  100% voluntary · No account required
+                </span>
+              </div>
+            </div>
+
+            <!-- Scannable Ko-fi QR Card -->
+            <a href="https://ko-fi.com/luisjavierromero" target="_blank" rel="noopener noreferrer"
+              class="group shrink-0 flex flex-col items-center gap-2 focus:outline-none">
+              <div class="p-2.5 rounded-2xl bg-white shadow-lg border border-slate-900/10 group-hover:scale-[1.03] transition-transform">
+                <img src="assets/kofi-qr.png" alt="Ko-fi QR Code — luisjavierromero" class="w-36 h-36 sm:w-40 sm:h-40 rounded-lg block" loading="lazy" />
+              </div>
+              <span class="text-[11px] font-semibold text-slate-500 dark:text-slate-400" data-i18n="support.scanQr">
+                Scan with your phone
+              </span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
   </main>
 
   <!-- =========================================================
@@ -2153,7 +2233,7 @@
   <footer class="border-t border-slate-900/10 dark:border-white/10 py-10 px-4 sm:px-6">
     <div class="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6 text-sm text-slate-500 dark:text-slate-400">
       <div class="flex items-center gap-3">
-        <img id="footer-app-icon" src="assets/app-icon.png" alt="MacFileExplorer" class="w-8 h-8 rounded-lg" />
+        <img id="footer-app-icon" src="assets/app-icon-mono-dark.png" alt="MacFileExplorer" class="w-8 h-8 rounded-lg" />
         <div>
           <p class="font-bold text-slate-900 dark:text-slate-100 leading-tight">MacFileExplorer</p>
           <p class="text-xs" data-i18n-html="footer.credit">Made for macOS by <a href="https://github.com/romeroluisjavier" target="_blank" rel="noopener noreferrer" class="hover:text-brand-600 underline-offset-2 hover:underline">Luis Javier Romero</a> · Free &amp; ad-free</p>
@@ -2173,6 +2253,7 @@
         <a href="#install" class="hover:text-brand-600 transition-colors" data-i18n="nav.install">Install</a>
         <a href="#report-issue" class="hover:text-brand-600 transition-colors" data-i18n="nav.report">Report issue</a>
         <a href="#releases" class="hover:text-brand-600 transition-colors" data-i18n="nav.releases">Releases</a>
+        <a href="#support" class="hover:text-rose-500 transition-colors" data-i18n="nav.support">Tip (Ko-fi)</a>
         <a href="https://github.com/romeroluisjavier/MacFileExplorer" target="_blank" rel="noopener noreferrer" class="hover:text-brand-600 transition-colors">GitHub</a>
       </div>
     </div>
@@ -2226,15 +2307,15 @@
   <script>
     const REPO_OWNER = 'romeroluisjavier';
     const REPO_NAME = 'MacFileExplorer';
-    let currentVersionTag = 'v2.5.0';
-    let currentDmgUrl = `https://github.com/${REPO_OWNER}/${REPO_NAME}/raw/main/releases/MacFileExplorer-2.5.0.dmg`;
+    let currentVersionTag = 'v2.5.1';
+    let currentDmgUrl = `https://github.com/${REPO_OWNER}/${REPO_NAME}/raw/main/releases/MacFileExplorer-2.5.1.dmg`;
     let currentLang = localStorage.getItem('mfe-lang') === 'es' ? 'es' : 'en';
     let currentTheme = ['light', 'dark', 'win98', 'macos98'].includes(localStorage.getItem('mfe-theme-v2'))
       ? localStorage.getItem('mfe-theme-v2')
       : 'light';
     let currentDemoFilter = 'gifs';
     let activeHeroId = 'taskbar';
-    let activeAppIconId = 'macos';
+    let activeAppIconId = 'monodark';
     let selectedIssueCat = 'bug';
     let selectedIssueChip = 'Apple Silicon (M1–M4)';
 
@@ -2340,9 +2421,9 @@
         'demo.eyebrow': 'Visual tour',
         'demo.title': 'See it in action',
         'demo.subtitle': 'Explore how every feature looks and feels on your Mac. Tap any card to view it full screen.',
-        'demo.filterGifs': 'In motion (24)',
+        'demo.filterGifs': 'In motion (25)',
         'demo.filterShots': 'Screenshots (6)',
-        'demo.filterAll': 'All (30)',
+        'demo.filterAll': 'All (31)',
         'install.eyebrow': 'Ready in 1 minute',
         'install.title': 'How to install on your Mac',
         'install.subtitle': 'No technical skills or terminal commands required. Just follow these 3 quick steps:',
@@ -2386,6 +2467,13 @@
         'releases.current': 'Current',
         'releases.downloadDmg': 'Download installer',
         'releases.viewRelease': 'View release',
+        'nav.support': 'Tip (Ko-fi)',
+        'support.badge': '100% Free · Optional Tip',
+        'support.title': 'Enjoying MacFileExplorer? Leave an optional tip',
+        'support.desc': 'MacFileExplorer is and will always remain <strong>100% free</strong>, ad-free, with zero locked features. Ko-fi is purely an <strong>optional tip</strong> in case the app saves you time every day and you\'d like to buy me a coffee to support future updates.',
+        'support.fallbackBtn': 'Support me on Ko-fi',
+        'support.note': '100% voluntary · No account required',
+        'support.scanQr': 'Scan with your phone',
         'footer.credit': 'Made for macOS by <a href="https://github.com/romeroluisjavier" target="_blank" rel="noopener noreferrer" class="hover:text-brand-600 underline-offset-2 hover:underline">Luis Javier Romero</a> · Free &amp; ad-free',
         'footer.tryTheme': 'Style:',
         'footer.legalTitle': 'Legal Disclaimer:',
@@ -2490,9 +2578,9 @@
         'demo.eyebrow': 'Recorrido visual',
         'demo.title': 'Mirala en acción',
         'demo.subtitle': 'Explorá cómo se ve y cómo se usa cada función en tu Mac. Tocá cualquier tarjeta para verla en grande.',
-        'demo.filterGifs': 'En movimiento (24)',
+        'demo.filterGifs': 'En movimiento (25)',
         'demo.filterShots': 'Imágenes (6)',
-        'demo.filterAll': 'Todo (30)',
+        'demo.filterAll': 'Todo (31)',
         'install.eyebrow': 'Listo en 1 minuto',
         'install.title': 'Cómo instalarla en tu Mac',
         'install.subtitle': 'No necesitás saber nada técnico ni escribir comandos. Seguí estos 3 pasos simples:',
@@ -2536,6 +2624,13 @@
         'releases.current': 'Actual',
         'releases.downloadDmg': 'Descargar instalador',
         'releases.viewRelease': 'Ver versión',
+        'nav.support': 'Propina (Ko-fi)',
+        'support.badge': '100% Gratis · Propina opcional',
+        'support.title': '¿Te sirve MacFileExplorer? Podés dejar una propina',
+        'support.desc': 'MacFileExplorer es y seguirá siendo <strong>100% gratis</strong>, libre de anuncios y sin funciones bloqueadas. Ko-fi es únicamente una <strong>propina opcional</strong> por si la app te ahorra tiempo todos los días y querés invitarme un café para apoyar futuras mejoras.',
+        'support.fallbackBtn': 'Dejar propina en Ko-fi',
+        'support.note': '100% voluntario · No necesitás cuenta',
+        'support.scanQr': 'Escaneá con tu celular',
         'footer.credit': 'Hecho para macOS por <a href="https://github.com/romeroluisjavier" target="_blank" rel="noopener noreferrer" class="hover:text-brand-600 underline-offset-2 hover:underline">Luis Javier Romero</a> · Gratis y sin anuncios',
         'footer.tryTheme': 'Estilo:',
         'footer.legalTitle': 'Aviso legal:',
@@ -2593,6 +2688,15 @@
     };
 
     const DEMO_ITEMS = [
+      {
+        id: 'monthly-update-kofi-checkin-gif', type: 'gifs', src: 'assets/monthly-update-kofi-checkin-demo.gif',
+        badge: { en: 'v2.5.1 · Focus & Updates', es: 'v2.5.1 · Foco y Aviso mensual' },
+        title: { en: 'Non-activating Start Menu + Non-invasive monthly update check-in', es: 'Menú Inicio sin robar foco + Aviso mensual discreto con actualizaciones' },
+        desc: {
+          en: 'Clicking Start opens the menu cleanly over Chrome or any active app without raising MacFileExplorer. Once a month, a gentle corner card also checks for new updates automatically alongside an optional Ko-fi tip (always 100% free).',
+          es: 'Al tocar Inicio el menú se abre encima de Chrome o cualquier app activa sin traer MacFileExplorer al frente. Además, 1 vez al mes un aviso flotante discreto chequea actualizaciones automáticamente junto a una propina opcional en Ko-fi (100% gratis).'
+        }
+      },
       {
         id: 'quicklook-media-actions-copy-gif', type: 'gifs', src: 'assets/quicklook-media-actions-copy-demo.gif',
         badge: { en: 'Quick Look Media & PDF', es: 'Vista Rápida y PDF' },
@@ -2867,13 +2971,35 @@
 
     const STATIC_RELEASES = [
       {
+        tag: 'v2.5.1',
+        date: { en: 'Nov 26, 2026', es: '26 nov 2026' },
+        title: {
+          en: 'Non-Activating Start Menu, Monthly Update Check-In + Optional Ko-fi Tip, Wider About Window & Dark Mono Default Icon',
+          es: 'Menú Inicio sin robar foco, Aviso mensual con actualizaciones + Ko-fi, «Acerca de» renovado e ícono Mono Oscuro'
+        },
+        latest: true,
+        dmgUrl: `https://github.com/${REPO_OWNER}/${REPO_NAME}/raw/main/releases/MacFileExplorer-2.5.1.dmg`,
+        highlights: {
+          en: [
+            'Start Menu keeps your active app in focus: clicking Start while using Chrome, Slack, or any other app floats the Start Menu smoothly above it with live search typing without raising MacFileExplorer folder windows.',
+            'Optional Ko-fi tip support & non-invasive monthly update check-in: MacFileExplorer remains 100% free and ad-free, now featuring Ko-fi buttons & QR in About and Release History plus a gentle once-a-month corner card that automatically checks for updates.',
+            'Redesigned wider, resizable horizontal About window with nearly double the space for Release Notes, and Dark Mono set as the new default icon for both the app and website.'
+          ],
+          es: [
+            'El botón Inicio ya no trae MacFileExplorer al frente: al tocar Inicio desde Chrome, Slack o cualquier app, el Menú Inicio se abre encima con el buscador listo manteniendo tu aplicación activa en primer plano.',
+            'Propina opcional en Ko-fi y aviso mensual discreto con chequeo de actualizaciones: MacFileExplorer sigue siendo 100% gratis, ahora con botón y QR en Acerca de e Historial de releases más una tarjeta flotante cada 30 días que comprueba si hay versiones nuevas.',
+            'Ventana «Acerca de» más ancha, redimensionable y en formato horizontal con mucho más lugar para las novedades, e ícono Mono Oscuro como predeterminado en la app y en la web.'
+          ]
+        }
+      },
+      {
         tag: 'v2.5.0',
         date: { en: 'Nov 25, 2026', es: '25 nov 2026' },
         title: {
           en: 'Office & CSV Drag-Select Editor, Free Quick Look with Media Quick Actions & Copy, Send to Drive in Status Bar, Red PDF Icons & Advanced Taskbar',
           es: 'Editor Office/CSV con selección por arrastre, Vista Rápida libre con Acciones rápidas y Copiar, Enviar a Drive en barra inferior, ícono rojo PDF y Barra de tareas avanzada'
         },
-        latest: true,
+        latest: false,
         dmgUrl: `https://github.com/${REPO_OWNER}/${REPO_NAME}/raw/main/releases/MacFileExplorer-2.5.0.dmg`,
         highlights: {
           en: [
@@ -3784,12 +3910,35 @@
     window.addEventListener('scroll', scheduleScrollFrame, { passive: true });
     window.addEventListener('resize', scheduleScrollFrame, { passive: true });
 
+    // Fallback check for fixed Ko-fi widget in case CDN is blocked
+    window.addEventListener('load', () => {
+      const fixedBox = document.getElementById('kofi-fixed-widget');
+      const fallbackBtn = document.getElementById('kofi-fallback-btn');
+      if (fixedBox && fallbackBtn && !fixedBox.querySelector('a, .btn-container')) {
+        fixedBox.classList.add('hidden');
+        fallbackBtn.classList.remove('hidden');
+      }
+    });
+
     // =========================================================================
     // BOOT — DEFAULT LIGHT MODE + DEFAULT ENGLISH
     // =========================================================================
     applyLanguage(currentLang);
     observeRevealElements();
     onScrollFrame();
+  </script>
+
+  <!-- Floating Ko-fi Overlay Widget -->
+  <script src='https://storage.ko-fi.com/cdn/scripts/overlay-widget.js'></script>
+  <script>
+    if (typeof kofiWidgetOverlay !== 'undefined') {
+      kofiWidgetOverlay.draw('luisjavierromero', {
+        'type': 'floating-chat',
+        'floating-chat.donateButton.text': 'Support me',
+        'floating-chat.donateButton.background-color': '#D9534F',
+        'floating-chat.donateButton.text-color': '#fff'
+      });
+    }
   </script>
 </body>
 </html>

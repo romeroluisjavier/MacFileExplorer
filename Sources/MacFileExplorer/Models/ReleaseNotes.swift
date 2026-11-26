@@ -77,6 +77,31 @@ public struct ReleaseNoteSection: Identifiable, Sendable {
 public enum ReleaseNotesCatalog {
     public static let sections: [ReleaseNoteSection] = [
         ReleaseNoteSection(
+            id: "v2.5.1-kofi-monthly-checkin-start-menu-focus-mono-dark",
+            versionLabelES: "Versión 2.5.1 — Menú Inicio sin robar foco, aviso mensual con actualizaciones + Ko-fi, «Acerca de» renovado e ícono Mono Oscuro",
+            versionLabelEN: "Version 2.5.1 — Non-Activating Start Menu, Monthly Update Check-In + Optional Ko-fi Tip, Wider About Window & Dark Mono Default Icon",
+            dateLabelES: "26 nov 2026",
+            dateLabelEN: "Nov 26, 2026",
+            items: [
+                ReleaseNoteItem(
+                    id: "start-menu-nonactivating-keeps-current-app-focus",
+                    icon: "macwindow.badge.plus",
+                    titleES: "El botón Inicio ya no trae al frente la ventana de MacFileExplorer",
+                    titleEN: "Start Button No Longer Brings MacFileExplorer Window to the Front",
+                    summaryES: "Al abrir el Menú Inicio desde la Barra de tareas mientras trabajás en otra aplicación (como Chrome, Slack o tu editor), el Menú Inicio se despliega suavemente encima con el buscador listo para escribir pero manteniendo en primer plano la aplicación donde estabas, sin traer al frente las ventanas de carpetas de MacFileExplorer.",
+                    summaryEN: "Clicking the Start button on the Taskbar while working in another app (such as Chrome, Slack, or your editor) now opens the Start Menu smoothly above it with instant search typing while keeping your current app in the foreground, without raising MacFileExplorer folder windows."
+                ),
+                ReleaseNoteItem(
+                    id: "kofi-optional-tip-and-monthly-update-checkin",
+                    icon: "heart.circle.fill",
+                    titleES: "Propina opcional en Ko-fi y aviso mensual discreto con comprobación de actualizaciones",
+                    titleEN: "Optional Ko-fi Tip Support & Non-Invasive Monthly Update Check-In",
+                    summaryES: "MacFileExplorer sigue siendo 100% gratuito y sin anuncios. Se sumó una tarjeta con botón de Ko-fi y código QR escaneable tanto en «Acerca de MacFileExplorer» (ahora con ventana más ancha, redimensionable y encabezado horizontal mucho más cómodo de leer) como en «Historial de releases» por si querés dejar una propina voluntaria. Además, el ícono Mono Oscuro pasa a ser el predeterminado de la app y la web, y una vez cada 30 días se muestra un aviso flotante discreto en la esquina inferior derecha que comprueba automáticamente si hay una versión nueva lista para actualizar.",
+                    summaryEN: "MacFileExplorer remains 100% free and ad-free. Added an optional Ko-fi tip card with button and scannable QR code in both «About MacFileExplorer» (now wider, resizable, with a spacious horizontal header) and «Release History» in case you want to support development. Dark Mono is now the default app and website icon, and once every 30 days a non-invasive floating corner card automatically checks for new updates right inside the card and can be snoozed or permanently dismissed in one click."
+                )
+            ]
+        ),
+        ReleaseNoteSection(
             id: "v2.5.0-office-quicklook-media-actions-taskbar-upgrades",
             versionLabelES: "Versión 2.5.0 — Editor Office y CSV con selección por arrastre, Vista Rápida libre con Acciones rápidas y Copiar, Barra de tareas avanzada e ícono rojo PDF",
             versionLabelEN: "Version 2.5.0 — Office & CSV Editor with Drag-Select, Free Quick Look with Media Quick Actions & Copy, Advanced Taskbar & Red PDF Icon",

@@ -104,6 +104,12 @@ struct MacFileExplorerApp: App {
                     Label(loc.text(es: "Buscar actualizaciones…", en: "Check for Updates…"), systemImage: "arrow.down.circle")
                 }
 
+                Button {
+                    MonthlySupportCheckManager.shared.presentPopup(triggerUpdateCheck: true)
+                } label: {
+                    Label(loc.text(es: "Apoyar proyecto (Propina Ko-fi)…", en: "Support Project (Ko-fi Tip)…"), systemImage: "heart.circle")
+                }
+
                 Menu {
                     Picker(
                         loc.text(es: "Ícono de la aplicación", en: "App Icon"),

@@ -458,6 +458,7 @@ public struct HelpGuideView: View {
                 subtitleES: "Historial completo generado directamente desde el catálogo oficial de versiones de MacFileExplorer.",
                 subtitleEN: "Full chronological changelog synced directly from MacFileExplorer's official release catalog."
             )
+            KoFiSupportCardView(compact: false)
             ForEach(ReleaseNotesCatalog.sections) { section in
                 releaseSectionCard(section)
             }
@@ -752,12 +753,12 @@ extension HelpGuideView {
         HelpTopicCard(
             id: "hl-windows-taskbar",
             icon: "dock.rectangle",
-            badgeES: "Nuevo · v2.5",
-            badgeEN: "New · v2.5",
-            titleES: "Barra de tareas estilo Windows: Arrastrar a apps (1 s), Agrupación, Solo íconos e Isla flotante",
-            titleEN: "Windows-Style Taskbar: Drag-to-Open (1 s), Grouping, Icons Only & Floating Island",
-            bodyES: "Activable desde el menú superior Barra de tareas (apagada por defecto y sin tocar el Dock original). Muestra un botón por ventana con miniaturas en vivo, apps fijadas, Menú Inicio con 8 animaciones (o 0 ms instantáneo), soporte hasta 5 monitores y 3 mejoras clave de productividad:\n• Arrastrar archivos sobre la barra: mantené un archivo quieto 1 segundo sobre cualquier app o ventana de la barra (incluso minimizada) para traerla al frente sin soltar el archivo y soltarlo directo adentro.\n• Agrupación lado a lado: mantené juntas todas las ventanas de una misma app (ej. varias ventanas de Chrome), incluso las que abrís más tarde.\n• Modo «Solo íconos» y «Solo ícono en ventanas minimizadas»: elegí si querés ver toda la barra solo con íconos o compactar únicamente las ventanas minimizadas u ocultas para dar más lugar a las abiertas.",
-            bodyEN: "Toggle on or off from the top Taskbar menu (off by default without touching your macOS Dock). Shows one button per window with live hover thumbnails, pinned apps, a searchable Start Menu with 8 animations (or 0 ms instant), up to 5 displays, and 3 key productivity upgrades:\n• Drag files onto the Taskbar: hover and hold still for 1 second over any app or window button (even if minimized) to bring it straight to the front without releasing your file, then drop it inside.\n• Keep same-app windows side by side: automatically keeps windows of the same app (such as multiple Chrome windows) next to each other, even ones opened later.\n• Icons-Only & Compact Minimized modes: switch the entire bar to icons only, or keep titles on open windows while collapsing minimized/hidden windows to compact icons."
+            badgeES: "Nuevo · v2.5.1",
+            badgeEN: "New · v2.5.1",
+            titleES: "Barra de tareas estilo Windows: Menú Inicio sin robar foco, Arrastrar a apps (1 s), Agrupación y Solo íconos",
+            titleEN: "Windows-Style Taskbar: Non-Activating Start Menu, Drag-to-Open (1 s), Grouping & Icons Only",
+            bodyES: "Activable desde el menú superior Barra de tareas (apagada por defecto y sin tocar el Dock original). Muestra un botón por ventana con miniaturas en vivo, apps fijadas, Menú Inicio con 8 animaciones (o 0 ms instantáneo) que flota encima sin traer al frente las ventanas de MacFileExplorer ni quitar el foco de la app donde estabas trabajando, soporte hasta 5 monitores y 3 mejoras clave de productividad:\n• Arrastrar archivos sobre la barra: mantené un archivo quieto 1 segundo sobre cualquier app o ventana de la barra (incluso minimizada) para traerla al frente sin soltar el archivo y soltarlo directo adentro.\n• Agrupación lado a lado: mantené juntas todas las ventanas de una misma app (ej. varias ventanas de Chrome), incluso las que abrís más tarde.\n• Modo «Solo íconos» y «Solo ícono en ventanas minimizadas»: elegí si querés ver toda la barra solo con íconos o compactar únicamente las ventanas minimizadas u ocultas para dar más lugar a las abiertas.",
+            bodyEN: "Toggle on or off from the top Taskbar menu (off by default without touching your macOS Dock). Shows one button per window with live hover thumbnails, pinned apps, a searchable Start Menu with 8 animations (or 0 ms instant) that floats cleanly above your active app without raising MacFileExplorer windows, up to 5 displays, and 3 key productivity upgrades:\n• Drag files onto the Taskbar: hover and hold still for 1 second over any app or window button (even if minimized) to bring it straight to the front without releasing your file, then drop it inside.\n• Keep same-app windows side by side: automatically keeps windows of the same app (such as multiple Chrome windows) next to each other, even ones opened later.\n• Icons-Only & Compact Minimized modes: switch the entire bar to icons only, or keep titles on open windows while collapsing minimized/hidden windows to compact icons."
         ),
         HelpTopicCard(
             id: "hl-alttab-switcher",
@@ -1063,10 +1064,10 @@ extension HelpGuideView {
         HelpTopicCard(
             id: "cfg-cache-updates",
             icon: "internaldrive",
-            titleES: "Mantenimiento de caché oculta (.macfileexplorer) y Actualizaciones",
-            titleEN: "Hidden Cache (.macfileexplorer) Maintenance & GitHub Updates",
-            bodyES: "Desde Archivo → Caché oculta (.macfileexplorer)… inspeccioná cuántos archivos .macfileexplorer_dir.cache, .macfileexplorer_thumbs.cache y .macfileexplorer_ocr.cache hay y cuánto ocupan, o borralos para regenerarlos. Desde MacFileExplorer → Buscar actualizaciones… comprobá y descargá nuevas versiones desde GitHub.",
-            bodyEN: "Under File → Hidden Cache (.macfileexplorer)… inspect total file count and disk usage of .macfileexplorer_*.cache files and wipe them to regenerate cleanly. Under MacFileExplorer → Check for Updates… check GitHub and download newer versions."
+            titleES: "Caché oculta (.macfileexplorer), Actualizaciones mensuales, Ícono Mono Oscuro y Ko-fi",
+            titleEN: "Hidden Cache (.macfileexplorer), Monthly Update Check-In, Dark Mono Icon & Optional Ko-fi Tip",
+            bodyES: "Desde Archivo → Caché oculta (.macfileexplorer)… inspeccioná cuántos archivos .macfileexplorer_dir.cache, .macfileexplorer_thumbs.cache y .macfileexplorer_ocr.cache hay y cuánto ocupan, o borralos para regenerarlos. Desde el menú MacFileExplorer podés buscar actualizaciones manualmente, cambiar entre los 5 íconos (Mono Oscuro por defecto) o abrir «Apoyar proyecto (Propina Ko-fi)…». Además, una vez cada 30 días aparece un aviso flotante discreto en la esquina inferior derecha que comprueba automáticamente si hay una nueva versión sin interrumpir tu trabajo (posponible o desactivable en un clic).",
+            bodyEN: "Under File → Hidden Cache (.macfileexplorer)… inspect total file count and disk usage of .macfileexplorer_*.cache files and wipe them to regenerate cleanly. From the MacFileExplorer menu check for updates manually, switch among the 5 app icons (Dark Mono by default), or open «Support Project (Ko-fi Tip)…». Once every 30 days a non-invasive floating corner card also checks automatically for new updates without interrupting your workflow (snoozable or permanently dismissible in one click)."
         )
     ]
 }
