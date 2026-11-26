@@ -153,7 +153,7 @@ public struct CommandBarView: View {
             } label: {
                 Label(loc.text(es: "Carpeta", en: "Folder"), systemImage: "folder.badge.plus")
             }
-            .keyboardShortcut("n", modifiers: [.command, .shift])
+            .optionalKeyboardShortcut(AppShortcutPreferences.shared.swiftUIShortcut(for: .newFolder))
 
             Divider()
 

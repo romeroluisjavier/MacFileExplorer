@@ -581,6 +581,8 @@ public struct AltTabSettingsView: View {
         stopShortcutRecording()
         recordingProfileID = profileID
         AltTabHotkeyMonitor.shared.isRecordingShortcut = true
+        ToolsShortcutManager.shared.setRecordingSuspended(true)
+        ClipboardHistoryManager.shared.setRecordingSuspended(true)
 
         localKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
             let consumed = MainActor.assumeIsolated { () -> Bool in
@@ -627,6 +629,8 @@ public struct AltTabSettingsView: View {
         }
         recordingProfileID = nil
         AltTabHotkeyMonitor.shared.isRecordingShortcut = false
+        ToolsShortcutManager.shared.setRecordingSuspended(false)
+        ClipboardHistoryManager.shared.setRecordingSuspended(false)
     }
 
     // MARK: - Helpers de UI y Bindings

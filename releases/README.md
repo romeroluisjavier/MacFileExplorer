@@ -2,7 +2,26 @@
 
 > ☕ **MacFileExplorer es 100% gratis y sin anuncios.** Si te resulta útil y querés colaborar con una **propina opcional** para apoyar el desarrollo, podés invitar un café en [**ko-fi.com/luisjavierromero**](https://ko-fi.com/luisjavierromero) *(o escanear el código QR desde *Acerca de MacFileExplorer* o *Ayuda → Historial de releases* dentro de la app)*.
 
-## Versión 2.5.1 (Versión Actual)
+## Versión 2.6.0 (Versión Actual)
+
+- **Instalador (GitHub Releases):** [`MacFileExplorer-2.6.0.dmg`](https://github.com/romeroluisjavier/MacFileExplorer/releases/download/v2.6.0/MacFileExplorer-2.6.0.dmg) *(copia local: [`./MacFileExplorer-2.6.0.dmg`](./MacFileExplorer-2.6.0.dmg))*
+- **Tamaño:** ~28 MB
+- **Arquitectura:** Binario Universal (`arm64` Apple Silicon + `x86_64` Intel)
+- **Requisitos del sistema:** macOS 14.0 (Sonoma) o posterior
+
+### Novedades principales en la v2.6.0:
+1. **Nuevo reproductor musical «Notch» (YouTube Music, Spotify y Apple Music)**: se integra de forma orgánica con el notch físico de tu MacBook (o como píldora flotante en cualquier monitor externo) sin robar foco, con carátula exacta, ecualizador animado, brillo ambiental del color de la portada, letras sincronizadas tipo karaoke en vivo, selector rápido de salida de audio, botones para reabrir tu última app musical cuando no suena nada y botón `✕` para cerrarlo por completo. Activable desde el nuevo menú superior **Notch** y personalizable desde **Configuración de Notch…**.
+2. **Barra de tareas inteligente sin scroll ni botones fantasma**:
+   - **Ajuste automático sin scroll horizontal (configurable)**: reduce suavemente el ancho de los botones cuando hay muchas ventanas abiertas para verlas todas sin cortes.
+   - **Apps fijadas primero en su mismo orden**: muestra primero las ventanas de tus apps fijadas con un pin sutil, divisor y aviso explicativo al arrastrar.
+   - **Sin botones fantasma de Preview**: oculta automáticamente Preview, QuickTime, TextEdit, Pages, Numbers y Keynote al cerrar su última ventana (personalizable con clic derecho y cierre con clic medio).
+   - **Ajuste instantáneo al maximizar**: Chrome y demás ventanas se ajustan arriba de la Barra de tareas casi al instante sin la demora previa de 1–2 segundos.
+3. **Administrador central de atajos y submenú «Herramientas (Tools)» con «View Desktop Shortcut» (`⌘D`)**: gestioná todos los atajos en una sola ventana desde *Archivo → Administrar todos los atajos de teclado…*, y usá `⌘D` para mostrar y enfocar el Escritorio desde cualquier app.
+4. **Nombres de configuración unificados y guía transparente de Permisos de macOS**: nombres coherentes en todos los menús (`Notch Settings…`, `Taskbar Settings…`, `AltTab Settings…`, `Clipboard Settings…`, `Tools Settings…`) y nueva sección *Permisos de macOS* en la Ayuda explicando por qué solo se solicita lo mínimo indispensable.
+
+---
+
+## Versión 2.5.1
 
 - **Instalador:** [`MacFileExplorer-2.5.1.dmg`](./MacFileExplorer-2.5.1.dmg)
 - **Tamaño:** ~24 MB

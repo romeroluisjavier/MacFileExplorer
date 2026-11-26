@@ -326,6 +326,21 @@ public struct TaskbarSettingsView: View {
                     }
                 }
 
+                Toggle(isOn: $prefs.orderWindowsByPinnedApps) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(loc.text(
+                            es: "Apps fijadas primero en la barra (en su mismo orden)",
+                            en: "Pinned apps' windows first (in pinned order)"
+                        ))
+                        Text(loc.text(
+                            es: "Las ventanas abiertas de tus apps fijadas aparecen primero respetando exactamente el orden de la barra de fijadas; al final quedan las ventanas de apps no fijadas.",
+                            en: "Open windows belonging to your pinned apps appear first in the exact order they are pinned, followed by windows of unpinned apps at the end."
+                        ))
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                    }
+                }
+
                 Toggle(isOn: $prefs.showWindowlessRunningApps) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(loc.text(
@@ -333,12 +348,40 @@ public struct TaskbarSettingsView: View {
                             en: "Show running apps with no open windows (like macOS Dock)"
                         ))
                         Text(loc.text(
-                            es: "Útil para apps como Visual Studio Code, Terminal o Numbers que siguen abiertas en segundo plano tras cerrar su última ventana. Al hacer clic se abre una ventana nueva.",
-                            en: "Useful for apps like Visual Studio Code, Terminal, or Numbers that stay running after closing their last window. Clicking reopens a window."
+                            es: "Útil para apps como Visual Studio Code, Terminal o Chrome que siguen abiertas en segundo plano tras cerrar su última ventana. Apps de solo documentos (como Preview, QuickTime o TextEdit) se ocultan automáticamente salvo que tengan un archivo abierto.",
+                            en: "Useful for apps like Visual Studio Code, Terminal, or Chrome that stay running after closing their last window. Document-only apps (like Preview, QuickTime, or TextEdit) hide automatically unless they have an open file."
                         ))
                         .font(.system(size: 11))
                         .foregroundStyle(.secondary)
                     }
+                }
+
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        Text(loc.text(es: "Al llenarse la barra (muchas ventanas):", en: "When Taskbar fills up (many windows):"))
+                            .font(.system(size: 12.5, weight: .medium))
+                        Spacer()
+                        Picker("", selection: $prefs.overflowMode) {
+                            ForEach(TaskbarOverflowMode.allCases) { mode in
+                                Text(mode.localizedTitle(using: loc)).tag(mode)
+                            }
+                        }
+                        .frame(width: 280)
+                    }
+
+                    Text(
+                        prefs.overflowMode == .shrinkToFit
+                            ? loc.text(
+                                es: "Reduce suavemente el ancho de los botones (y pasa a solo íconos si hay demasiadas ventanas) para que entren todas a la vista sin scroll ni cortes.",
+                                en: "Smoothly shrinks button widths (and switches to icons-only when very crowded) so every open window stays visible without scrolling or clipping."
+                            )
+                            : loc.text(
+                                es: "Mantiene un ancho mínimo legible por botón y habilita desplazamiento horizontal cuando las ventanas superan el ancho de la barra.",
+                                en: "Keeps a fixed minimum width per button and enables horizontal scrolling when open windows exceed the taskbar width."
+                            )
+                    )
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
                 }
 
                 Toggle(
@@ -1012,6 +1055,64 @@ public struct TaskbarSettingsView: View {
                 }
             }
 
+            sectionCard(title: loc.text(es: "Ocultar automáticamente cuando quedan sin ventanas (\(prefs.windowlessHiddenBundleIDs.count))", en: "Auto-Hide When Windowless (\(prefs.windowlessHiddenBundleIDs.count))")) {
+                Text(loc.text(
+                    es: "Estas apps aparecen normalmente cuando tienen un documento o ventana abierta, pero desaparecen de la barra apenas cerrás su última ventana (evita íconos fantasma como Preview).",
+                    en: "These apps show normally whenever they have an open file or window, and disappear automatically once their last window closes (prevents ghost buttons like Preview)."
+                ))
+                .font(.system(size: 11.5))
+                .foregroundStyle(.secondary)
+
+                HStack(spacing: 8) {
+                    Button {
+                        chooseApplicationToHideWhenWindowless()
+                    } label: {
+                        Label(loc.text(es: "Agregar aplicación…", en: "Add Application…"), systemImage: "macwindow.badge.minus")
+                    }
+
+                    Button {
+                        prefs.resetWindowlessHiddenAppsToDefaults()
+                    } label: {
+                        Label(loc.text(es: "Restablecer sugeridas", en: "Reset Suggested"), systemImage: "arrow.counterclockwise")
+                    }
+                    .disabled(prefs.windowlessHiddenBundleIDs == TaskbarPreferences.defaultWindowlessHiddenBundleIDs)
+                }
+
+                if prefs.windowlessHiddenBundleIDs.isEmpty {
+                    Text(loc.text(es: "Ninguna aplicación configurada.", en: "No applications configured."))
+                        .font(.system(size: 12))
+                        .foregroundStyle(.tertiary)
+                } else {
+                    VStack(spacing: 6) {
+                        ForEach(prefs.windowlessHiddenBundleIDs, id: \.self) { bundleID in
+                            let displayName = prefs.friendlyAppName(forBundleIdentifier: bundleID)
+                            HStack(spacing: 8) {
+                                Image(nsImage: TaskbarAppCatalogService.shared.icon(forBundleIdentifier: bundleID, fallbackURL: nil))
+                                    .resizable()
+                                    .frame(width: 18, height: 18)
+                                VStack(alignment: .leading, spacing: 0.5) {
+                                    Text(displayName)
+                                        .font(.system(size: 12, weight: .medium))
+                                    if displayName != bundleID {
+                                        Text(bundleID)
+                                            .font(.system(size: 10))
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+                                Spacer()
+                                Button {
+                                    prefs.removeAppHiddenWhenWindowless(bundleIdentifier: bundleID)
+                                } label: {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .foregroundStyle(.secondary)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    }
+                }
+            }
+
             sectionCard(title: loc.text(es: "Aplicaciones excluidas de la barra (\(prefs.excludedBundleIDs.count))", en: "Excluded Applications (\(prefs.excludedBundleIDs.count))")) {
                 Text(loc.text(
                     es: "Las apps listadas aquí no aparecerán como botones en la barra de tareas.",
@@ -1260,6 +1361,21 @@ public struct TaskbarSettingsView: View {
         for url in panel.urls {
             if let bundleID = Bundle(url: url)?.bundleIdentifier, !bundleID.isEmpty {
                 prefs.excludeApp(bundleIdentifier: bundleID)
+            }
+        }
+    }
+
+    private func chooseApplicationToHideWhenWindowless() {
+        let panel = NSOpenPanel()
+        panel.directoryURL = URL(fileURLWithPath: "/System/Applications")
+        panel.allowedContentTypes = [.applicationBundle]
+        panel.allowsMultipleSelection = true
+        panel.canChooseDirectories = false
+        panel.canChooseFiles = true
+        guard panel.runModal() == .OK else { return }
+        for url in panel.urls {
+            if let bundleID = Bundle(url: url)?.bundleIdentifier, !bundleID.isEmpty {
+                prefs.hideAppWhenWindowless(bundleIdentifier: bundleID)
             }
         }
     }

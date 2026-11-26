@@ -5,7 +5,8 @@ Un explorador de archivos nativo, ágil y moderno para macOS, inspirado en la pr
 ![macOS 14+](https://img.shields.io/badge/macOS-14.0%2B-blue?logo=apple)
 ![Swift 6](https://img.shields.io/badge/Swift-6.0-orange?logo=swift)
 ![Architecture](https://img.shields.io/badge/Architecture-Universal%20(Apple%20Silicon%20%2B%20Intel)-brightgreen)
-![Release](https://img.shields.io/badge/Release-v2.5.1-blueviolet)
+![Release](https://img.shields.io/badge/Release-v2.6.0-blueviolet)
+[![Downloads](https://img.shields.io/github/downloads/romeroluisjavier/MacFileExplorer/total?label=Downloads&color=0071E3)](https://github.com/romeroluisjavier/MacFileExplorer/releases)
 [![Support me on Ko-fi](https://img.shields.io/badge/Ko--fi-Support%20me%20(Optional%20Tip)-F57373?logo=ko-fi&logoColor=white)](https://ko-fi.com/luisjavierromero)
 
 🌐 **Sitio web oficial con demos en vivo e instalación paso a paso:** [romeroluisjavier.github.io/MacFileExplorer](https://romeroluisjavier.github.io/MacFileExplorer/)
@@ -24,9 +25,9 @@ Un explorador de archivos nativo, ágil y moderno para macOS, inspirado en la pr
         <img src="https://img.shields.io/badge/☕%20Support%20me%20on%20Ko--fi-ko--fi.com%2Fluisjavierromero-F57373?style=for-the-badge" alt="Support me on Ko-fi" />
       </a>
     </td>
-    <td align="center" width="150">
+    <td align="center" width="185">
       <a href="https://ko-fi.com/luisjavierromero" target="_blank">
-        <img src="./GithubPages/assets/kofi-qr.png" width="124" alt="Ko-fi QR Code" />
+        <img src="./GithubPages/assets/kofi-qr.png" width="164" alt="Ko-fi QR Code" />
       </a><br/>
       <sub>Escaneá el QR · Scan QR</sub>
     </td>
@@ -35,12 +36,12 @@ Un explorador de archivos nativo, ágil y moderno para macOS, inspirado en la pr
 
 ---
 
-## ✨ Novedades recientes (v2.5.1)
+## ✨ Novedades recientes (v2.6.0)
 
-- 🧭 **Botón Inicio sin robar foco**: al abrir el Menú Inicio desde la Barra de tareas mientras trabajás en otra app (Chrome, Slack, etc.), se despliega encima con el buscador listo para escribir manteniendo en primer plano la aplicación donde estabas, sin traer al frente las ventanas de `MacFileExplorer`.
-- ☕ **Propina opcional en Ko-fi y aviso mensual discreto con chequeo de actualizaciones**: tarjeta con botón Ko-fi y QR en *Acerca de* (ahora más ancha, redimensionable y en formato horizontal) y en *Historial de releases*, más un aviso flotante no invasivo 1 vez cada 30 días que también comprueba automáticamente si existe una nueva versión disponible.
-- 🖤 **Nuevo ícono predeterminado «Mono Oscuro»**: diseño minimalista blanco sobre negro como ícono oficial por defecto en la app (`.icns`), el instalador `.dmg` y el sitio web (manteniendo los 5 diseños seleccionables).
-- 🖼️ **Todo lo de v2.5.0 incluido**: Acciones rápidas y Copiar (`⌘C`) dentro del Preview de imágenes y videos, Vista Rápida libre entre monitores, íconos rojos estilo Acrobat para PDFs, editor Office/CSV con selección de múltiples filas y columnas arrastrando con el mouse, «Enviar a Drive» en la barra de estado inferior y Barra de tareas con 1 s drag-hover, agrupación lado a lado y modo Solo íconos.
+- 🎵 **Nuevo reproductor musical «Notch» (YouTube Music, Spotify y Apple Music)**: transforma el Notch de tu MacBook (o la parte superior de cualquier monitor en modo píldora flotante) en un reproductor fluido sin robar foco, con carátula exacta, ecualizador animado, brillo ambiental, barra de progreso, letras sincronizadas tipo karaoke, cambio rápido de salida de audio, botones para reabrir tu última app musical cuando no suena nada y cruz `✕` para cerrarlo por completo (activable desde el nuevo menú superior **Notch**).
+- 🧭 **Barra de tareas inteligente (v2.6.0)**: ajuste automático de ancho sin scroll horizontal cuando hay muchas ventanas abiertas (configurable), opción **Apps fijadas primero en su mismo orden** (con pin sutil, divisor y aviso al arrastrar), ocultamiento automático de **Preview** y apps de documentos cuando no tienen ventanas, y ajuste instantáneo al maximizar ventanas como Chrome.
+- ⌨️ **Administrador central de atajos + submenú «Herramientas (Tools)» con `⌘D` (View Desktop)**: buscá, personalizá y revisá conflictos de todos los atajos desde *Archivo → Administrar todos los atajos de teclado…*, y usá **`⌘D`** desde cualquier app para mostrar y enfocar el Escritorio de tu Mac.
+- 🛡️ **Guía transparente de Permisos de macOS y nombres unificados**: nueva sección *Permisos de macOS* en la Ayuda explicando qué pide cada función y por qué es lo mínimo necesario, más nombres de configuración unificados en todos los menús (`Notch Settings…`, `Taskbar Settings…`, `AltTab Settings…`, `Clipboard Settings…`, `Tools Settings…`).
 
 ---
 
@@ -76,13 +77,13 @@ Un explorador de archivos nativo, ágil y moderno para macOS, inspirado en la pr
 ## 📥 Cómo descargar y usar (Paso a paso)
 
 ### 1. Descargar el instalador
-Descarga la versión más reciente en formato `.dmg` directamente desde este repositorio:
-- 👉 **[Descargar MacFileExplorer-2.5.1.dmg](https://github.com/romeroluisjavier/MacFileExplorer/raw/main/releases/MacFileExplorer-2.5.1.dmg)** *(ubicado en la carpeta [`releases/`](./releases) — también podés ver el historial en [`releases/README.md`](./releases/README.md))*
+Descarga la versión más reciente en formato `.dmg` directamente desde GitHub Releases:
+- 👉 **[Descargar MacFileExplorer-2.6.0.dmg](https://github.com/romeroluisjavier/MacFileExplorer/releases/download/v2.6.0/MacFileExplorer-2.6.0.dmg)** *(también disponible en [GitHub Releases](https://github.com/romeroluisjavier/MacFileExplorer/releases) y en [`releases/README.md`](./releases/README.md))*
 
 ---
 
 ### 2. Instalación en tu Mac
-1. Haz doble clic en el archivo descargado **`MacFileExplorer-2.5.1.dmg`**.
+1. Haz doble clic en el archivo descargado **`MacFileExplorer-2.6.0.dmg`**.
 2. Arrastra el icono de **MacFileExplorer** a la carpeta **Applications** (Aplicaciones).
 
 ---

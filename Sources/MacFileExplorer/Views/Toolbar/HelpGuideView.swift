@@ -9,6 +9,7 @@ public enum HelpGuideSection: String, CaseIterable, Identifiable, Sendable {
     case features
     case shortcuts
     case settings
+    case permissions
     case releases
 
     public var id: String { rawValue }
@@ -21,6 +22,7 @@ public enum HelpGuideSection: String, CaseIterable, Identifiable, Sendable {
         case .features: return "square.grid.2x2.fill"
         case .shortcuts: return "keyboard"
         case .settings: return "slider.horizontal.3"
+        case .permissions: return "lock.shield.fill"
         case .releases: return "sparkles"
         }
     }
@@ -34,6 +36,7 @@ public enum HelpGuideSection: String, CaseIterable, Identifiable, Sendable {
         case .features: return loc.text(es: "Todas las funciones", en: "All Features")
         case .shortcuts: return loc.text(es: "Atajos de teclado", en: "Keyboard Shortcuts")
         case .settings: return loc.text(es: "Configuraciones", en: "Settings")
+        case .permissions: return loc.text(es: "Permisos de macOS", en: "macOS Permissions")
         case .releases: return loc.text(es: "Historial de releases", en: "Release History")
         }
     }
@@ -143,6 +146,8 @@ private struct HelpShortcutRow: Identifiable {
 public struct HelpGuideView: View {
     @Environment(\.colorScheme) private var colorScheme
     @Bindable private var loc = LocalizationManager.shared
+    @Bindable private var windowTracker = TaskbarWindowTracker.shared
+    @Bindable private var thumbnailService = TaskbarThumbnailService.shared
 
     @ViewState private var selectedSection: HelpGuideSection
     @ViewState private var searchText: String = ""
@@ -443,12 +448,26 @@ public struct HelpGuideView: View {
                 icon: "slider.horizontal.3",
                 titleES: "Todas las configuraciones posibles",
                 titleEN: "All Available Settings & Preferences",
-                subtitleES: "Podés personalizar vistas, idioma, carpetas visibles en Acceso rápido, portapapeles Maccy, ratón, marcadores, Slack y caché oculta.",
-                subtitleEN: "Customize view modes, language, visible Quick Access folders, Maccy clipboard, mouse buttons, bookmarks, Slack, and hidden cache."
+                subtitleES: "Podés personalizar vistas, idioma, carpetas visibles en Acceso rápido, portapapeles Maccy, ratón, marcadores, Slack, atajos y herramientas.",
+                subtitleEN: "Customize view modes, language, visible Quick Access folders, Maccy clipboard, mouse buttons, bookmarks, Slack, shortcuts, and tools."
             )
             ForEach(Self.settingsTopics) { card in
                 topicCardView(card)
             }
+
+        case .permissions:
+            introBanner(
+                icon: "lock.shield.fill",
+                titleES: "Permisos de macOS: pedimos solo lo mínimo y necesario",
+                titleEN: "macOS Permissions: Strictly Minimum & Necessary",
+                subtitleES: "MacFileExplorer respeta tu privacidad. Solo solicita permisos del sistema cuando activás o usás una función específica que los requiere. Ningún permiso es obligatorio para usar el Explorador básico, y todo se procesa 100% localmente en tu Mac sin telemetría ni envío de capturas o archivos a servidores externos.",
+                subtitleEN: "MacFileExplorer respects your privacy. It requests system permissions only when you enable or use a specific feature that needs them. No special permission is required for basic file browsing, and everything runs 100% locally on your Mac with zero telemetry or external data sharing."
+            )
+            permissionsLiveStatusCard
+            ForEach(Self.permissionTopics) { card in
+                topicCardView(card)
+            }
+            permissionsSystemShortcutsCard
 
         case .releases:
             introBanner(
@@ -468,7 +487,7 @@ public struct HelpGuideView: View {
     @ViewBuilder
     private var searchResultsContent: some View {
         let q = trimmedSearch
-        let matchingCards = (Self.highlightedTopics + Self.sidebarTopics + Self.searchTopics + Self.allFeatureTopics + Self.settingsTopics)
+        let matchingCards = (Self.highlightedTopics + Self.sidebarTopics + Self.searchTopics + Self.allFeatureTopics + Self.settingsTopics + Self.permissionTopics)
             .filter { card in
                 matches(card.titleES, query: q) || matches(card.titleEN, query: q)
                     || matches(card.bodyES, query: q) || matches(card.bodyEN, query: q)
@@ -723,6 +742,193 @@ public struct HelpGuideView: View {
     private func matches(_ text: String, query: String) -> Bool {
         text.range(of: query, options: [.caseInsensitive, .diacriticInsensitive]) != nil
     }
+
+    // MARK: - Panel en Vivo y Accesos Rápidos de Permisos de macOS
+
+    private var permissionsLiveStatusCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                Image(systemName: "checkmark.shield.fill")
+                    .font(.system(size: 13.5, weight: .semibold))
+                    .foregroundStyle(Color.accentColor)
+                Text(loc.text(
+                    es: "Estado actual de permisos opcionales en esta Mac",
+                    en: "Live Status of Optional Permissions on This Mac"
+                ))
+                .font(.system(size: 12.5, weight: .bold))
+
+                Spacer()
+
+                Button {
+                    refreshPermissionStatuses()
+                } label: {
+                    Label(
+                        loc.text(es: "Actualizar estado", en: "Refresh Status"),
+                        systemImage: "arrow.clockwise"
+                    )
+                    .font(.system(size: 11))
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+            }
+
+            HStack(spacing: 10) {
+                livePermissionPill(
+                    title: loc.text(es: "Accesibilidad", en: "Accessibility"),
+                    subtitle: loc.text(es: "Barra de tareas, AltTab, auto-pegado", en: "Taskbar, AltTab, Auto-paste"),
+                    isGranted: windowTracker.isAccessibilityGranted,
+                    openAction: {
+                        windowTracker.openAccessibilitySettings()
+                    }
+                )
+
+                livePermissionPill(
+                    title: loc.text(es: "Grabación de pantalla", en: "Screen Recording"),
+                    subtitle: loc.text(es: "Solo miniaturas de ventanas", en: "Window thumbnails only"),
+                    isGranted: thumbnailService.hasScreenRecordingPermission,
+                    openAction: {
+                        thumbnailService.openScreenRecordingSettings()
+                    }
+                )
+            }
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(Color.primary.opacity(0.04))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .strokeBorder(Color.primary.opacity(0.08), lineWidth: 0.8)
+        )
+        .onAppear {
+            refreshPermissionStatuses()
+        }
+    }
+
+    private func livePermissionPill(
+        title: String,
+        subtitle: String,
+        isGranted: Bool,
+        openAction: @escaping () -> Void
+    ) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: isGranted ? "checkmark.circle.fill" : "circle.dashed")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(isGranted ? Color.green : Color.secondary)
+
+            VStack(alignment: .leading, spacing: 1) {
+                HStack(spacing: 5) {
+                    Text(title)
+                        .font(.system(size: 12, weight: .semibold))
+                    Text(isGranted
+                        ? loc.text(es: "Activo", en: "Enabled")
+                        : loc.text(es: "No habilitado", en: "Not enabled"))
+                        .font(.system(size: 9.5, weight: .semibold))
+                        .foregroundStyle(isGranted ? Color.green : Color.secondary)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 1.5)
+                        .background(
+                            Capsule()
+                                .fill(isGranted ? Color.green.opacity(0.14) : Color.primary.opacity(0.08))
+                        )
+                }
+                Text(subtitle)
+                    .font(.system(size: 10.5))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: 4)
+
+            Button(loc.text(es: "Abrir", en: "Open")) {
+                openAction()
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.mini)
+        }
+        .padding(9)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(Color(nsColor: .controlBackgroundColor).opacity(0.75))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .strokeBorder(isGranted ? Color.green.opacity(0.28) : Color.primary.opacity(0.08), lineWidth: 0.8)
+        )
+    }
+
+    private var permissionsSystemShortcutsCard: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(loc.text(
+                es: "Accesos directos a Ajustes del Sistema (Privacidad y Seguridad)",
+                en: "Quick Links to macOS System Settings (Privacy & Security)"
+            ))
+            .font(.system(size: 12, weight: .semibold))
+            .foregroundStyle(.secondary)
+
+            HStack(spacing: 8) {
+                Button {
+                    openPrivacyPane("Privacy_FilesAndFolders")
+                } label: {
+                    Label(loc.text(es: "Archivos y carpetas", en: "Files & Folders"), systemImage: "folder")
+                        .font(.system(size: 11.5))
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+
+                Button {
+                    windowTracker.openAccessibilitySettings()
+                } label: {
+                    Label(loc.text(es: "Accesibilidad", en: "Accessibility"), systemImage: "figure.walk.circle")
+                        .font(.system(size: 11.5))
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+
+                Button {
+                    thumbnailService.openScreenRecordingSettings()
+                } label: {
+                    Label(loc.text(es: "Grabación de pantalla", en: "Screen Recording"), systemImage: "rectangle.dashed.badge.record")
+                        .font(.system(size: 11.5))
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+
+                Button {
+                    openPrivacyPane("Privacy_Automation")
+                } label: {
+                    Label(loc.text(es: "Automatización", en: "Automation"), systemImage: "gearshape.2")
+                        .font(.system(size: 11.5))
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+            }
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(Color.primary.opacity(0.035))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .strokeBorder(Color.primary.opacity(0.07), lineWidth: 0.8)
+        )
+    }
+
+    private func refreshPermissionStatuses() {
+        _ = windowTracker.checkAccessibilityPermission(prompt: false)
+        _ = thumbnailService.refreshPermissionStatus()
+    }
+
+    private func openPrivacyPane(_ anchor: String) {
+        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?\(anchor)") {
+            NSWorkspace.shared.open(url)
+        }
+    }
 }
 
 // MARK: - Catálogo Estructurado de Contenidos de la Ayuda
@@ -730,6 +936,16 @@ public struct HelpGuideView: View {
 extension HelpGuideView {
 
     private static let highlightedTopics: [HelpTopicCard] = [
+        HelpTopicCard(
+            id: "hl-notch-music-player",
+            icon: "waveform",
+            badgeES: "Nuevo · v2.5.1",
+            badgeEN: "New · v2.5.1",
+            titleES: "Reproductor de música Notch (Menú superior «Notch»)",
+            titleEN: "Notch Music Player («Notch» Top Menu)",
+            bodyES: "Integrado directamente alrededor del Notch de tu MacBook (o en el borde superior de cualquier pantalla), muestra lo que estás escuchando en YouTube Music, Spotify, Apple Music o el navegador sin tapar tu trabajo ni robar foco. En modo compacto muestra la carátula con anillo de progreso y un ecualizador animado a los lados del Notch; al pasar el puntero o hacer clic se despliega con animaciones fluidas, brillo ambiental del color del álbum, barra de progreso interactiva, controles de reproducción, selector rápido de salida de audio y letras sincronizadas estilo karaoke. Activá, probá con una canción demo o personalizá cada detalle desde el menú superior «Notch».",
+            bodyEN: "Seamlessly integrated around your MacBook's notch (or the top center of any display), showing what's playing in YouTube Music, Spotify, Apple Music, or your browser without interrupting your work or stealing focus. While collapsed, it displays album artwork with a progress ring and animated equalizer bars on either side of the notch; hover or click to smoothly expand into a rich player with ambient album-art glow, interactive progress scrubber, playback controls, quick audio output switcher, and synced karaoke lyrics. Enable it, try the built-in Demo track, or customize every detail from the top «Notch» menu."
+        ),
         HelpTopicCard(
             id: "hl-quicklook-media-actions-free-move",
             icon: "wand.and.stars",
@@ -753,12 +969,12 @@ extension HelpGuideView {
         HelpTopicCard(
             id: "hl-windows-taskbar",
             icon: "dock.rectangle",
-            badgeES: "Nuevo · v2.5.1",
-            badgeEN: "New · v2.5.1",
-            titleES: "Barra de tareas estilo Windows: Menú Inicio sin robar foco, Arrastrar a apps (1 s), Agrupación y Solo íconos",
-            titleEN: "Windows-Style Taskbar: Non-Activating Start Menu, Drag-to-Open (1 s), Grouping & Icons Only",
-            bodyES: "Activable desde el menú superior Barra de tareas (apagada por defecto y sin tocar el Dock original). Muestra un botón por ventana con miniaturas en vivo, apps fijadas, Menú Inicio con 8 animaciones (o 0 ms instantáneo) que flota encima sin traer al frente las ventanas de MacFileExplorer ni quitar el foco de la app donde estabas trabajando, soporte hasta 5 monitores y 3 mejoras clave de productividad:\n• Arrastrar archivos sobre la barra: mantené un archivo quieto 1 segundo sobre cualquier app o ventana de la barra (incluso minimizada) para traerla al frente sin soltar el archivo y soltarlo directo adentro.\n• Agrupación lado a lado: mantené juntas todas las ventanas de una misma app (ej. varias ventanas de Chrome), incluso las que abrís más tarde.\n• Modo «Solo íconos» y «Solo ícono en ventanas minimizadas»: elegí si querés ver toda la barra solo con íconos o compactar únicamente las ventanas minimizadas u ocultas para dar más lugar a las abiertas.",
-            bodyEN: "Toggle on or off from the top Taskbar menu (off by default without touching your macOS Dock). Shows one button per window with live hover thumbnails, pinned apps, a searchable Start Menu with 8 animations (or 0 ms instant) that floats cleanly above your active app without raising MacFileExplorer windows, up to 5 displays, and 3 key productivity upgrades:\n• Drag files onto the Taskbar: hover and hold still for 1 second over any app or window button (even if minimized) to bring it straight to the front without releasing your file, then drop it inside.\n• Keep same-app windows side by side: automatically keeps windows of the same app (such as multiple Chrome windows) next to each other, even ones opened later.\n• Icons-Only & Compact Minimized modes: switch the entire bar to icons only, or keep titles on open windows while collapsing minimized/hidden windows to compact icons."
+            badgeES: "Nuevo · v2.6",
+            badgeEN: "New · v2.6",
+            titleES: "Barra de tareas estilo Windows: Sin scroll, Apps fijadas primero, Sin fantasma de Preview y Ajuste instantáneo",
+            titleEN: "Windows-Style Taskbar: Auto-Shrink No-Scroll, Pinned Apps First, Auto-Hide Preview & Instant Maximize",
+            bodyES: "Activable desde el menú superior Barra de tareas (apagada por defecto y sin tocar el Dock original). Muestra un botón por ventana con miniaturas en vivo, apps fijadas, Menú Inicio con 8 animaciones (o 0 ms instantáneo) sin robar foco a tu app actual y soporte hasta 5 monitores:\n• Ajuste automático sin scroll (configurable): al abrir muchas ventanas reduce el ancho suavemente (o compacta a íconos) para verlas todas sin cortes ni scroll horizontal.\n• Apps fijadas primero en su mismo orden: muestra primero las ventanas de tus apps fijadas respetando su orden (con un pin sutil y divisor) y avisa al intentar arrastrarlas.\n• Sin botones fantasma de Preview: oculta automáticamente Preview, QuickTime, TextEdit, Pages, Numbers y Keynote cuando cerrás su última ventana (configurable con clic derecho), y ajusta al instante las ventanas maximizadas como Chrome para que nunca queden detrás de la barra.\n• Arrastrar archivos sobre la barra (1 s), Agrupación lado a lado y modos «Solo íconos» o «Solo ícono en minimizadas».",
+            bodyEN: "Toggle on or off from the top Taskbar menu (off by default without touching your macOS Dock). Shows one button per window with live hover thumbnails, pinned apps, a non-activating searchable Start Menu with 8 animations (or 0 ms instant), and up to 5 displays:\n• Auto-shrink buttons without horizontal scroll (configurable): smoothly narrows buttons (and compacts to icons when crowded) so every window stays visible without clipping.\n• Pinned apps' windows first (in pinned order): places open windows of pinned apps first in their exact pinned order with a subtle pin indicator and divider.\n• No windowless Preview ghosts & instant maximize fit: automatically hides Preview, QuickTime, TextEdit, Pages, Numbers, and Keynote once their last window closes (customizable via right-click), and snaps maximized windows like Chrome cleanly above the bar almost instantaneously.\n• 1 s drag-hover to raise apps while dragging files, side-by-side grouping, and Icons-Only / Compact Minimized modes."
         ),
         HelpTopicCard(
             id: "hl-alttab-switcher",
@@ -946,10 +1162,10 @@ extension HelpGuideView {
         HelpTopicCard(
             id: "af-taskbar-full",
             icon: "dock.rectangle",
-            titleES: "Barra de tareas: Arrastrar a apps (1 s), Agrupación, Solo íconos, Isla flotante y Multimonitor",
-            titleEN: "Taskbar: Drag-to-Open (1 s), Grouping, Icons Only, Floating Island & Multi-Monitor",
-            bodyES: "Desde el menú Barra de tareas encendé una barra inferior estilo Windows (borde a borde o Isla flotante) con un botón por ventana, vistas previas emergentes, apps fijadas, Menú Inicio con 8 animaciones, hasta 5 monitores y Spaces. Podés arrastrar cualquier archivo y dejarlo quieto 1 segundo sobre una app de la barra para que se abra al frente y soltar el archivo adentro, mantener ventanas de la misma app una al lado de la otra, y elegir entre «Ícono y título», «Solo íconos» o «Solo ícono en ventanas minimizadas».",
-            bodyEN: "Enable a Windows-style bottom bar (Edge-to-Edge or Floating Island) from the Taskbar menu with one button per window, hover previews, pinned apps, Start Menu with 8 animations, up to 5 displays, and Spaces sync. Drag any file and hold still for 1 second over a taskbar button to bring that app to the front and drop the file inside, keep same-app windows side by side, and switch between Icon & Title, Icons Only, or Icon Only for Minimized Windows."
+            titleES: "Barra de tareas: Sin scroll, Apps fijadas primero, Sin fantasma de Preview, Arrastrar (1 s) e Isla flotante",
+            titleEN: "Taskbar: No-Scroll Auto-Shrink, Pinned Apps First, Auto-Hide Preview, Drag-to-Open (1 s) & Floating Island",
+            bodyES: "Desde el menú Barra de tareas encendé una barra inferior estilo Windows (borde a borde o Isla flotante) con un botón por ventana, vistas previas emergentes, apps fijadas, Menú Inicio sin robar foco (8 animaciones), hasta 5 monitores y Spaces. Incluye ajuste automático de ancho sin scroll horizontal, orden «Apps fijadas primero en su mismo orden», ocultamiento automático de Preview y apps de documentos sin ventanas, ajuste instantáneo al maximizar ventanas (como Chrome), arrastrar archivos 1 s sobre un botón para abrir esa app, agrupación lado a lado y modos «Solo íconos» o «Solo ícono en minimizadas».",
+            bodyEN: "Enable a Windows-style bottom bar (Edge-to-Edge or Floating Island) from the Taskbar menu with one button per window, hover previews, pinned apps, non-activating Start Menu (8 animations), up to 5 displays, and Spaces sync. Includes auto-shrinking buttons without horizontal scroll, «Pinned Apps' Windows First (in Pinned Order)», automatic hiding of windowless Preview & document apps, instant maximize fit above the bar (for Chrome & all apps), 1 s drag-hover to raise apps, same-app grouping, and Icons Only / Compact Minimized modes."
         ),
         HelpTopicCard(
             id: "af-alttab-full",
@@ -962,6 +1178,7 @@ extension HelpGuideView {
     ]
 
     private static let allShortcuts: [HelpShortcutRow] = [
+        HelpShortcutRow(id: "sc-view-desktop", categoryES: "Herramientas (Global)", categoryEN: "Tools (Global)", keys: "⌘ D", actionES: "Mostrar y poner en foco el Escritorio de la Mac desde cualquier app (personalizable en Archivo → Herramientas)", actionEN: "Reveal and focus your Mac Desktop from any app (customizable under File → Tools)"),
         HelpShortcutRow(id: "sc-tab-new", categoryES: "Pestañas y Ventanas", categoryEN: "Tabs & Windows", keys: "⌘ T", actionES: "Abrir nueva pestaña de carpetas en la ruta actual", actionEN: "Open new folder tab at current location"),
         HelpShortcutRow(id: "sc-tab-close", categoryES: "Pestañas y Ventanas", categoryEN: "Tabs & Windows", keys: "⇧ ⌘ T", actionES: "Cerrar pestaña actual", actionEN: "Close current tab"),
         HelpShortcutRow(id: "sc-address", categoryES: "Navegación", categoryEN: "Navigation", keys: "⌘ L", actionES: "Editar barra de direcciones (escribir o pegar ruta)", actionEN: "Edit address bar (type or paste path)"),
@@ -998,6 +1215,22 @@ extension HelpGuideView {
 
     private static let settingsTopics: [HelpTopicCard] = [
         HelpTopicCard(
+            id: "cfg-notch",
+            icon: "waveform",
+            titleES: "Reproductor Notch, carátula, letras y pantallas (Menú Notch)",
+            titleEN: "Notch Music Player, Artwork, Lyrics & Displays (Notch Menu)",
+            bodyES: "Arranca desactivado por defecto y se controla desde el menú superior «Notch» o «Configuración de Notch…». Detecta canción, artista, progreso y carátula exacta de YouTube Music (app o navegador), Spotify y Apple Music; ofrece accesos rápidos para volver a abrir tu último reproductor cuando no suena música, y el botón «✕» cierra y oculta el Notch por completo. Podés configurar inicio automático, letras sincronizadas, anuncios al cambiar de tema, brillo ambiental, estilo de carátula, tamaño, pantallas, apertura por puntero o clic, swipe horizontal y ocultamiento en pantalla completa o en pausa.",
+            bodyEN: "Starts disabled by default and is managed from the top «Notch» menu or «Notch Settings…». Reads exact song, artist, progress, and cover art from YouTube Music (app or browser), Spotify, and Apple Music; shows quick buttons to reopen your last music app when idle, and the «✕» button closes and hides the Notch completely. Configure launch-on-startup, synced lyrics, track-change announcements, ambient glow, artwork style, sizing, displays, hover vs click expansion, horizontal swipe, and full-screen or paused auto-hide."
+        ),
+        HelpTopicCard(
+            id: "cfg-shortcuts-and-tools",
+            icon: "wrench.and.screwdriver.fill",
+            titleES: "Administrador de todos los atajos y submenú «Herramientas» (Menú Archivo)",
+            titleEN: "All Keyboard Shortcuts Manager & «Tools» Submenu (File Menu)",
+            bodyES: "Desde Archivo → Administrar todos los atajos de teclado… podés buscar, activar, cambiar y restablecer en un solo lugar los atajos de Herramientas, Explorador, Portapapeles Maccy y AltTab con detección de conflictos. En Archivo → Herramientas (Tools) encontrás configuraciones modulares como «View Desktop Shortcut» (⌘D por defecto para mostrar y enfocar el Escritorio, con presets rápidos y elección entre Mission Control o estilo Win+D).",
+            bodyEN: "Under File → Manage All Keyboard Shortcuts… you can search, toggle, customize, and reset shortcuts across Tools, File Explorer, Maccy Clipboard, and AltTab with automatic conflict detection. Under File → Tools you'll find extensible tool settings starting with «View Desktop Shortcut» (⌘D by default to show and focus your Mac Desktop, with quick presets and choice between Mission Control or Win+D mode)."
+        ),
+        HelpTopicCard(
             id: "cfg-alttab",
             icon: "rectangle.stack.fill",
             titleES: "Selector AltTab, estilos, vista previa y atajos (Menú AltTab)",
@@ -1016,10 +1249,10 @@ extension HelpGuideView {
         HelpTopicCard(
             id: "cfg-taskbar",
             icon: "dock.rectangle",
-            titleES: "Barra de tareas, apariencia, agrupación, solo íconos, monitores y Dock (Menú Barra de tareas)",
-            titleEN: "Taskbar, Appearance, Grouping, Icons Only, Displays & Dock (Taskbar Menu)",
-            bodyES: "Arranca desactivada por defecto con el Dock original de macOS intacto. Desde Barra de tareas → Configuración (o clic derecho sobre la barra) podés elegir inicio automático, Isla flotante o barra acoplada, línea divisoria superior, material de fondo, estilo de botones, indicador activo en 6 colores, «Solo íconos», «Solo ícono en ventanas minimizadas», «Agrupar ventanas de la misma app lado a lado», 8 animaciones del Menú Inicio (incluyendo 0 ms instantáneo), 5 íconos de MacFileExplorer, multimonitor y restauración de emergencia del Dock.",
-            bodyEN: "Starts disabled by default with your original macOS Dock untouched. Under Taskbar → Settings (or by right-clicking the bar) you can configure auto-launch, Floating Island vs Edge-to-Edge bar, top divider line, background material, button shapes, active indicator in 6 colors, «Icons Only», «Icon Only for Minimized Windows», «Keep Same-App Windows Side by Side», 8 Start Menu animations (including 0 ms instant), 5 MacFileExplorer app icons, multi-monitor rules, and one-click emergency Dock restore."
+            titleES: "Barra de tareas, sin scroll, apps fijadas primero, Preview, apariencia y Dock (Configuración de la Barra de tareas)",
+            titleEN: "Taskbar Settings: Auto-Shrink, Pinned Apps First, Preview Auto-Hide, Appearance & Dock",
+            bodyES: "Arranca desactivada por defecto con el Dock original de macOS intacto. Desde «Configuración de la Barra de tareas…» (o clic derecho sobre la barra) podés elegir inicio automático, «Ajustar ancho sin scroll horizontal» vs scroll horizontal, «Apps fijadas primero en la barra (en su mismo orden)», ocultar automáticamente apps de documentos sin ventanas como Preview (y clic medio para cerrarlas), Isla flotante o barra acoplada, línea divisoria, material de fondo, estilo de botones, indicador en 6 colores, «Solo íconos», agrupación lado a lado, 8 animaciones del Menú Inicio (incluyendo 0 ms), 5 íconos de app, multimonitor y restauración de emergencia del Dock.",
+            bodyEN: "Starts disabled by default with your original macOS Dock untouched. Under «Taskbar Settings…» (or right-clicking the bar) configure launch-on-startup, «Auto-Shrink Buttons (No Scroll)» vs horizontal scroll, «Pinned Apps' Windows First (in Pinned Order)», auto-hiding windowless document apps like Preview (plus middle-click quit), Floating Island vs Edge-to-Edge, top divider, background material, button shapes, active indicator in 6 colors, «Icons Only», side-by-side grouping, 8 Start Menu animations (including 0 ms), 5 app icons, multi-monitor rules, and one-click emergency Dock restore."
         ),
         HelpTopicCard(
             id: "cfg-language",
@@ -1058,8 +1291,8 @@ extension HelpGuideView {
             icon: "doc.on.clipboard",
             titleES: "Historial del Portapapeles Maccy (Menú Portapapeles)",
             titleEN: "Maccy Clipboard History Settings (Clipboard Menu)",
-            bodyES: "Activá o desactivá el guardado automático, configurá Tiempo de retención (1 día, 7 días, 30 días o Sin límite), Cantidad máxima (50 a 1000 ítems), Cantidad visible en el desplegable rápido (5 a 20), Pegar automáticamente tras seleccionar, y personalizá todos los atajos de teclado desde el Panel de atajos y ajustes.",
-            bodyEN: "Enable/disable history recording, set Retention Time (1 day, 7 days, 30 days, or Unlimited), Maximum Items (50–1000), Quick Dropdown count (5–20), Auto-paste on selection, and customize every shortcut in the Shortcuts & Settings panel."
+            bodyES: "Activá o desactivá el guardado automático, configurá Tiempo de retención (1 día, 7 días, 30 días o Sin límite), Cantidad máxima (50 a 1000 ítems), Cantidad visible en el desplegable rápido (5 a 20), Pegar automáticamente tras seleccionar, y personalizá todos los atajos de teclado desde Configuración del Portapapeles.",
+            bodyEN: "Enable/disable history recording, set Retention Time (1 day, 7 days, 30 days, or Unlimited), Maximum Items (50–1000), Quick Dropdown count (5–20), Auto-paste on selection, and customize every shortcut in Clipboard Settings."
         ),
         HelpTopicCard(
             id: "cfg-cache-updates",
@@ -1068,6 +1301,59 @@ extension HelpGuideView {
             titleEN: "Hidden Cache (.macfileexplorer), Monthly Update Check-In, Dark Mono Icon & Optional Ko-fi Tip",
             bodyES: "Desde Archivo → Caché oculta (.macfileexplorer)… inspeccioná cuántos archivos .macfileexplorer_dir.cache, .macfileexplorer_thumbs.cache y .macfileexplorer_ocr.cache hay y cuánto ocupan, o borralos para regenerarlos. Desde el menú MacFileExplorer podés buscar actualizaciones manualmente, cambiar entre los 5 íconos (Mono Oscuro por defecto) o abrir «Apoyar proyecto (Propina Ko-fi)…». Además, una vez cada 30 días aparece un aviso flotante discreto en la esquina inferior derecha que comprueba automáticamente si hay una nueva versión sin interrumpir tu trabajo (posponible o desactivable en un clic).",
             bodyEN: "Under File → Hidden Cache (.macfileexplorer)… inspect total file count and disk usage of .macfileexplorer_*.cache files and wipe them to regenerate cleanly. From the MacFileExplorer menu check for updates manually, switch among the 5 app icons (Dark Mono by default), or open «Support Project (Ko-fi Tip)…». Once every 30 days a non-invasive floating corner card also checks automatically for new updates without interrupting your workflow (snoozable or permanently dismissible in one click)."
+        )
+    ]
+
+    private static let permissionTopics: [HelpTopicCard] = [
+        HelpTopicCard(
+            id: "perm-files-folders",
+            icon: "folder.fill.badge.person.crop",
+            badgeES: "Básico · Solo por carpeta",
+            badgeEN: "Core · Per-folder only",
+            titleES: "1. Archivos y Carpetas (Escritorio, Documentos, Descargas y Volúmenes externos)",
+            titleEN: "1. Files & Folders (Desktop, Documents, Downloads & Removable Volumes)",
+            bodyES: "• Para qué funciones se precisa: navegar, buscar, copiar, mover, renombrar, comprimir y previsualizar tus archivos dentro de Escritorio, Documentos, Descargas y discos USB/externos en «Acceso rápido» y «Este equipo».\n• Por qué es lo mínimo y necesario: macOS te pide autorización individual solo la primera vez que entrás a cada carpeta específica. MacFileExplorer NO solicita «Acceso total al disco» (Full Disk Access) ni accede a carpetas privadas del sistema.",
+            bodyEN: "• Which features need it: browsing, searching, copying, moving, renaming, archiving, and previewing your files inside Desktop, Documents, Downloads, and external/USB drives in «Quick Access» and «This PC».\n• Why it's the strict minimum: macOS asks per individual folder only the first time you open it. MacFileExplorer NEVER asks for «Full Disk Access» or touches private system folders."
+        ),
+        HelpTopicCard(
+            id: "perm-accessibility",
+            icon: "figure.walk.circle.fill",
+            badgeES: "Opcional · Ventanas y auto-pegado",
+            badgeEN: "Optional · Windows & Auto-paste",
+            titleES: "2. Accesibilidad (Accessibility)",
+            titleEN: "2. Accessibility",
+            bodyES: "• Para qué funciones se precisa:\n  – Barra de tareas (Taskbar): listar las ventanas abiertas de tus apps, cambiar a una ventana al hacer clic, minimizar/cerrar/reordenar ventanas, leer badges de notificaciones y redimensionar ventanas superpuestas.\n  – Selector AltTab: detectar los atajos globales de cambio de ventana (⌥⇥ / ⌘⇥ / ⌥`) y enfocar, cerrar o minimizar la ventana que elijas.\n  – Portapapeles Maccy (solo si activás «Pegar automáticamente»): simular ⌘V en la app activa cuando elegís un elemento del menú desplegable (⌃⌘V). Si desactivás el pegado automático, el portapapeles copia el texto/archivo sin necesitar Accesibilidad.\n• Por qué es lo mínimo y necesario: no se usa si solo utilizás el Explorador de archivos. Nunca registra contraseñas ni lo que escribís; solo se activa cuando encendés la Barra de tareas, AltTab o el pegado automático.",
+            bodyEN: "• Which features need it:\n  – Taskbar: listing open windows from your apps, focusing a window on click, minimizing/closing/arranging windows, detecting notification badges, and auto-resizing overlapping windows.\n  – AltTab Switcher: listening for global window-switching shortcuts (⌥⇥ / ⌘⇥ / ⌥`) and focusing, closing, or minimizing the selected window.\n  – Maccy Clipboard (only if «Auto-paste on selection» is on): sending ⌘V to the active app when you pick an item from the quick dropdown (⌃⌘V). If auto-paste is turned off, Clipboard History works without Accessibility.\n• Why it's the strict minimum: not needed at all if you only use the File Explorer. It never logs keystrokes or passwords — it is only used when you enable Taskbar, AltTab, or auto-paste."
+        ),
+        HelpTopicCard(
+            id: "perm-screen-recording",
+            icon: "rectangle.dashed.badge.record",
+            badgeES: "100% Opcional · Solo miniaturas",
+            badgeEN: "100% Optional · Thumbnails only",
+            titleES: "3. Grabación de pantalla (Screen Recording)",
+            titleEN: "3. Screen Recording",
+            bodyES: "• Para qué funciones se precisa:\n  – Barra de tareas: mostrar la vista previa (miniatura en vivo) de cada ventana al pasar el cursor por encima.\n  – Selector AltTab: mostrar miniaturas visuales y la vista previa a tamaño completo de las ventanas abiertas.\n• Aclaración importante de privacidad: MacFileExplorer NO graba tu pantalla, NO guarda videos ni capturas en disco y NO envía imágenes a internet. Apple agrupa bajo «Grabación de pantalla» el permiso técnico de macOS necesario para dibujar miniaturas locales de ventanas en memoria RAM.\n• Si preferís no habilitarlo: tanto la Barra de tareas como AltTab siguen funcionando sin problemas mostrando el ícono y título de cada ventana.",
+            bodyEN: "• Which features need it:\n  – Taskbar: showing live window thumbnail previews when hovering over taskbar buttons.\n  – AltTab Switcher: displaying visual window thumbnails and full-size window previews.\n• Important privacy note: MacFileExplorer does NOT record your screen, does NOT save screenshots or videos to disk, and NEVER uploads anything. macOS uses the label «Screen Recording» for the system API required to render local in-memory window thumbnails.\n• If you prefer not to grant it: both Taskbar and AltTab keep working smoothly using app icons and window titles instead."
+        ),
+        HelpTopicCard(
+            id: "perm-automation",
+            icon: "gearshape.2.fill",
+            badgeES: "Opcional · Solo 2 acciones puntuales",
+            badgeEN: "Optional · 2 specific actions only",
+            titleES: "4. Automatización (Finder y System Events)",
+            titleEN: "4. Automation (Finder & System Events)",
+            bodyES: "• Para qué funciones se precisa (únicamente si usás estas 2 opciones):\n  – «Vaciar Papelera» desde el menú lateral: solicita autorización puntual para pedirle a Finder que vacíe la Papelera con el diálogo nativo de macOS.\n  – «Añadir a Slack» desde el menú contextual: si activás la integración con Slack, solicita autorización puntual para traer Slack al frente y pegar el archivo con System Events.\n• Por qué es lo mínimo y necesario: si no hacés clic en ninguna de esas dos acciones, macOS nunca te pedirá permiso de Automatización.",
+            bodyEN: "• Which features need it (only if you trigger these 2 actions):\n  – «Empty Trash» from the sidebar: asks once to let Finder empty Trash with macOS's native confirmation.\n  – «Add to Slack» from the context menu: if you enable Slack sharing, asks once to bring Slack forward and paste the file via System Events.\n• Why it's the strict minimum: if you never use those two actions, macOS will never ask you for Automation permission."
+        ),
+        HelpTopicCard(
+            id: "perm-none-needed-and-never-asked",
+            icon: "hand.raised.fill",
+            badgeES: "Privacidad total",
+            badgeEN: "Privacy First",
+            titleES: "Funciones sin permisos especiales — y permisos que NUNCA pedimos",
+            titleEN: "Zero-Permission Features — & Permissions We NEVER Request",
+            bodyES: "• Funcionan de fábrica sin permisos especiales: Vista Rápida (Quick Look), Editor de Word/Excel/PowerPoint/CSV, Acciones rápidas de imágenes y videos (quitar fondo, rotar, convertir, recortar, limpiar metadatos), Buscador Avanzado y OCR local (Apple Vision), Buscador de duplicados, Compresión ZIP/TAR y atajos globales como «View Desktop Shortcut» (⌘D) o abrir el menú del Portapapeles (⌃⌘V).\n• Permisos que MacFileExplorer NUNCA solicita: Cámara, Micrófono, Contactos, Fotos, Calendario, Ubicación, Bluetooth ni Acceso total al disco (Full Disk Access).",
+            bodyEN: "• Work out of the box with zero special permissions: Quick Look previews, Word/Excel/PowerPoint/CSV Editor, image & video Quick Actions (remove background, rotate, convert, trim, strip metadata), Advanced Search & local Vision OCR, Duplicate Finder, ZIP/TAR archiving, and global shortcuts like «View Desktop Shortcut» (⌘D) or opening the Clipboard dropdown (⌃⌘V).\n• Permissions MacFileExplorer NEVER requests: Camera, Microphone, Contacts, Photos, Calendar, Location, Bluetooth, or Full Disk Access."
         )
     ]
 }

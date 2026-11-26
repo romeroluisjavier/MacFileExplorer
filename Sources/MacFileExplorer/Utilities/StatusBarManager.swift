@@ -217,6 +217,20 @@ public final class StatusBarManager: NSObject, NSMenuDelegate {
         altTabParentItem.submenu = altTabMenu
         statusMenu.addItem(altTabParentItem)
 
+        // 6e. Submenú: Notch (reproductor de música en el Notch)
+        let notchMenu = buildNotchSubmenu(using: loc)
+        let notchStateSuffix = NotchPreferences.shared.isEnabled
+            ? loc.text(es: " (Activo)", en: " (On)")
+            : ""
+        let notchParentItem = NSMenuItem(
+            title: "Notch" + notchStateSuffix,
+            action: nil,
+            keyEquivalent: ""
+        )
+        notchParentItem.image = LocalizationManager.symbolImage(named: "waveform")
+        notchParentItem.submenu = notchMenu
+        statusMenu.addItem(notchParentItem)
+
         statusMenu.addItem(.separator())
 
         // 7. Cerrar pestaña actual
@@ -413,12 +427,12 @@ public final class StatusBarManager: NSObject, NSMenuDelegate {
         submenu.addItem(openSearchItem)
 
         let settingsItem = NSMenuItem(
-            title: loc.text(es: "Configurar atajos y retención…", en: "Configure Shortcuts & Retention…"),
+            title: loc.text(es: "Configuración del Portapapeles…", en: "Clipboard Settings…"),
             action: #selector(handleOpenClipboardShortcutsSettings(_:)),
             keyEquivalent: ""
         )
         settingsItem.target = self
-        settingsItem.image = LocalizationManager.symbolImage(named: "keyboard")
+        settingsItem.image = LocalizationManager.symbolImage(named: "slider.horizontal.3")
         submenu.addItem(settingsItem)
 
         let limit = max(1, prefs.dropdownCountOption.rawValue)
@@ -552,6 +566,57 @@ public final class StatusBarManager: NSObject, NSMenuDelegate {
         return submenu
     }
 
+    private func buildNotchSubmenu(using loc: LocalizationManager) -> NSMenu {
+        let submenu = NSMenu(title: "Notch")
+        submenu.autoenablesItems = false
+        let prefs = NotchPreferences.shared
+        let media = NotchMediaService.shared
+
+        let toggleItem = NSMenuItem(
+            title: loc.text(es: "Activar Notch", en: "Enable Notch"),
+            action: #selector(handleToggleNotch(_:)),
+            keyEquivalent: ""
+        )
+        toggleItem.target = self
+        toggleItem.state = prefs.isEnabled ? .on : .off
+        toggleItem.image = LocalizationManager.symbolImage(named: "waveform")
+        submenu.addItem(toggleItem)
+
+        let defaultToggleItem = NSMenuItem(
+            title: loc.text(es: "Activar por defecto al iniciar", en: "Enable by Default on Launch"),
+            action: #selector(handleToggleNotchStartByDefault(_:)),
+            keyEquivalent: ""
+        )
+        defaultToggleItem.target = self
+        defaultToggleItem.state = prefs.startEnabledByDefault ? .on : .off
+        defaultToggleItem.image = LocalizationManager.symbolImage(named: "power.circle")
+        submenu.addItem(defaultToggleItem)
+
+        submenu.addItem(.separator())
+
+        let demoItem = NSMenuItem(
+            title: media.isDemoMode
+                ? loc.text(es: "Detener canción demo", en: "Stop Demo Track")
+                : loc.text(es: "Probar con canción demo", en: "Preview with Demo Track"),
+            action: #selector(handleToggleNotchDemo(_:)),
+            keyEquivalent: ""
+        )
+        demoItem.target = self
+        demoItem.image = LocalizationManager.symbolImage(named: media.isDemoMode ? "stop.circle" : "sparkles")
+        submenu.addItem(demoItem)
+
+        let settingsItem = NSMenuItem(
+            title: loc.text(es: "Configuración de Notch…", en: "Notch Settings…"),
+            action: #selector(handleOpenNotchSettings(_:)),
+            keyEquivalent: ""
+        )
+        settingsItem.target = self
+        settingsItem.image = LocalizationManager.symbolImage(named: "slider.horizontal.3")
+        submenu.addItem(settingsItem)
+
+        return submenu
+    }
+
     // MARK: - Acciones del Menú del Tray Icon
 
     @objc public func handleOpenMainWindow(_ sender: Any?) {
@@ -667,9 +732,27 @@ public final class StatusBarManager: NSObject, NSMenuDelegate {
         AltTabSettingsWindowController.shared.show()
     }
 
+    @objc public func handleToggleNotch(_ sender: Any?) {
+        NotchManager.shared.setEnabled(!NotchPreferences.shared.isEnabled)
+    }
+
+    @objc public func handleToggleNotchStartByDefault(_ sender: Any?) {
+        NotchPreferences.shared.startEnabledByDefault.toggle()
+        refreshTooltipAndMenu()
+    }
+
+    @objc public func handleToggleNotchDemo(_ sender: Any?) {
+        NotchManager.shared.toggleDemoPreviewAndReveal()
+    }
+
+    @objc public func handleOpenNotchSettings(_ sender: Any?) {
+        NotchSettingsWindowController.shared.show()
+    }
+
     @objc public func handleQuitApp(_ sender: Any?) {
         TaskbarManager.shared.prepareForTermination()
         AltTabManager.shared.prepareForTermination()
+        NotchManager.shared.prepareForTermination()
         GoogleAccountsManager.shared.prepareForTermination()
         NSApplication.shared.terminate(nil)
     }

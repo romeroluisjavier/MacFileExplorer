@@ -5,6 +5,7 @@ public struct MainExplorerView: View {
     @ViewState private var viewModel: ExplorerViewModel
     @Bindable private var slackPrefs: SlackPreferences = .shared
     @Bindable private var monthlySupportManager: MonthlySupportCheckManager = .shared
+    @Bindable private var appShortcutPrefs: AppShortcutPreferences = .shared
     @Environment(\.colorScheme) private var colorScheme
 
     private var loc: LocalizationManager { LocalizationManager.shared }
@@ -373,11 +374,11 @@ public struct MainExplorerView: View {
         .background(Color.orange.opacity(0.12))
     }
 
-    /// Botones invisibles para enlazar atajos estándar con modificadores `Cmd` (`Cmd+L`, `Cmd+X`, `Cmd+C`, `Cmd+V`, `Cmd+A`, `Cmd+R`, `Cmd+Shift+.`).
+    /// Botones invisibles para enlazar atajos estándar y personalizables (`Cmd+L`, `Cmd+X/C/V/A`, `Cmd+R`, `Cmd+Shift+.`, `Cmd+1/2`, `Cmd+I`).
     private var hiddenShortcutButtons: some View {
         Group {
             Button("") { viewModel.beginAddressBarEditing() }
-                .keyboardShortcut("l", modifiers: [.command])
+                .optionalKeyboardShortcut(appShortcutPrefs.swiftUIShortcut(for: .focusAddressBar))
 
             Button("") { viewModel.cutSelectedItems() }
                 .keyboardShortcut("x", modifiers: [.command])
@@ -392,19 +393,19 @@ public struct MainExplorerView: View {
                 .keyboardShortcut("a", modifiers: [.command])
 
             Button("") { viewModel.refresh(preservingSelection: true) }
-                .keyboardShortcut("r", modifiers: [.command])
+                .optionalKeyboardShortcut(appShortcutPrefs.swiftUIShortcut(for: .refreshFolder))
 
             Button("") { viewModel.showHiddenFiles.toggle() }
-                .keyboardShortcut(".", modifiers: [.command, .shift])
+                .optionalKeyboardShortcut(appShortcutPrefs.swiftUIShortcut(for: .toggleHiddenFiles))
 
             Button("") { viewModel.viewMode = .details }
-                .keyboardShortcut("1", modifiers: [.command])
+                .optionalKeyboardShortcut(appShortcutPrefs.swiftUIShortcut(for: .viewDetails))
 
             Button("") { viewModel.viewMode = .largeIcons }
-                .keyboardShortcut("2", modifiers: [.command])
+                .optionalKeyboardShortcut(appShortcutPrefs.swiftUIShortcut(for: .viewLargeIcons))
 
             Button("") { viewModel.showProperties() }
-                .keyboardShortcut("i", modifiers: [.command])
+                .optionalKeyboardShortcut(appShortcutPrefs.swiftUIShortcut(for: .showProperties))
         }
         .opacity(0)
         .frame(width: 0, height: 0)

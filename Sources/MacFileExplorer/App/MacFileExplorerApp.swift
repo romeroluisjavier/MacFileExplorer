@@ -14,8 +14,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         MouseNavigationManager.shared.installIfNeeded()
         InternalErrorLogger.shared.install()
         ClipboardHistoryManager.shared.installIfNeeded()
+        ToolsShortcutManager.shared.installIfNeeded()
         TaskbarManager.shared.installIfNeeded()
         AltTabManager.shared.installIfNeeded()
+        NotchManager.shared.installIfNeeded()
         StatusBarManager.shared.installIfNeeded()
         LocalizationManager.shared.installMenuTrackingObserverIfNeeded()
         LocalizationManager.shared.applyLanguageToMainMenu()
@@ -38,19 +40,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
-        !(TrayIconPreferences.shared.isTrayIconEnabled || TaskbarPreferences.shared.isEnabled || AltTabPreferences.shared.isEnabled)
+        !(TrayIconPreferences.shared.isTrayIconEnabled
+            || TaskbarPreferences.shared.isEnabled
+            || AltTabPreferences.shared.isEnabled
+            || NotchPreferences.shared.isEnabled)
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        ToolsShortcutManager.shared.unregisterGlobalHotKeys()
         TaskbarManager.shared.prepareForTermination()
         AltTabManager.shared.prepareForTermination()
+        NotchManager.shared.prepareForTermination()
         GoogleAccountsManager.shared.prepareForTermination()
         return .terminateNow
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        ToolsShortcutManager.shared.unregisterGlobalHotKeys()
         TaskbarManager.shared.prepareForTermination()
         AltTabManager.shared.prepareForTermination()
+        NotchManager.shared.prepareForTermination()
         GoogleAccountsManager.shared.prepareForTermination()
     }
 }
@@ -68,8 +77,12 @@ struct MacFileExplorerApp: App {
     @Bindable private var sessionPrefs = SessionPreferences.shared
     @Bindable private var trayIconPrefs = TrayIconPreferences.shared
     @Bindable private var clipboardPrefs = ClipboardHistoryPreferences.shared
+    @Bindable private var appShortcutPrefs = AppShortcutPreferences.shared
     @Bindable private var taskbarPrefs = TaskbarPreferences.shared
     @Bindable private var altTabPrefs = AltTabPreferences.shared
+    @Bindable private var notchPrefs = NotchPreferences.shared
+    @Bindable private var notchMedia = NotchMediaService.shared
+    @Bindable private var notchManager = NotchManager.shared
     @Bindable private var officePrefs = OfficePreferences.shared
     @Bindable private var drivePrefs = GoogleDriveUploadPreferences.shared
     @Bindable private var googleManager = GoogleAccountsManager.shared
@@ -154,7 +167,7 @@ struct MacFileExplorerApp: App {
                 } label: {
                     Label(loc.text(es: "Nueva pestaña de carpetas", en: "New Folder Tab"), systemImage: "folder.badge.plus")
                 }
-                .keyboardShortcut("t", modifiers: [.command])
+                .optionalKeyboardShortcut(appShortcutPrefs.swiftUIShortcut(for: .newFolderTab))
 
                 Button {
                     let sourceWindow = NSApp.keyWindow ?? NSApp.mainWindow
@@ -162,7 +175,7 @@ struct MacFileExplorerApp: App {
                 } label: {
                     Label(loc.text(es: "Cerrar pestaña actual", en: "Close Current Tab"), systemImage: "xmark.circle")
                 }
-                .keyboardShortcut("t", modifiers: [.command, .shift])
+                .optionalKeyboardShortcut(appShortcutPrefs.swiftUIShortcut(for: .closeCurrentTab))
             }
 
             CommandGroup(replacing: .undoRedo) {
@@ -262,6 +275,7 @@ struct MacFileExplorerApp: App {
                         systemImage: "doc.on.doc"
                     )
                 }
+                .optionalKeyboardShortcut(appShortcutPrefs.swiftUIShortcut(for: .findDuplicateFiles))
                 .disabled((focusedExplorerViewModel ?? activeExplorerViewModel) == nil)
 
                 Button {
@@ -275,7 +289,83 @@ struct MacFileExplorerApp: App {
                         systemImage: "internaldrive"
                     )
                 }
+                .optionalKeyboardShortcut(appShortcutPrefs.swiftUIShortcut(for: .openHiddenCache))
                 .disabled((focusedExplorerViewModel ?? activeExplorerViewModel) == nil)
+
+                Divider()
+
+                Button {
+                    AppShortcutsWindowController.shared.show(initialCategory: .all)
+                } label: {
+                    Label(
+                        loc.text(es: "Administrar todos los atajos de teclado…", en: "Manage All Keyboard Shortcuts…"),
+                        systemImage: "keyboard"
+                    )
+                }
+
+                Menu {
+                    Toggle(isOn: $appShortcutPrefs.isViewDesktopShortcutEnabled) {
+                        Label(
+                            loc.text(
+                                es: "View Desktop Shortcut (\(appShortcutPrefs.viewDesktopShortcut.displayString))",
+                                en: "View Desktop Shortcut (\(appShortcutPrefs.viewDesktopShortcut.displayString))"
+                            ),
+                            systemImage: "macwindow.on.rectangle"
+                        )
+                    }
+
+                    Button {
+                        ToolsShortcutManager.shared.triggerViewDesktop()
+                    } label: {
+                        Label(
+                            loc.text(es: "Ver Escritorio ahora", en: "View Desktop Now"),
+                            systemImage: "menubar.dock.rectangle"
+                        )
+                    }
+
+                    Menu {
+                        Picker(
+                            loc.text(es: "Modo de «Ver Escritorio»", en: "View Desktop Mode"),
+                            selection: $appShortcutPrefs.viewDesktopBehavior
+                        ) {
+                            ForEach(ViewDesktopBehavior.allCases) { mode in
+                                Label(mode.localizedTitle(using: loc), systemImage: mode.systemImage)
+                                    .tag(mode)
+                            }
+                        }
+                        .pickerStyle(.inline)
+                    } label: {
+                        Label(
+                            loc.text(es: "Modo de «Ver Escritorio»", en: "View Desktop Mode"),
+                            systemImage: "rectangle.inset.bottomleft.filled"
+                        )
+                    }
+
+                    Divider()
+
+                    Button {
+                        ToolsSettingsWindowController.shared.show(initialSection: .viewDesktop)
+                    } label: {
+                        Label(
+                            loc.text(es: "Configuración de Herramientas…", en: "Tools Settings…"),
+                            systemImage: "slider.horizontal.3"
+                        )
+                    }
+
+                    Button {
+                        AppShortcutsWindowController.shared.show(initialCategory: .tools)
+                    } label: {
+                        Label(
+                            loc.text(es: "Administrar todos los atajos…", en: "Manage All Shortcuts…"),
+                            systemImage: "keyboard"
+                        )
+                    }
+                } label: {
+                    Label(
+                        loc.text(es: "Herramientas", en: "Tools"),
+                        systemImage: "wrench.and.screwdriver"
+                    )
+                }
             }
 
             CommandGroup(after: .toolbar) {
@@ -283,7 +373,7 @@ struct MacFileExplorerApp: App {
                 Toggle(isOn: $bookmarksManager.isBookmarksBarVisible) {
                     Label(loc.text(es: "Mostrar barra de marcadores", en: "Show Bookmarks Bar"), systemImage: "bookmark")
                 }
-                .keyboardShortcut("b", modifiers: [.command, .shift])
+                .optionalKeyboardShortcut(appShortcutPrefs.swiftUIShortcut(for: .toggleBookmarksBar))
 
                 Toggle(isOn: $toolbarPrefs.isNewButtonVisible) {
                     Label(loc.text(es: "Mostrar botón Nuevo", en: "Show New Button"), systemImage: "plus.circle")
@@ -417,7 +507,7 @@ struct MacFileExplorerApp: App {
                 } label: {
                     Label(loc.text(es: "Acercar página web", en: "Zoom In Web Page"), systemImage: "plus.magnifyingglass")
                 }
-                .keyboardShortcut("+", modifiers: [.command])
+                .optionalKeyboardShortcut(appShortcutPrefs.swiftUIShortcut(for: .zoomInWeb))
                 .disabled(GoogleAccountsManager.shared.activeTabID == nil)
 
                 Button {
@@ -427,7 +517,7 @@ struct MacFileExplorerApp: App {
                 } label: {
                     Label(loc.text(es: "Alejar página web", en: "Zoom Out Web Page"), systemImage: "minus.magnifyingglass")
                 }
-                .keyboardShortcut("-", modifiers: [.command])
+                .optionalKeyboardShortcut(appShortcutPrefs.swiftUIShortcut(for: .zoomOutWeb))
                 .disabled(GoogleAccountsManager.shared.activeTabID == nil)
 
                 Button {
@@ -437,7 +527,7 @@ struct MacFileExplorerApp: App {
                 } label: {
                     Label(loc.text(es: "Restablecer zoom web (100%)", en: "Reset Web Zoom (100%)"), systemImage: "arrow.counterclockwise")
                 }
-                .keyboardShortcut("0", modifiers: [.command])
+                .optionalKeyboardShortcut(appShortcutPrefs.swiftUIShortcut(for: .resetZoomWeb))
                 .disabled(GoogleAccountsManager.shared.activeTabID == nil)
 
                 Divider()
@@ -449,7 +539,7 @@ struct MacFileExplorerApp: App {
                 } label: {
                     Label(loc.text(es: "Atrás", en: "Back"), systemImage: "chevron.backward")
                 }
-                .keyboardShortcut("[", modifiers: [.command])
+                .optionalKeyboardShortcut(appShortcutPrefs.swiftUIShortcut(for: .goBack))
                 .disabled(!canNavigateBack)
 
                 Button {
@@ -457,7 +547,7 @@ struct MacFileExplorerApp: App {
                 } label: {
                     Label(loc.text(es: "Adelante", en: "Forward"), systemImage: "chevron.forward")
                 }
-                .keyboardShortcut("]", modifiers: [.command])
+                .optionalKeyboardShortcut(appShortcutPrefs.swiftUIShortcut(for: .goForward))
                 .disabled(!canNavigateForward)
 
                 Divider()
@@ -467,7 +557,7 @@ struct MacFileExplorerApp: App {
                 } label: {
                     Label(loc.text(es: "Subir un nivel", en: "Enclosing Folder"), systemImage: "arrow.up")
                 }
-                .keyboardShortcut(.upArrow, modifiers: [.command])
+                .optionalKeyboardShortcut(appShortcutPrefs.swiftUIShortcut(for: .goUp))
                 .disabled(!canNavigateUp)
 
                 Divider()
@@ -477,7 +567,7 @@ struct MacFileExplorerApp: App {
                 } label: {
                     Label(loc.text(es: "Inicio", en: "Home"), systemImage: "house")
                 }
-                .keyboardShortcut("h", modifiers: [.command, .shift])
+                .optionalKeyboardShortcut(appShortcutPrefs.swiftUIShortcut(for: .goHome))
             }
 
             CommandMenu(loc.text(es: "Portapapeles", en: "Clipboard")) {
@@ -612,7 +702,7 @@ struct MacFileExplorerApp: App {
                     ClipboardShortcutsWindowController.shared.show()
                 } label: {
                     Label(
-                        loc.text(es: "Abrir panel de atajos y ajustes…", en: "Open Shortcuts & Settings Panel…"),
+                        loc.text(es: "Configuración del Portapapeles…", en: "Clipboard Settings…"),
                         systemImage: "slider.horizontal.3"
                     )
                 }
@@ -704,6 +794,29 @@ struct MacFileExplorerApp: App {
                             en: "Keep Same-App Windows Side by Side"
                         ),
                         systemImage: "rectangle.split.2x1"
+                    )
+                }
+
+                Toggle(isOn: $taskbarPrefs.orderWindowsByPinnedApps) {
+                    Label(
+                        loc.text(
+                            es: "Apps fijadas primero en la barra (en su mismo orden)",
+                            en: "Pinned Apps' Windows First (in Pinned Order)"
+                        ),
+                        systemImage: "pin.circle"
+                    )
+                }
+
+                Toggle(isOn: Binding(
+                    get: { taskbarPrefs.overflowMode == .shrinkToFit },
+                    set: { taskbarPrefs.overflowMode = $0 ? .shrinkToFit : .horizontalScroll }
+                )) {
+                    Label(
+                        loc.text(
+                            es: "Ajustar ancho sin scroll horizontal",
+                            en: "Auto-Shrink Buttons (No Scroll)"
+                        ),
+                        systemImage: "arrow.right.and.line.vertical.and.arrow.left"
                     )
                 }
 
@@ -1218,6 +1331,155 @@ struct MacFileExplorerApp: App {
                 }
             }
 
+            CommandMenu("Notch") {
+                Toggle(isOn: Binding(
+                    get: { notchPrefs.isEnabled },
+                    set: { NotchManager.shared.setEnabled($0) }
+                )) {
+                    Label(
+                        loc.text(es: "Activar Notch (Reproductor de música)", en: "Enable Notch (Now Playing)"),
+                        systemImage: "waveform"
+                    )
+                }
+
+                Toggle(isOn: $notchPrefs.startEnabledByDefault) {
+                    Label(
+                        loc.text(es: "Activar por defecto al iniciar MacFileExplorer", en: "Enable by Default on Launch"),
+                        systemImage: "power.circle"
+                    )
+                }
+
+                Divider()
+
+                Button {
+                    NotchMediaService.shared.togglePlayPause()
+                } label: {
+                    Label(
+                        loc.text(es: "Reproducir / Pausar", en: "Play / Pause"),
+                        systemImage: notchMedia.isPlaying ? "pause.fill" : "play.fill"
+                    )
+                }
+                .disabled(!notchPrefs.isEnabled && !notchMedia.hasActiveTrack)
+
+                Button {
+                    NotchMediaService.shared.nextTrack()
+                } label: {
+                    Label(
+                        loc.text(es: "Siguiente canción", en: "Next Track"),
+                        systemImage: "forward.fill"
+                    )
+                }
+                .disabled(!notchPrefs.isEnabled && !notchMedia.hasActiveTrack)
+
+                Button {
+                    NotchMediaService.shared.previousTrack()
+                } label: {
+                    Label(
+                        loc.text(es: "Canción anterior", en: "Previous Track"),
+                        systemImage: "backward.fill"
+                    )
+                }
+                .disabled(!notchPrefs.isEnabled && !notchMedia.hasActiveTrack)
+
+                Button {
+                    NotchManager.shared.toggleExpanded()
+                } label: {
+                    Label(
+                        loc.text(es: "Expandir / Contraer Notch", en: "Expand / Collapse Notch"),
+                        systemImage: notchManager.isAnyPanelExpanded ? "chevron.up.circle" : "chevron.down.circle"
+                    )
+                }
+                .disabled(!notchPrefs.isEnabled)
+
+                Button {
+                    NotchManager.shared.toggleDemoPreviewAndReveal()
+                } label: {
+                    Label(
+                        notchMedia.isDemoMode
+                            ? loc.text(es: "Detener canción demo", en: "Stop Demo Track")
+                            : loc.text(es: "Probar con canción demo", en: "Preview with Demo Track"),
+                        systemImage: notchMedia.isDemoMode ? "stop.circle" : "sparkles"
+                    )
+                }
+
+                Divider()
+
+                Toggle(isOn: $notchPrefs.showSyncedLyrics) {
+                    Label(
+                        loc.text(es: "Mostrar letras sincronizadas", en: "Show Synced Lyrics"),
+                        systemImage: "quote.bubble"
+                    )
+                }
+
+                Toggle(isOn: $notchPrefs.announceNewTracks) {
+                    Label(
+                        loc.text(es: "Anunciar nuevas canciones", en: "Announce New Tracks"),
+                        systemImage: "bell.badge"
+                    )
+                }
+
+                Toggle(isOn: $notchPrefs.showAmbientArtworkGlow) {
+                    Label(
+                        loc.text(es: "Efecto de brillo del álbum", en: "Ambient Album Glow"),
+                        systemImage: "sun.max"
+                    )
+                }
+
+                Toggle(isOn: $notchPrefs.hideInFullScreen) {
+                    Label(
+                        loc.text(es: "Ocultar en pantalla completa", en: "Hide in Full Screen"),
+                        systemImage: "rectangle.dashed"
+                    )
+                }
+
+                Menu {
+                    Picker(
+                        loc.text(es: "Estilo de carátula", en: "Artwork Style"),
+                        selection: $notchPrefs.artworkStyle
+                    ) {
+                        ForEach(NotchArtworkStyle.allCases) { style in
+                            Label(style.localizedTitle(using: loc), systemImage: style.symbolName)
+                                .tag(style)
+                        }
+                    }
+                    .pickerStyle(.inline)
+                } label: {
+                    Label(
+                        loc.text(es: "Estilo de carátula", en: "Artwork Style"),
+                        systemImage: "photo.circle"
+                    )
+                }
+
+                Menu {
+                    Picker(
+                        loc.text(es: "Pantallas", en: "Displays"),
+                        selection: $notchPrefs.displayMode
+                    ) {
+                        ForEach(NotchDisplayMode.allCases) { mode in
+                            Label(mode.localizedTitle(using: loc), systemImage: mode.symbolName)
+                                .tag(mode)
+                        }
+                    }
+                    .pickerStyle(.inline)
+                } label: {
+                    Label(
+                        loc.text(es: "Pantallas", en: "Displays"),
+                        systemImage: "display.2"
+                    )
+                }
+
+                Divider()
+
+                Button {
+                    NotchSettingsWindowController.shared.show()
+                } label: {
+                    Label(
+                        loc.text(es: "Configuración de Notch…", en: "Notch Settings…"),
+                        systemImage: "slider.horizontal.3"
+                    )
+                }
+            }
+
             CommandMenu("Office") {
                 Toggle(isOn: $officePrefs.isOfficeEditingEnabled) {
                     Label(
@@ -1379,8 +1641,8 @@ struct MacFileExplorerApp: App {
                     GoogleDriveSettingsWindowController.shared.show()
                 } label: {
                     Label(
-                        loc.text(es: "Configurar «Enviar a Drive» y carpeta…", en: "Configure \"Send to Drive\" & Folder…"),
-                        systemImage: "folder.badge.gearshape"
+                        loc.text(es: "Configuración de «Enviar a Drive»…", en: "Send to Drive Settings…"),
+                        systemImage: "slider.horizontal.3"
                     )
                 }
                 .disabled(!officePrefs.isSendToDriveEnabled)
@@ -1463,6 +1725,12 @@ struct MacFileExplorerApp: App {
                     HelpWindowController.shared.show(section: .settings)
                 } label: {
                     Label(loc.text(es: "Configuraciones posibles…", en: "Available Settings…"), systemImage: "slider.horizontal.3")
+                }
+
+                Button {
+                    HelpWindowController.shared.show(section: .permissions)
+                } label: {
+                    Label(loc.text(es: "Permisos de macOS y Privacidad…", en: "macOS Permissions & Privacy…"), systemImage: "lock.shield")
                 }
 
                 Divider()

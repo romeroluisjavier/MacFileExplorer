@@ -1,5 +1,6 @@
 import AppKit
 import CoreGraphics
+import QuartzCore
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -229,10 +230,17 @@ public struct TaskbarBarView: View {
     }
 
     private var leadingReservedWidth: CGFloat {
-        let startW: CGFloat = CGFloat(prefs.barHeight)
+        let isFloating = (prefs.barStyle == .floatingIsland)
+        let outerPadding: CGFloat = isFloating ? 20 : 16
+        let startW: CGFloat = max(26, CGFloat(prefs.barHeight) - 8)
         let pinnedItemW: CGFloat = max(30, CGFloat(prefs.barHeight) - 6)
-        let pinnedW = CGFloat(prefs.pinnedApps.count) * (pinnedItemW + 4)
-        return startW + pinnedW + 34
+        let pinnedCount = prefs.pinnedApps.count
+        let pinnedW: CGFloat = pinnedCount > 0
+            ? CGFloat(pinnedCount) * pinnedItemW + CGFloat(max(0, pinnedCount - 1)) * 4
+            : 0
+        let hStackGaps: CGFloat = pinnedCount > 0 ? 18 : 12
+        let separatorW: CGFloat = 5
+        return outerPadding + startW + pinnedW + hStackGaps + separatorW + 4
     }
 
     // MARK: - Botón Inicio
@@ -356,13 +364,34 @@ public struct TaskbarBarView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
+            let isPinnedOrderFlags: [Bool] = windows.map { item in
+                guard prefs.orderWindowsByPinnedApps else { return false }
+                return prefs.isPinned(
+                    bundleIdentifier: item.bundleIdentifier,
+                    bundlePath: item.appBundleURL?.standardizedFileURL.path(percentEncoded: false)
+                )
+            }
+            let pinnedBoundaryIndex: Int? = {
+                guard prefs.orderWindowsByPinnedApps else { return nil }
+                for idx in 1..<isPinnedOrderFlags.count {
+                    if isPinnedOrderFlags[idx - 1] && !isPinnedOrderFlags[idx] {
+                        return idx
+                    }
+                }
+                return nil
+            }()
+            let effectiveAvailableWidth = pinnedBoundaryIndex != nil
+                ? max(120, availableWidth - 10)
+                : availableWidth
+
             let layout = TaskbarButtonLayoutCalculator.computeLayout(
                 windows: windows,
-                availableWidth: availableWidth,
+                availableWidth: effectiveAvailableWidth,
                 barHeight: CGFloat(prefs.barHeight),
                 showWindowTitles: prefs.showWindowTitles,
                 minimizedDisplayMode: prefs.minimizedWindowDisplayMode,
-                groupWindowsByApp: prefs.groupWindowsByApp
+                groupWindowsByApp: prefs.groupWindowsByApp,
+                overflowMode: prefs.overflowMode
             )
 
             let buttonsRow = HStack(spacing: 0) {
@@ -370,6 +399,18 @@ public struct TaskbarBarView: View {
                     Spacer(minLength: 0)
                 }
                 ForEach(Array(windows.enumerated()), id: \.element.id) { idx, item in
+                    if pinnedBoundaryIndex == idx {
+                        Capsule()
+                            .fill(effectiveDark ? Color.white.opacity(0.22) : Color.black.opacity(0.18))
+                            .frame(width: 1.5, height: max(14, CGFloat(prefs.barHeight) * 0.40))
+                            .padding(.leading, 5)
+                            .padding(.trailing, 3.5)
+                            .help(LocalizationManager.shared.text(
+                                es: "A la izquierda: apps con orden fijado · A la derecha: apps no fijadas",
+                                en: "Left: pinned-order apps · Right: unpinned apps"
+                            ))
+                    }
+
                     TaskbarWindowButtonView(
                         item: item,
                         displayID: displayID,
@@ -385,9 +426,10 @@ public struct TaskbarBarView: View {
                         activeIndicatorStyle: prefs.activeIndicatorStyle,
                         activeIndicatorColor: prefs.activeIndicatorColor,
                         effectiveDark: effectiveDark,
-                        isDragging: manager.draggingWindowID == item.id
+                        isDragging: manager.draggingWindowID == item.id,
+                        isPinnedOrderLocked: isPinnedOrderFlags[idx]
                     )
-                    .padding(.leading, layout.leadingSpacings[idx])
+                    .padding(.leading, pinnedBoundaryIndex == idx ? 0 : layout.leadingSpacings[idx])
                 }
                 if prefs.alignment == .center && !layout.needsHorizontalScroll {
                     Spacer(minLength: 0)
@@ -775,6 +817,7 @@ private struct TaskbarWindowButtonView: View {
     let activeIndicatorColor: TaskbarActiveIndicatorColor
     let effectiveDark: Bool
     let isDragging: Bool
+    let isPinnedOrderLocked: Bool
 
     @ViewState private var isHovered = false
     @ViewState private var dragHoverState: TaskbarDragHoverState = .idle
@@ -830,7 +873,12 @@ private struct TaskbarWindowButtonView: View {
     var body: some View {
         let height = max(26, barHeight - 8)
         let cornerRadius: CGFloat = (buttonStyle == .pill) ? (height * 0.5) : 7
-        let iconSize = max(16, min(24, barHeight * 0.52))
+        let baseIconSize = max(16, min(24, barHeight * 0.52))
+        let iconSize = (!showTitle && buttonWidth < 34) ? max(14, min(baseIconSize, buttonWidth - 8)) : baseIconSize
+        let isCompactTitled = showTitle && buttonWidth < 78
+        let horizontalPadding: CGFloat = showTitle
+            ? (isCompactTitled ? 5 : (buttonStyle == .pill ? 11 : 9))
+            : (buttonWidth < 32 ? 2 : 4)
         let activeBadge: String? = showNotificationBadges ? item.badgeLabel : nil
         let maxJumpUp = TaskbarNotificationAnimationEngine.safeMaxJumpUp(forBarHeight: barHeight, iconSize: iconSize)
         let indicatorAccent = activeIndicatorColor.resolvedColor(effectiveDark: effectiveDark)
@@ -853,7 +901,7 @@ private struct TaskbarWindowButtonView: View {
             let buttonShadowRadius: CGFloat = isDragHovering ? 4.5 : (isButtonGlowing ? 4.0 : (item.isFocused && buttonStyle != .minimalBorderless ? 2.5 : 0.0))
             let buttonShadowY: CGFloat = isDragHovering ? 0.0 : (isButtonGlowing ? 0.0 : (item.isFocused && buttonStyle != .minimalBorderless ? 1.0 : 0.0))
 
-            HStack(spacing: showTitle ? 7 : 0) {
+            HStack(spacing: showTitle ? (isCompactTitled ? 4 : 7) : 0) {
                 ZStack(alignment: .topTrailing) {
                     Image(nsImage: TaskbarAppCatalogService.shared.icon(
                         forBundleIdentifier: item.bundleIdentifier,
@@ -886,7 +934,7 @@ private struct TaskbarWindowButtonView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
-            .padding(.horizontal, showTitle ? (buttonStyle == .pill ? 11 : 9) : 4)
+            .padding(.horizontal, horizontalPadding)
             .frame(width: buttonWidth, height: height, alignment: showTitle ? .leading : .center)
             .background(
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
@@ -927,6 +975,22 @@ private struct TaskbarWindowButtonView: View {
             )
             .scaleEffect(dragHoverState.didActivate ? 1.03 : 1.0)
             .animation(.spring(response: 0.20, dampingFraction: 0.65), value: dragHoverState.didActivate)
+            .overlay(alignment: showTitle ? .topTrailing : .topLeading) {
+                if isPinnedOrderLocked {
+                    Image(systemName: "pin.fill")
+                        .font(.system(size: 7.5, weight: .semibold))
+                        .rotationEffect(.degrees(32))
+                        .foregroundStyle(
+                            effectiveDark
+                                ? Color.white.opacity(isHovered || item.isFocused ? 0.56 : 0.34)
+                                : Color.black.opacity(isHovered || item.isFocused ? 0.48 : 0.26)
+                        )
+                        .padding(.top, 3)
+                        .padding(.trailing, showTitle ? (buttonStyle == .pill ? 7 : 4.5) : 0)
+                        .padding(.leading, showTitle ? 0 : 4)
+                        .allowsHitTesting(false)
+                }
+            }
             .overlay(alignment: .bottom) {
                 if isDragHovering {
                     let trackWidth = max(14, buttonWidth - (buttonStyle == .pill ? 24 : 14))
@@ -990,14 +1054,24 @@ private struct TaskbarWindowButtonView: View {
                 }
             )
         )
-        .help(
-            item.isWindowlessApp
-                ? LocalizationManager.shared.text(
-                    es: "\(item.appName) — Abierta sin ventanas (clic para abrir)",
-                    en: "\(item.appName) — Running without open windows (click to open)"
-                )
-                : item.displayTitle
-        )
+        .help(buttonHelpTooltip)
+    }
+
+    private var buttonHelpTooltip: String {
+        let loc = LocalizationManager.shared
+        let base = item.isWindowlessApp
+            ? loc.text(
+                es: "\(item.appName) — Abierta sin ventanas (clic para abrir)",
+                en: "\(item.appName) — Running without open windows (click to open)"
+            )
+            : item.displayTitle
+        if isPinnedOrderLocked {
+            return base + loc.text(
+                es: " · Orden fijado según tus apps pineadas (arrastrá su ícono fijado a la izquierda para reordenar)",
+                en: " · Locked to pinned apps order (drag its pinned icon on the left to reorder)"
+            )
+        }
+        return base
     }
 }
 
@@ -1237,6 +1311,8 @@ private final class TaskbarWindowMouseNSView: NSView {
     private var trackingArea: NSTrackingArea?
     private var mouseDownLocation: NSPoint?
     private var didStartDragging = false
+    private var didShowPinnedOrderHintThisDrag = false
+    private var didMoveWindowDuringDrag = false
     private lazy var springLoader: TaskbarDragSpringLoader = {
         let loader = TaskbarDragSpringLoader(hostView: self)
         loader.onStateChanged = { [weak self] state in
@@ -1293,7 +1369,16 @@ private final class TaskbarWindowMouseNSView: NSView {
 
         // Si se está arrastrando otro botón horizontalmente, intercambiar posiciones en vivo
         if let draggedID = TaskbarManager.shared.draggingWindowID, draggedID != item.id {
-            TaskbarWindowTracker.shared.moveWindow(sourceID: draggedID, toTargetID: item.id)
+            let result = TaskbarWindowTracker.shared.moveWindow(sourceID: draggedID, toTargetID: item.id)
+            if case .blockedByPinnedOrder(let appName, let isSourcePinned) = result,
+               let screenRect = buttonScreenRect() {
+                TaskbarPinnedOrderHintController.shared.show(
+                    anchorScreenRect: screenRect,
+                    displayID: displayID,
+                    appName: appName,
+                    isSourcePinned: isSourcePinned
+                )
+            }
             return
         }
 
@@ -1316,7 +1401,10 @@ private final class TaskbarWindowMouseNSView: NSView {
     override func mouseDown(with event: NSEvent) {
         mouseDownLocation = event.locationInWindow
         didStartDragging = false
+        didShowPinnedOrderHintThisDrag = false
+        didMoveWindowDuringDrag = false
         TaskbarPreviewPanelController.shared.hideImmediately()
+        TaskbarPinnedOrderHintController.shared.hideImmediately()
     }
 
     override func mouseDragged(with event: NSEvent) {
@@ -1336,20 +1424,58 @@ private final class TaskbarWindowMouseNSView: NSView {
             if let hitView = window.contentView?.hitTest(pointInWindow) as? TaskbarWindowMouseNSView,
                let targetItem = hitView.item,
                targetItem.id != item.id {
-                TaskbarWindowTracker.shared.moveWindow(sourceID: item.id, toTargetID: targetItem.id)
+                let result = TaskbarWindowTracker.shared.moveWindow(sourceID: item.id, toTargetID: targetItem.id)
+                switch result {
+                case .moved:
+                    didMoveWindowDuringDrag = true
+                case .blockedByPinnedOrder(let appName, let isSourcePinned):
+                    if !didShowPinnedOrderHintThisDrag, let screenRect = buttonScreenRect() {
+                        didShowPinnedOrderHintThisDrag = true
+                        TaskbarPinnedOrderHintController.shared.show(
+                            anchorScreenRect: screenRect,
+                            displayID: displayID,
+                            appName: appName,
+                            isSourcePinned: isSourcePinned
+                        )
+                    }
+                }
             }
         }
     }
 
     override func mouseUp(with event: NSEvent) {
+        let wasDragging = didStartDragging
+        let hadShownHint = didShowPinnedOrderHintThisDrag
+        let hadMoved = didMoveWindowDuringDrag
         defer {
             mouseDownLocation = nil
             if didStartDragging {
                 TaskbarManager.shared.draggingWindowID = nil
                 didStartDragging = false
             }
+            didShowPinnedOrderHintThisDrag = false
+            didMoveWindowDuringDrag = false
         }
-        guard !didStartDragging, let item else { return }
+        if wasDragging {
+            // Si el usuario arrastró una app fijada con ventana única sin cruzar otra app, igual explicar por qué no se movió
+            if !hadMoved && !hadShownHint,
+               let item,
+               TaskbarPreferences.shared.orderWindowsByPinnedApps,
+               TaskbarPreferences.shared.isPinned(
+                   bundleIdentifier: item.bundleIdentifier,
+                   bundlePath: item.appBundleURL?.standardizedFileURL.path(percentEncoded: false)
+               ),
+               let screenRect = buttonScreenRect() {
+                TaskbarPinnedOrderHintController.shared.show(
+                    anchorScreenRect: screenRect,
+                    displayID: displayID,
+                    appName: item.appName,
+                    isSourcePinned: true
+                )
+            }
+            return
+        }
+        guard let item else { return }
         let loc = convert(event.locationInWindow, from: nil)
         guard bounds.insetBy(dx: -8, dy: -8).contains(loc) else { return }
         TaskbarWindowTracker.shared.handlePrimaryClick(on: item)
@@ -1828,6 +1954,25 @@ private enum TaskbarContextMenuBuilder {
         }
 
         if !item.bundleIdentifier.isEmpty {
+            if item.bundleIdentifier.caseInsensitiveCompare("com.apple.finder") != .orderedSame && prefs.showWindowlessRunningApps {
+                let alreadyHiddenWhenWindowless = prefs.isHiddenWhenWindowless(bundleIdentifier: item.bundleIdentifier)
+                let windowlessItem = makeItem(
+                    title: loc.text(
+                        es: "Ocultar \(item.appName) cuando no tenga ventanas",
+                        en: "Hide \(item.appName) When Windowless"
+                    ),
+                    symbol: "macwindow.badge.minus"
+                ) {
+                    if alreadyHiddenWhenWindowless {
+                        prefs.removeAppHiddenWhenWindowless(bundleIdentifier: item.bundleIdentifier)
+                    } else {
+                        prefs.hideAppWhenWindowless(bundleIdentifier: item.bundleIdentifier)
+                    }
+                }
+                windowlessItem.state = alreadyHiddenWhenWindowless ? .on : .off
+                menu.addItem(windowlessItem)
+            }
+
             menu.addItem(makeItem(
                 title: loc.text(es: "Ocultar \(item.appName) de la barra de tareas", en: "Exclude \(item.appName) from Taskbar"),
                 symbol: "eye.slash.circle"
@@ -1847,6 +1992,30 @@ private enum TaskbarContextMenuBuilder {
         }
         groupToggleItem.state = prefs.groupWindowsByApp ? .on : .off
         menu.addItem(groupToggleItem)
+
+        let pinnedOrderItem = makeItem(
+            title: loc.text(
+                es: "Apps fijadas primero en la barra (en su mismo orden)",
+                en: "Pinned Apps' Windows First (in Pinned Order)"
+            ),
+            symbol: "pin.circle"
+        ) {
+            prefs.orderWindowsByPinnedApps.toggle()
+        }
+        pinnedOrderItem.state = prefs.orderWindowsByPinnedApps ? .on : .off
+        menu.addItem(pinnedOrderItem)
+
+        let shrinkToFitItem = makeItem(
+            title: loc.text(
+                es: "Ajustar ancho sin scroll horizontal",
+                en: "Auto-Shrink Buttons (No Scroll)"
+            ),
+            symbol: "arrow.right.and.line.vertical.and.arrow.left"
+        ) {
+            prefs.overflowMode = (prefs.overflowMode == .shrinkToFit) ? .horizontalScroll : .shrinkToFit
+        }
+        shrinkToFitItem.state = (prefs.overflowMode == .shrinkToFit) ? .on : .off
+        menu.addItem(shrinkToFitItem)
 
         let iconsOnlyItem = makeItem(
             title: loc.text(
@@ -2057,6 +2226,30 @@ private enum TaskbarContextMenuBuilder {
         groupToggleItem.state = prefs.groupWindowsByApp ? .on : .off
         menu.addItem(groupToggleItem)
 
+        let pinnedOrderItem = makeItem(
+            title: loc.text(
+                es: "Apps fijadas primero en la barra (en su mismo orden)",
+                en: "Pinned Apps' Windows First (in Pinned Order)"
+            ),
+            symbol: "pin.circle"
+        ) {
+            prefs.orderWindowsByPinnedApps.toggle()
+        }
+        pinnedOrderItem.state = prefs.orderWindowsByPinnedApps ? .on : .off
+        menu.addItem(pinnedOrderItem)
+
+        let shrinkToFitItem = makeItem(
+            title: loc.text(
+                es: "Ajustar ancho sin scroll horizontal",
+                en: "Auto-Shrink Buttons (No Scroll)"
+            ),
+            symbol: "arrow.right.and.line.vertical.and.arrow.left"
+        ) {
+            prefs.overflowMode = (prefs.overflowMode == .shrinkToFit) ? .horizontalScroll : .shrinkToFit
+        }
+        shrinkToFitItem.state = (prefs.overflowMode == .shrinkToFit) ? .on : .off
+        menu.addItem(shrinkToFitItem)
+
         let iconsOnlyItem = makeItem(
             title: loc.text(
                 es: "Mostrar solo íconos",
@@ -2120,5 +2313,225 @@ private enum TaskbarContextMenuBuilder {
         ) {
             TaskbarManager.shared.setEnabled(false)
         })
+    }
+}
+
+// MARK: - Aviso Flotante Explicativo al Intentar Mover una App con Orden Fijado
+
+@MainActor
+public final class TaskbarPinnedOrderHintController {
+
+    public static let shared = TaskbarPinnedOrderHintController()
+
+    private var panel: NSPanel?
+    private var dismissWorkItem: DispatchWorkItem?
+
+    public var panelWindowNumber: Int? {
+        panel?.windowNumber
+    }
+
+    private init() {}
+
+    public func show(
+        anchorScreenRect: NSRect,
+        displayID: String,
+        appName: String,
+        isSourcePinned: Bool
+    ) {
+        dismissWorkItem?.cancel()
+        TaskbarPreviewPanelController.shared.hideImmediately()
+
+        let hintPanel = ensurePanel()
+        let contentView = TaskbarPinnedOrderHintView(
+            appName: appName,
+            isSourcePinned: isSourcePinned,
+            onDisableLock: { [weak self] in
+                TaskbarPreferences.shared.orderWindowsByPinnedApps = false
+                self?.hideImmediately()
+            },
+            onDismiss: { [weak self] in
+                self?.hideImmediately()
+            }
+        )
+
+        let hosting = NSHostingView(rootView: contentView)
+        hosting.layoutSubtreeIfNeeded()
+        let fitting = hosting.fittingSize
+        let width = min(372, max(290, ceil(fitting.width)))
+        let height = max(62, ceil(fitting.height))
+
+        let screen = NSScreen.screens.first(where: {
+            $0.frame.contains(NSPoint(x: anchorScreenRect.midX, y: anchorScreenRect.midY))
+        }) ?? NSScreen.main ?? NSScreen.screens.first
+        let bounds = screen?.frame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
+
+        let idealX = anchorScreenRect.midX - (width * 0.5)
+        let clampedX = min(max(bounds.minX + 10, idealX), bounds.maxX - width - 10)
+        let barTopY = TaskbarManager.shared.barFrame(for: displayID)?.maxY ?? anchorScreenRect.maxY
+        let targetY = min(bounds.maxY - height - 10, barTopY + 8)
+
+        hintPanel.contentView = hosting
+        hintPanel.setFrame(NSRect(x: round(clampedX), y: round(targetY), width: width, height: height), display: true)
+
+        if !hintPanel.isVisible {
+            hintPanel.alphaValue = 0
+            hintPanel.orderFrontRegardless()
+            NSAnimationContext.runAnimationGroup { ctx in
+                ctx.duration = 0.16
+                ctx.timingFunction = CAMediaTimingFunction(name: .easeOut)
+                hintPanel.animator().alphaValue = 1
+            }
+        } else {
+            hintPanel.alphaValue = 1
+            hintPanel.orderFrontRegardless()
+        }
+
+        let work = DispatchWorkItem { [weak self] in
+            Task { @MainActor [weak self] in
+                self?.fadeOutAndHide()
+            }
+        }
+        dismissWorkItem = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 4.5, execute: work)
+    }
+
+    public func hideImmediately() {
+        dismissWorkItem?.cancel()
+        dismissWorkItem = nil
+        panel?.orderOut(nil)
+    }
+
+    private func fadeOutAndHide() {
+        guard let panel, panel.isVisible else { return }
+        NSAnimationContext.runAnimationGroup({ ctx in
+            ctx.duration = 0.22
+            ctx.timingFunction = CAMediaTimingFunction(name: .easeIn)
+            panel.animator().alphaValue = 0
+        }, completionHandler: { [weak self] in
+            Task { @MainActor [weak self] in
+                self?.panel?.orderOut(nil)
+                self?.panel?.alphaValue = 1
+            }
+        })
+    }
+
+    private func ensurePanel() -> NSPanel {
+        if let existing = panel {
+            return existing
+        }
+        let created = NSPanel(
+            contentRect: NSRect(x: 0, y: 0, width: 340, height: 76),
+            styleMask: [.borderless, .nonactivatingPanel],
+            backing: .buffered,
+            defer: false
+        )
+        created.isOpaque = false
+        created.backgroundColor = .clear
+        created.hasShadow = true
+        created.isReleasedWhenClosed = false
+        created.hidesOnDeactivate = false
+        created.becomesKeyOnlyIfNeeded = true
+        created.level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.dockWindow)) + 2)
+        created.collectionBehavior = [.canJoinAllSpaces, .transient, .ignoresCycle]
+        self.panel = created
+        return created
+    }
+}
+
+private struct TaskbarPinnedOrderHintView: View {
+    @Environment(\.colorScheme) private var colorScheme
+    @Bindable private var prefs = TaskbarPreferences.shared
+    @Bindable private var loc = LocalizationManager.shared
+
+    let appName: String
+    let isSourcePinned: Bool
+    let onDisableLock: () -> Void
+    let onDismiss: () -> Void
+
+    private var effectiveDark: Bool {
+        switch prefs.themeMode {
+        case .system: return colorScheme == .dark
+        case .light: return false
+        case .dark: return true
+        }
+    }
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            ZStack {
+                Circle()
+                    .fill(Color.accentColor.opacity(effectiveDark ? 0.22 : 0.14))
+                    .frame(width: 26, height: 26)
+                Image(systemName: "pin.fill")
+                    .font(.system(size: 11.5, weight: .semibold))
+                    .rotationEffect(.degrees(32))
+                    .foregroundStyle(Color.accentColor)
+            }
+            .padding(.top, 1)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(loc.text(
+                    es: "Orden fijado según tus apps pineadas",
+                    en: "Locked to Pinned Apps Order"
+                ))
+                .font(.system(size: 12, weight: .bold))
+                .foregroundStyle(.primary)
+
+                Text(
+                    isSourcePinned
+                        ? loc.text(
+                            es: "«\(appName)» sigue el orden de tus íconos fijados a la izquierda. Arrastrá su ícono fijado para cambiarla de lugar.",
+                            en: "\"\(appName)\" follows the order of your pinned icons on the left. Drag its pinned icon to change position."
+                        )
+                        : loc.text(
+                            es: "Las apps no fijadas van después de las fijadas. Fijá «\(appName)» para moverla al principio.",
+                            en: "Unpinned apps stay after pinned ones. Pin \"\(appName)\" to place it up front."
+                        )
+                )
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+                HStack(spacing: 8) {
+                    Button {
+                        onDisableLock()
+                    } label: {
+                        Text(loc.text(
+                            es: "Desactivar «Apps fijadas primero»",
+                            en: "Turn Off \"Pinned Apps First\""
+                        ))
+                        .font(.system(size: 10.5, weight: .semibold))
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.mini)
+
+                    Spacer(minLength: 0)
+                }
+                .padding(.top, 1)
+            }
+
+            Button {
+                onDismiss()
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 9.5, weight: .bold))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 18, height: 18)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .frame(width: 356, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(effectiveDark ? Color(white: 0.14).opacity(0.95) : Color(white: 0.98).opacity(0.96))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .strokeBorder(effectiveDark ? Color.white.opacity(0.16) : Color.black.opacity(0.12), lineWidth: 0.9)
+        )
+        .preferredColorScheme(effectiveDark ? .dark : .light)
     }
 }

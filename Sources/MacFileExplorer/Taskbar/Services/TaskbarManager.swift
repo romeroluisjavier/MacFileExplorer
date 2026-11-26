@@ -41,19 +41,36 @@ public final class TaskbarManager {
         }
         prefs.onAppearanceOrLayoutChanged = { [weak self] in
             self?.rebuildBarPanels()
+            TaskbarWindowTracker.shared.reapplyWindowOrderingImmediately()
+            TaskbarOverlapResizer.shared.syncInteractionMonitors()
             self?.triggerOverlapResizeCheck()
         }
         prefs.onWindowFilteringChanged = { [weak self] in
             TaskbarWindowTracker.shared.reapplyWindowOrderingImmediately()
             TaskbarWindowTracker.shared.refreshNow()
+            TaskbarOverlapResizer.shared.syncInteractionMonitors()
             self?.triggerOverlapResizeCheck()
         }
 
         TaskbarWindowTracker.shared.registerOwnedWindowNumbersProvider(key: "taskbar") { [weak self] in
             self?.ownedWindowNumbers ?? []
         }
+        TaskbarOverlapResizer.shared.barContextProvider = { [weak self] in
+            guard let self else { return ([], [], 0) }
+            let prefs = TaskbarPreferences.shared
+            let fullScreenIDs = TaskbarWindowTracker.shared.fullScreenDisplayIDs
+            let visibleBarDisplayIDs = Set(self.panelsByDisplayID.keys.filter { !fullScreenIDs.contains($0) })
+            let reservedBarHeight = CGFloat(prefs.barHeight) + (prefs.barStyle == .floatingIsland ? 6 : 0)
+            return (TaskbarWindowTracker.shared.connectedScreens, visibleBarDisplayIDs, reservedBarHeight)
+        }
         TaskbarWindowTracker.shared.onWindowGeometryPotentiallyChanged = { [weak self] in
             self?.triggerOverlapResizeCheck()
+        }
+        TaskbarWindowTracker.shared.onAXWindowGeometryChanged = { element in
+            TaskbarOverlapResizer.shared.handleAXWindowGeometryEvent(element: element)
+        }
+        TaskbarWindowTracker.shared.onLocalWindowGeometryChanged = { window in
+            TaskbarOverlapResizer.shared.adjustLocalWindowImmediately(window)
         }
 
         // Arranca desactivada por defecto (`startEnabledByDefault == false`), salvo que el usuario
@@ -83,6 +100,7 @@ public final class TaskbarManager {
             TaskbarWindowTracker.shared.acquireMonitoring(for: .taskbar)
             TaskbarDockManager.shared.reapplyDockModeIfNeededOnEnable()
             rebuildBarPanels()
+            TaskbarOverlapResizer.shared.syncInteractionMonitors()
             triggerOverlapResizeCheck()
 
             let prefs = TaskbarPreferences.shared
@@ -92,6 +110,7 @@ public final class TaskbarManager {
             }
         } else {
             TaskbarPreviewPanelController.shared.hideImmediately()
+            TaskbarPinnedOrderHintController.shared.hideImmediately()
             TaskbarStartMenuController.shared.close()
             destroyAllBarPanels()
             TaskbarWindowTracker.shared.releaseMonitoring(for: .taskbar)
@@ -110,8 +129,10 @@ public final class TaskbarManager {
     /// Invocado antes de cerrar `MacFileExplorer` para limpiar observadores y restaurar Dock si estaba en `fullyHidden`.
     public func prepareForTermination() {
         TaskbarPreviewPanelController.shared.hideImmediately()
+        TaskbarPinnedOrderHintController.shared.hideImmediately()
         TaskbarStartMenuController.shared.close()
         destroyAllBarPanels()
+        TaskbarOverlapResizer.shared.resetState()
         TaskbarWindowTracker.shared.releaseMonitoring(for: .taskbar)
         WindowServicesKeepAlive.shared.release(for: .taskbar)
         TaskbarDockManager.shared.revertFullyHiddenIfNeededForDisableOrQuit()
@@ -126,6 +147,9 @@ public final class TaskbarManager {
         }
         if let startNum = TaskbarStartMenuController.shared.panelWindowNumber {
             numbers.insert(startNum)
+        }
+        if let hintNum = TaskbarPinnedOrderHintController.shared.panelWindowNumber {
+            numbers.insert(hintNum)
         }
         return numbers
     }

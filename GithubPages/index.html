@@ -11,6 +11,9 @@
   <meta property="og:type" content="website" />
   <link id="page-favicon" rel="icon" type="image/png" href="assets/app-icon-mono-dark.png" />
 
+  <!-- Privacy-friendly analytics (Umami Cloud — cookie-free) -->
+  <script defer src="https://cloud.umami.is/script.js" data-website-id="fcb832bf-d2ed-494c-9b18-1789e836870f"></script>
+
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
@@ -1169,7 +1172,7 @@
           <img id="nav-app-icon" src="assets/app-icon-mono-dark.png" alt="MacFileExplorer" class="w-8 h-8 rounded-lg shadow-sm group-hover:scale-105 transition-transform shrink-0" />
           <div class="flex items-center gap-2 min-w-0">
             <span class="font-bold tracking-tight text-[15px] text-slate-900 dark:text-white truncate">MacFileExplorer</span>
-            <span id="nav-version-pill" class="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-brand-500/12 text-brand-600 dark:text-brand-400 border border-brand-500/20">v2.5.1</span>
+            <span id="nav-version-pill" class="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-brand-500/12 text-brand-600 dark:text-brand-400 border border-brand-500/20">v2.6.0</span>
           </div>
         </a>
 
@@ -1229,6 +1232,7 @@
 
           <!-- Desktop Support me (Ko-fi Optional Tip) CTA -->
           <a id="nav-kofi-cta" href="https://ko-fi.com/luisjavierromero" target="_blank" rel="noopener noreferrer"
+            data-umami-event="kofi-click" data-umami-event-location="nav"
             title="MacFileExplorer is 100% Free — Optional tip on Ko-fi"
             class="hidden md:inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-[12.5px] font-semibold text-white bg-gradient-to-b from-[#F57373] to-[#D9534F] hover:brightness-110 shadow-md shadow-rose-500/25 transition-all whitespace-nowrap">
             <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -1240,7 +1244,8 @@
           </a>
 
           <!-- Desktop Download CTA -->
-          <a id="nav-download-cta" href="https://github.com/romeroluisjavier/MacFileExplorer/raw/main/releases/MacFileExplorer-2.5.1.dmg"
+          <a id="nav-download-cta" href="https://github.com/romeroluisjavier/MacFileExplorer/releases/download/v2.6.0/MacFileExplorer-2.6.0.dmg"
+            data-umami-event="download-dmg" data-umami-event-location="nav" data-umami-event-version="v2.6.0"
             class="btn-primary hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[12.5px] font-semibold text-white bg-gradient-to-b from-[#1A90FF] to-[#0071E3] hover:brightness-110 shadow-md shadow-brand-600/25 transition-all whitespace-nowrap">
             <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2.3" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v11m0 0-4-4m4 4 4-4M4 19h16"/>
@@ -1283,7 +1288,8 @@
             </div>
           </div>
 
-          <a id="mobile-download-cta" href="https://github.com/romeroluisjavier/MacFileExplorer/raw/main/releases/MacFileExplorer-2.5.1.dmg"
+          <a id="mobile-download-cta" href="https://github.com/romeroluisjavier/MacFileExplorer/releases/download/v2.6.0/MacFileExplorer-2.6.0.dmg"
+            data-umami-event="download-dmg" data-umami-event-location="mobile" data-umami-event-version="v2.6.0"
             class="btn-primary w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold text-white bg-gradient-to-b from-[#1A90FF] to-[#0071E3] shadow-md">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.3" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v11m0 0-4-4m4 4 4-4M4 19h16"/>
@@ -1292,6 +1298,7 @@
           </a>
 
           <a href="https://ko-fi.com/luisjavierromero" target="_blank" rel="noopener noreferrer"
+            data-umami-event="kofi-click" data-umami-event-location="mobile"
             class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-gradient-to-b from-[#F57373] to-[#D9534F] shadow-md">
             <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <path d="M3.5 7.5h11.8c.7 0 1.2.5 1.2 1.2v4.6c0 3.1-2.4 5.7-5.6 5.7H9.1c-3.2 0-5.6-2.6-5.6-5.7V8.7c0-.7.5-1.2 1.2-1.2Z" fill="#fff"/>
@@ -1317,7 +1324,7 @@
     <!-- =========================================================
          HERO — CLEAN, LIGHT-FIRST, PARALLAX DEPTH
     ========================================================== -->
-    <section class="relative px-4 sm:px-6 pb-16 sm:pb-24 subtle-grid-bg">
+    <section class="relative px-4 sm:px-6 pb-10 sm:pb-14 subtle-grid-bg">
       <div class="max-w-6xl mx-auto text-center">
         <!-- Friendly Pills (immediate first paint, never hidden on load) -->
         <div class="inline-flex flex-wrap items-center justify-center gap-2 mb-5 sm:mb-7">
@@ -1331,7 +1338,7 @@
           </span>
           <span id="hero-release-badge" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold mac-glass text-indigo-700 dark:text-indigo-300">
             <span class="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
-            <span id="hero-release-badge-text">Latest version: v2.5.1</span>
+            <span id="hero-release-badge-text">Latest version: v2.6.0</span>
           </span>
         </div>
 
@@ -1349,12 +1356,13 @@
 
         <!-- Primary CTAs (stack cleanly on mobile) -->
         <div class="mt-7 sm:mt-9 flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 max-w-md sm:max-w-none mx-auto">
-          <a id="hero-download-cta" href="https://github.com/romeroluisjavier/MacFileExplorer/raw/main/releases/MacFileExplorer-2.5.1.dmg"
+          <a id="hero-download-cta" href="https://github.com/romeroluisjavier/MacFileExplorer/releases/download/v2.6.0/MacFileExplorer-2.6.0.dmg"
+            data-umami-event="download-dmg" data-umami-event-location="hero" data-umami-event-version="v2.6.0"
             class="btn-primary inline-flex items-center justify-center gap-2.5 px-7 py-3.5 rounded-2xl text-[15px] font-semibold text-white bg-gradient-to-b from-[#1A90FF] to-[#0071E3] hover:brightness-110 shadow-xl shadow-brand-600/25 transition-all hover:-translate-y-0.5">
             <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v12m0 0-4.5-4.5M12 15l4.5-4.5M4 20h16"/>
             </svg>
-            <span id="hero-download-label">Download MacFileExplorer v2.5.1</span>
+            <span id="hero-download-label">Download MacFileExplorer v2.6.0</span>
           </a>
 
           <a href="#install"
@@ -1434,6 +1442,64 @@
                 <button type="button" id="hero-enlarge-btn" class="text-brand-600 dark:text-brand-400 font-semibold hover:underline" data-i18n="hero.clickZoom">Click to enlarge</button>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================
+         SUPPORT / OPTIONAL TIP ON KO-FI (AFTER SUMMARY — #support)
+    ========================================================== -->
+    <section id="support" class="py-8 sm:py-12 px-4 sm:px-6 scroll-mt-24">
+      <div class="max-w-4xl mx-auto">
+        <div class="reveal mac-glass rounded-3xl p-6 sm:p-9 border border-rose-500/20 shadow-xl">
+          <div class="flex flex-col md:flex-row items-center gap-7 sm:gap-10">
+            <div class="flex-1 text-center md:text-left">
+              <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25 mb-3">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                <span data-i18n="support.badge">100% Free · Optional Tip</span>
+              </div>
+
+              <h2 class="desktop-heading text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-950 dark:text-white" data-i18n="support.title">
+                Enjoying MacFileExplorer? Leave an optional tip
+              </h2>
+
+              <p class="desktop-subtext mt-3 text-sm sm:text-[15px] text-slate-600 dark:text-slate-300 leading-relaxed" data-i18n-html="support.desc">
+                MacFileExplorer is and will always remain <strong>100% free</strong>, ad-free, with zero locked features. Ko-fi is purely an <strong>optional tip</strong> in case the app saves you time every day and you'd like to buy me a coffee to support future updates.
+              </p>
+
+              <div data-kofi-fixed-wrap class="mt-5 flex flex-col sm:flex-row items-center md:items-center justify-center md:justify-start gap-3.5">
+                <!-- Fixed Ko-fi Script Widget (Top) -->
+                <div id="kofi-fixed-widget-top" data-kofi-fixed-widget class="inline-flex items-center justify-center min-h-[40px]">
+                  <script type='text/javascript' src='https://storage.ko-fi.com/cdn/widget/Widget_2.js'></script>
+                  <script type='text/javascript'>if (typeof kofiwidget2 !== 'undefined') { kofiwidget2.init('Support me on Ko-fi', '#F57373', 'S5U62BAGY7'); kofiwidget2.draw(); }</script>
+                </div>
+
+                <!-- Graceful fallback button if Ko-fi CDN is blocked by an adblocker -->
+                <a id="kofi-fallback-btn-top" data-kofi-fallback-btn href="https://ko-fi.com/luisjavierromero" target="_blank" rel="noopener noreferrer"
+                  data-umami-event="kofi-click" data-umami-event-location="top-summary"
+                  class="hidden inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-gradient-to-b from-[#F57373] to-[#D9534F] hover:brightness-110 shadow-md transition-all">
+                  <span>☕</span>
+                  <span data-i18n="support.fallbackBtn">Support me on Ko-fi</span>
+                </a>
+
+                <span class="text-xs text-slate-500 dark:text-slate-400" data-i18n="support.note">
+                  100% voluntary · No account required
+                </span>
+              </div>
+            </div>
+
+            <!-- Scannable Ko-fi QR Card -->
+            <a href="https://ko-fi.com/luisjavierromero" target="_blank" rel="noopener noreferrer"
+              data-umami-event="kofi-click" data-umami-event-location="top-qr"
+              class="group shrink-0 flex flex-col items-center gap-2 focus:outline-none">
+              <div class="p-2 rounded-2xl bg-white shadow-lg border border-slate-900/10 group-hover:scale-[1.03] transition-transform">
+                <img src="assets/kofi-qr.png" alt="Ko-fi QR Code — luisjavierromero" class="w-44 h-44 sm:w-48 sm:h-48 rounded-lg block" loading="lazy" />
+              </div>
+              <span class="text-[11px] font-semibold text-slate-500 dark:text-slate-400" data-i18n="support.scanQr">
+                Scan with your phone
+              </span>
+            </a>
           </div>
         </div>
       </div>
@@ -1915,7 +1981,7 @@
             <button type="button" data-demo-filter="gifs"
               class="demo-filter-btn active shrink-0 px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all bg-brand-600 text-white shadow-sm inline-flex items-center gap-1.5">
               <span class="w-1.5 h-1.5 rounded-full bg-emerald-300"></span>
-              <span data-i18n="demo.filterGifs">In motion (25)</span>
+              <span data-i18n="demo.filterGifs">In motion (28)</span>
             </button>
             <button type="button" data-demo-filter="screenshots"
               class="demo-filter-btn shrink-0 px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all text-slate-600 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white">
@@ -1923,7 +1989,7 @@
             </button>
             <button type="button" data-demo-filter="all"
               class="demo-filter-btn shrink-0 px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all text-slate-600 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white">
-              <span data-i18n="demo.filterAll">All (31)</span>
+              <span data-i18n="demo.filterAll">All (34)</span>
             </button>
           </div>
         </div>
@@ -1963,12 +2029,13 @@
                     Click the blue button below. The installer file will land in your <strong>Downloads</strong> folder in just a few seconds.
                   </p>
                 </div>
-                <a id="install-download-cta" href="https://github.com/romeroluisjavier/MacFileExplorer/raw/main/releases/MacFileExplorer-2.5.1.dmg"
+                <a id="install-download-cta" href="https://github.com/romeroluisjavier/MacFileExplorer/releases/download/v2.6.0/MacFileExplorer-2.6.0.dmg"
+                  data-umami-event="download-dmg" data-umami-event-location="install" data-umami-event-version="v2.6.0"
                   class="btn-primary inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-gradient-to-b from-[#1A90FF] to-[#0071E3] hover:brightness-110 shadow-md shadow-brand-600/25 transition-all shrink-0 self-start sm:self-center">
                   <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v11m0 0-4-4m4 4 4-4M4 19h16"/>
                   </svg>
-                  <span id="install-download-label">Download v2.5.1 (.dmg)</span>
+                  <span id="install-download-label">Download v2.6.0 (.dmg)</span>
                 </a>
               </div>
             </div>
@@ -2171,9 +2238,9 @@
     </section>
 
     <!-- =========================================================
-         SUPPORT / OPTIONAL TIP ON KO-FI (#support)
+         SUPPORT / OPTIONAL TIP ON KO-FI (BOTTOM — #support-bottom)
     ========================================================== -->
-    <section id="support" class="section-band py-16 sm:py-20 px-4 sm:px-6 scroll-mt-24">
+    <section id="support-bottom" class="section-band py-16 sm:py-20 px-4 sm:px-6 scroll-mt-24">
       <div class="max-w-4xl mx-auto">
         <div class="reveal mac-glass rounded-3xl p-6 sm:p-9 border border-rose-500/20 shadow-xl">
           <div class="flex flex-col md:flex-row items-center gap-7 sm:gap-10">
@@ -2191,15 +2258,15 @@
                 MacFileExplorer is and will always remain <strong>100% free</strong>, ad-free, with zero locked features. Ko-fi is purely an <strong>optional tip</strong> in case the app saves you time every day and you'd like to buy me a coffee to support future updates.
               </p>
 
-              <div class="mt-5 flex flex-col sm:flex-row items-center md:items-center justify-center md:justify-start gap-3.5">
-                <!-- Fixed Ko-fi Script Widget -->
-                <div id="kofi-fixed-widget" class="inline-flex items-center justify-center min-h-[40px]">
-                  <script type='text/javascript' src='https://storage.ko-fi.com/cdn/widget/Widget_2.js'></script>
+              <div data-kofi-fixed-wrap class="mt-5 flex flex-col sm:flex-row items-center md:items-center justify-center md:justify-start gap-3.5">
+                <!-- Fixed Ko-fi Script Widget (Bottom) -->
+                <div id="kofi-fixed-widget" data-kofi-fixed-widget class="inline-flex items-center justify-center min-h-[40px]">
                   <script type='text/javascript'>if (typeof kofiwidget2 !== 'undefined') { kofiwidget2.init('Support me on Ko-fi', '#F57373', 'S5U62BAGY7'); kofiwidget2.draw(); }</script>
                 </div>
 
                 <!-- Graceful fallback button if Ko-fi CDN is blocked by an adblocker -->
-                <a id="kofi-fallback-btn" href="https://ko-fi.com/luisjavierromero" target="_blank" rel="noopener noreferrer"
+                <a id="kofi-fallback-btn" data-kofi-fallback-btn href="https://ko-fi.com/luisjavierromero" target="_blank" rel="noopener noreferrer"
+                  data-umami-event="kofi-click" data-umami-event-location="bottom"
                   class="hidden inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-gradient-to-b from-[#F57373] to-[#D9534F] hover:brightness-110 shadow-md transition-all">
                   <span>☕</span>
                   <span data-i18n="support.fallbackBtn">Support me on Ko-fi</span>
@@ -2213,9 +2280,10 @@
 
             <!-- Scannable Ko-fi QR Card -->
             <a href="https://ko-fi.com/luisjavierromero" target="_blank" rel="noopener noreferrer"
+              data-umami-event="kofi-click" data-umami-event-location="bottom-qr"
               class="group shrink-0 flex flex-col items-center gap-2 focus:outline-none">
-              <div class="p-2.5 rounded-2xl bg-white shadow-lg border border-slate-900/10 group-hover:scale-[1.03] transition-transform">
-                <img src="assets/kofi-qr.png" alt="Ko-fi QR Code — luisjavierromero" class="w-36 h-36 sm:w-40 sm:h-40 rounded-lg block" loading="lazy" />
+              <div class="p-2 rounded-2xl bg-white shadow-lg border border-slate-900/10 group-hover:scale-[1.03] transition-transform">
+                <img src="assets/kofi-qr.png" alt="Ko-fi QR Code — luisjavierromero" class="w-44 h-44 sm:w-48 sm:h-48 rounded-lg block" loading="lazy" />
               </div>
               <span class="text-[11px] font-semibold text-slate-500 dark:text-slate-400" data-i18n="support.scanQr">
                 Scan with your phone
@@ -2307,8 +2375,8 @@
   <script>
     const REPO_OWNER = 'romeroluisjavier';
     const REPO_NAME = 'MacFileExplorer';
-    let currentVersionTag = 'v2.5.1';
-    let currentDmgUrl = `https://github.com/${REPO_OWNER}/${REPO_NAME}/raw/main/releases/MacFileExplorer-2.5.1.dmg`;
+    let currentVersionTag = 'v2.6.0';
+    let currentDmgUrl = `https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/download/v2.6.0/MacFileExplorer-2.6.0.dmg`;
     let currentLang = localStorage.getItem('mfe-lang') === 'es' ? 'es' : 'en';
     let currentTheme = ['light', 'dark', 'win98', 'macos98'].includes(localStorage.getItem('mfe-theme-v2'))
       ? localStorage.getItem('mfe-theme-v2')
@@ -2421,9 +2489,9 @@
         'demo.eyebrow': 'Visual tour',
         'demo.title': 'See it in action',
         'demo.subtitle': 'Explore how every feature looks and feels on your Mac. Tap any card to view it full screen.',
-        'demo.filterGifs': 'In motion (25)',
+        'demo.filterGifs': 'In motion (28)',
         'demo.filterShots': 'Screenshots (6)',
-        'demo.filterAll': 'All (31)',
+        'demo.filterAll': 'All (34)',
         'install.eyebrow': 'Ready in 1 minute',
         'install.title': 'How to install on your Mac',
         'install.subtitle': 'No technical skills or terminal commands required. Just follow these 3 quick steps:',
@@ -2578,9 +2646,9 @@
         'demo.eyebrow': 'Recorrido visual',
         'demo.title': 'Mirala en acción',
         'demo.subtitle': 'Explorá cómo se ve y cómo se usa cada función en tu Mac. Tocá cualquier tarjeta para verla en grande.',
-        'demo.filterGifs': 'En movimiento (25)',
+        'demo.filterGifs': 'En movimiento (28)',
         'demo.filterShots': 'Imágenes (6)',
-        'demo.filterAll': 'Todo (31)',
+        'demo.filterAll': 'Todo (34)',
         'install.eyebrow': 'Listo en 1 minuto',
         'install.title': 'Cómo instalarla en tu Mac',
         'install.subtitle': 'No necesitás saber nada técnico ni escribir comandos. Seguí estos 3 pasos simples:',
@@ -2688,6 +2756,33 @@
     };
 
     const DEMO_ITEMS = [
+      {
+        id: 'notch-now-playing-gif', type: 'gifs', src: 'assets/notch-now-playing-demo.gif',
+        badge: { en: 'v2.6.0 · Notch Player', es: 'v2.6.0 · Reproductor Notch' },
+        title: { en: 'Notch Music Player for YouTube Music, Spotify & Apple Music', es: 'Reproductor musical en el Notch para YouTube Music, Spotify y Apple Music' },
+        desc: {
+          en: 'Turn your MacBook notch (or any external screen as a floating island) into a smooth music player without stealing focus. Shows exact artwork, animated equalizer, ambient color glow, live synced karaoke lyrics, audio output switcher, quick reopen of your last music app when idle, and a ✕ close button.',
+          es: 'Transformá el Notch de tu MacBook (o cualquier monitor externo en modo píldora flotante) en un reproductor musical fluido que no roba foco. Muestra la carátula exacta, ecualizador animado, brillo ambiental, letras sincronizadas tipo karaoke, selector de salida de audio, botón para reabrir tu última app musical cuando está en pausa y cruz ✕ para cerrarlo.'
+        }
+      },
+      {
+        id: 'taskbar-smart-layout-gif', type: 'gifs', src: 'assets/taskbar-smart-layout-demo.gif',
+        badge: { en: 'v2.6.0 · Smart Taskbar', es: 'v2.6.0 · Barra inteligente' },
+        title: { en: 'No-scroll auto-shrink, Pinned Apps first, No Preview ghosts & Instant maximize', es: 'Ajuste automático sin scroll, Apps fijadas primero, Sin fantasma de Preview y Maximizado instantáneo' },
+        desc: {
+          en: 'Open 12+ windows and watch buttons shrink smoothly with zero horizontal scroll, keep pinned apps\' windows first in their exact pinned order, hide windowless Preview/TextEdit ghost icons automatically, and snap maximized Chrome windows cleanly above the bar almost instantaneously.',
+          es: 'Abrí más de 12 ventanas y mirá cómo los botones se ajustan solos sin scroll horizontal, ordená las ventanas de apps fijadas primero en su mismo orden, ocultá automáticamente Preview cuando cerrás sus ventanas y maximizá Chrome con ajuste instantáneo arriba de la barra.'
+        }
+      },
+      {
+        id: 'shortcuts-tools-view-desktop-gif', type: 'gifs', src: 'assets/shortcuts-tools-view-desktop-demo.gif',
+        badge: { en: 'v2.6.0 · Shortcuts & Tools', es: 'v2.6.0 · Atajos y Tools' },
+        title: { en: 'Manage All Keyboard Shortcuts + Tools «View Desktop» (⌘D)', es: 'Administrar todos los atajos + «View Desktop Shortcut» (⌘D)' },
+        desc: {
+          en: 'Search, toggle, edit, and check conflicts for every shortcut across MacFileExplorer from one window under File. Plus a new File → Tools menu starting with «View Desktop Shortcut» (⌘D by default) to reveal and focus your Mac Desktop from any app.',
+          es: 'Buscá, activá, editá y revisá conflictos de todos los atajos de MacFileExplorer desde una sola ventana en Archivo. Además, nuevo submenú Archivo → Herramientas con «View Desktop Shortcut» (⌘D por defecto) para mostrar y enfocar el Escritorio de tu Mac desde cualquier app.'
+        }
+      },
       {
         id: 'monthly-update-kofi-checkin-gif', type: 'gifs', src: 'assets/monthly-update-kofi-checkin-demo.gif',
         badge: { en: 'v2.5.1 · Focus & Updates', es: 'v2.5.1 · Foco y Aviso mensual' },
@@ -2971,13 +3066,37 @@
 
     const STATIC_RELEASES = [
       {
+        tag: 'v2.6.0',
+        date: { en: 'Nov 26, 2026', es: '26 nov 2026' },
+        title: {
+          en: 'Notch Music Player (YouTube Music & Spotify), Smart No-Scroll Taskbar, Pinned Order, Auto-Hide Preview, All Shortcuts Manager & Tools (⌘D)',
+          es: 'Reproductor musical «Notch» (YouTube Music y Spotify), Barra de tareas sin scroll, Apps fijadas primero, Preview sin fantasma, Administrador de atajos y Tools (⌘D)'
+        },
+        latest: true,
+        dmgUrl: `https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/download/v2.6.0/MacFileExplorer-2.6.0.dmg`,
+        highlights: {
+          en: [
+            'New «Notch» Music Player: blends seamlessly into your MacBook notch (or floats cleanly on external displays) with exact song, artist, progress, and cover art from YouTube Music, Spotify, and Apple Music, animated equalizer, ambient glow, live synced lyrics, audio output switcher, quick reopen of your last music app when idle, and a ✕ button to close Notch completely.',
+            'Auto-Shrinking Taskbar (no horizontal scroll): smoothly adapts button widths when many windows are open so everything stays visible without clipping (switch back to horizontal scroll anytime).',
+            'Pinned Apps\' Windows First (in Pinned Order) with subtle pin badges, divider, and helpful drag hint + automatic hiding of windowless Preview & document apps + instant window maximize adjustment above the Taskbar.',
+            'Central «Manage All Keyboard Shortcuts…» window under File, new «Tools» submenu with «View Desktop Shortcut» (⌘D by default), unified Settings naming across every menu, and a transparent macOS Permissions guide in Help.'
+          ],
+          es: [
+            'Nuevo reproductor musical «Notch»: se funde con el notch de tu MacBook (o flota como píldora en monitores externos) con canción, artista, progreso y carátula exacta de YouTube Music, Spotify y Apple Music, ecualizador animado, brillo ambiental, letras sincronizadas en vivo, selector de salida de audio, acceso para reabrir tu última app musical cuando no suena nada y cruz ✕ para cerrarlo por completo.',
+            'Barra de tareas con ajuste automático sin scroll horizontal: adapta suavemente el ancho de los botones cuando hay muchas ventanas abiertas para verlas todas sin cortes (configurable).',
+            'Ventanas de apps fijadas primero en su mismo orden (con indicador sutil y aviso al arrastrar), ocultamiento automático de Preview y apps de documentos sin ventanas, y ajuste instantáneo al maximizar ventanas como Chrome.',
+            'Ventana central «Administrar todos los atajos de teclado…» en Archivo, nuevo submenú «Herramientas (Tools)» con «View Desktop Shortcut» (⌘D por defecto), nombres de configuración unificados por módulo y guía transparente de Permisos de macOS en la Ayuda.'
+          ]
+        }
+      },
+      {
         tag: 'v2.5.1',
         date: { en: 'Nov 26, 2026', es: '26 nov 2026' },
         title: {
           en: 'Non-Activating Start Menu, Monthly Update Check-In + Optional Ko-fi Tip, Wider About Window & Dark Mono Default Icon',
           es: 'Menú Inicio sin robar foco, Aviso mensual con actualizaciones + Ko-fi, «Acerca de» renovado e ícono Mono Oscuro'
         },
-        latest: true,
+        latest: false,
         dmgUrl: `https://github.com/${REPO_OWNER}/${REPO_NAME}/raw/main/releases/MacFileExplorer-2.5.1.dmg`,
         highlights: {
           en: [
@@ -3714,7 +3833,10 @@
         currentDmgUrl = dmgUrl;
         ['nav-download-cta', 'mobile-download-cta', 'hero-download-cta', 'install-download-cta'].forEach((id) => {
           const el = document.getElementById(id);
-          if (el) el.href = dmgUrl;
+          if (el) {
+            el.href = dmgUrl;
+            el.setAttribute('data-umami-event-version', currentVersionTag);
+          }
         });
       }
     }
@@ -3725,6 +3847,7 @@
         const relDate = typeof rel.date === 'string' ? rel.date : rel.date[currentLang];
         const relTitle = typeof rel.title === 'string' ? rel.title : rel.title[currentLang];
         const relHighlights = Array.isArray(rel.highlights) ? rel.highlights : rel.highlights[currentLang];
+        const isDmgLink = rel.dmgUrl && rel.dmgUrl.endsWith('.dmg');
         return `
           <article class="reveal relative mac-glass rounded-2xl sm:rounded-3xl p-5 sm:p-7" data-delay="${Math.min(idx + 1, 3)}">
             <span class="absolute -left-[25px] sm:-left-[35px] top-7 w-4 h-4 rounded-full border-2 border-white dark:border-[#090b10] ${rel.latest ? 'bg-brand-600 ring-4 ring-brand-500/25' : 'bg-slate-400 dark:bg-slate-600'}"></span>
@@ -3736,9 +3859,12 @@
               </div>
               ${rel.dmgUrl ? `
                 <a href="${rel.dmgUrl}" target="_blank" rel="noopener noreferrer"
+                  data-umami-event="${isDmgLink ? 'download-dmg' : 'release-view'}"
+                  data-umami-event-location="release-card"
+                  data-umami-event-version="${rel.tag}"
                   class="inline-flex items-center gap-1.5 text-xs font-semibold text-brand-600 dark:text-brand-400 hover:underline">
                   <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v11m0 0-4-4m4 4 4-4M4 19h16"/></svg>
-                  ${rel.dmgUrl.endsWith('.dmg') ? t('releases.downloadDmg') : t('releases.viewRelease')}
+                  ${isDmgLink ? t('releases.downloadDmg') : t('releases.viewRelease')}
                 </a>` : ''}
             </div>
             <h3 class="text-base sm:text-xl font-bold text-slate-950 dark:text-white">${relTitle}</h3>
@@ -3789,7 +3915,7 @@
     const featureStage = document.getElementById('feature-cards-stage');
     const featureParallaxCards = document.querySelectorAll('[data-card-parallax]');
     const heroCard = document.getElementById('hero-parallax-card');
-    const navSections = ['features', 'demo', 'install', 'report-issue', 'releases']
+    const navSections = ['support', 'features', 'demo', 'install', 'report-issue', 'releases', 'support-bottom']
       .map((id) => document.getElementById(id))
       .filter(Boolean);
     const navLinks = document.querySelectorAll('.nav-link');
@@ -3896,8 +4022,9 @@
           activeId = sec.id;
         }
       }
+      const navActiveTarget = activeId === 'support-bottom' ? 'support' : activeId;
       navLinks.forEach((a) => {
-        a.classList.toggle('is-active', a.getAttribute('href') === `#${activeId}`);
+        a.classList.toggle('is-active', a.getAttribute('href') === `#${navActiveTarget}`);
       });
     }
 
@@ -3910,15 +4037,75 @@
     window.addEventListener('scroll', scheduleScrollFrame, { passive: true });
     window.addEventListener('resize', scheduleScrollFrame, { passive: true });
 
-    // Fallback check for fixed Ko-fi widget in case CDN is blocked
+    // Fallback check for fixed Ko-fi widgets (top + bottom) in case CDN is blocked
     window.addEventListener('load', () => {
-      const fixedBox = document.getElementById('kofi-fixed-widget');
-      const fallbackBtn = document.getElementById('kofi-fallback-btn');
-      if (fixedBox && fallbackBtn && !fixedBox.querySelector('a, .btn-container')) {
-        fixedBox.classList.add('hidden');
-        fallbackBtn.classList.remove('hidden');
-      }
+      document.querySelectorAll('[data-kofi-fixed-wrap]').forEach((wrap) => {
+        const fixedBox = wrap.querySelector('[data-kofi-fixed-widget]');
+        const fallbackBtn = wrap.querySelector('[data-kofi-fallback-btn]');
+        if (fixedBox && fallbackBtn && !fixedBox.querySelector('a, .btn-container')) {
+          fixedBox.classList.add('hidden');
+          fallbackBtn.classList.remove('hidden');
+        }
+      });
     });
+
+    // Prefer official GitHub Release asset URLs when published so GitHub counts every .dmg download accurately.
+    async function syncReleaseAssetDownloadURLs() {
+      const CACHE_KEY = 'mfe_gh_release_assets_v1';
+      const CACHE_TTL_MS = 10 * 60 * 1000;
+      let assetByTag = null;
+
+      try {
+        const cachedRaw = sessionStorage.getItem(CACHE_KEY);
+        if (cachedRaw) {
+          const cached = JSON.parse(cachedRaw);
+          if (cached && cached.ts && (Date.now() - cached.ts) < CACHE_TTL_MS && cached.map) {
+            assetByTag = cached.map;
+          }
+        }
+      } catch (_) {}
+
+      if (!assetByTag) {
+        try {
+          const resp = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases?per_page=20`, {
+            headers: { Accept: 'application/vnd.github+json' }
+          });
+          if (!resp.ok) return;
+          const releases = await resp.json();
+          if (!Array.isArray(releases) || !releases.length) return;
+          assetByTag = {};
+          releases.forEach((rel) => {
+            if (!rel || !rel.tag_name || !Array.isArray(rel.assets)) return;
+            const dmgAsset = rel.assets.find((a) => a && typeof a.name === 'string' && a.name.toLowerCase().endsWith('.dmg') && a.browser_download_url);
+            if (dmgAsset) {
+              assetByTag[rel.tag_name] = dmgAsset.browser_download_url;
+            }
+          });
+          try {
+            sessionStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), map: assetByTag }));
+          } catch (_) {}
+        } catch (_) {
+          return;
+        }
+      }
+
+      if (!assetByTag || !Object.keys(assetByTag).length) return;
+
+      let updatedAnyRelease = false;
+      STATIC_RELEASES.forEach((rel) => {
+        if (assetByTag[rel.tag] && rel.dmgUrl !== assetByTag[rel.tag]) {
+          rel.dmgUrl = assetByTag[rel.tag];
+          updatedAnyRelease = true;
+        }
+      });
+
+      if (assetByTag[currentVersionTag]) {
+        updateDownloadCTAs(currentVersionTag, assetByTag[currentVersionTag]);
+      }
+      if (updatedAnyRelease) {
+        renderReleases(STATIC_RELEASES);
+      }
+    }
 
     // =========================================================================
     // BOOT — DEFAULT LIGHT MODE + DEFAULT ENGLISH
@@ -3926,6 +4113,7 @@
     applyLanguage(currentLang);
     observeRevealElements();
     onScrollFrame();
+    syncReleaseAssetDownloadURLs();
   </script>
 
   <!-- Floating Ko-fi Overlay Widget -->

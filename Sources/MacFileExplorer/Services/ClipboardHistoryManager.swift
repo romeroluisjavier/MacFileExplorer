@@ -21,7 +21,9 @@ private func clipboardCarbonHotKeyHandler(
         nil,
         &hotKeyID
     )
-    guard status == noErr else { return status }
+    guard status == noErr, hotKeyID.signature == 0x4D464543 else {
+        return OSStatus(eventNotHandledErr)
+    }
     let id = hotKeyID.id
     Task { @MainActor in
         ClipboardHistoryManager.shared.handleCarbonHotKeyTriggered(id: id)
@@ -317,6 +319,7 @@ public final class ClipboardHistoryManager {
     private var carbonEventHandlerRef: EventHandlerRef?
     private var quickPasteHotKeyRef: EventHotKeyRef?
     private var fullSearchHotKeyRef: EventHotKeyRef?
+    private var isRecordingSuspended: Bool = false
 
     /// Tipos de `NSPasteboard` confidenciales o transitorios (gestores de contraseñas como 1Password, Keychain, etc.) que deben ignorarse.
     private static let ignoredPasteboardTypeRawValues: Set<String> = [
@@ -421,6 +424,13 @@ public final class ClipboardHistoryManager {
         pollTimer = nil
     }
 
+    /// Suspende temporalmente los atajos globales del Portapapeles mientras el usuario graba atajos.
+    public func setRecordingSuspended(_ suspended: Bool) {
+        guard isRecordingSuspended != suspended else { return }
+        isRecordingSuspended = suspended
+        syncGlobalHotKeys()
+    }
+
     /// Registra o actualiza los atajos globales a nivel sistema en macOS mediante Carbon `RegisterEventHotKey`
     /// para que `⌃⌘V` abra el desplegable rápido de los últimos 10 ítems sin importar en qué aplicación esté parado el usuario.
     public func syncGlobalHotKeys() {
@@ -432,6 +442,8 @@ public final class ClipboardHistoryManager {
             UnregisterEventHotKey(existingFull)
             fullSearchHotKeyRef = nil
         }
+
+        guard !isRecordingSuspended else { return }
 
         let prefs = ClipboardHistoryPreferences.shared
         guard prefs.isEnabled else { return }
@@ -489,7 +501,7 @@ public final class ClipboardHistoryManager {
     }
 
     fileprivate func handleCarbonHotKeyTriggered(id: UInt32) {
-        guard ClipboardHistoryPreferences.shared.isEnabled else { return }
+        guard !isRecordingSuspended, ClipboardHistoryPreferences.shared.isEnabled else { return }
         switch id {
         case 1:
             ClipboardQuickPopupController.shared.togglePopup()

@@ -1097,6 +1097,8 @@ public struct TaskbarWindowOrderEngine: Sendable {
     public struct SlotMetadata: Sendable, Equatable {
         public let pid: pid_t
         public let appGroupKey: String
+        public let bundleIdentifier: String
+        public let bundlePathLowercased: String
         public let frameAX: CGRect
         public let isWindowlessApp: Bool
     }
@@ -1115,10 +1117,12 @@ public struct TaskbarWindowOrderEngine: Sendable {
     }
 
     /// Sincroniza la lista de ventanas visibles actuales manteniendo el orden previo,
-    /// insertando nuevas ventanas en su ranura heredada, junto a su app (`groupByApp`) o al final.
+    /// insertando nuevas ventanas en su ranura heredada, junto a su app (`groupByApp`) o al final,
+    /// y opcionalmente priorizando las ventanas de apps fijadas en su mismo orden (`pinnedAppsForOrdering`).
     public mutating func orderedWindows(
         from currentWindows: [TaskbarWindowItem],
         groupByApp: Bool,
+        pinnedAppsForOrdering: [TaskbarPinnedApp]? = nil,
         liveWindowIDsAcrossAllSpaces: Set<String>? = nil,
         runningPIDs: Set<pid_t>? = nil,
         now: TimeInterval = Date().timeIntervalSinceReferenceDate
@@ -1128,9 +1132,12 @@ public struct TaskbarWindowOrderEngine: Sendable {
 
         // Actualizar metadatos de las ventanas visibles actualmente
         for item in currentWindows {
+            let normalizedPath = item.appBundleURL?.standardizedFileURL.path(percentEncoded: false).lowercased() ?? ""
             metadataByID[item.id] = SlotMetadata(
                 pid: item.pid,
                 appGroupKey: item.appGroupKey,
+                bundleIdentifier: item.bundleIdentifier,
+                bundlePathLowercased: normalizedPath,
                 frameAX: item.frameAX,
                 isWindowlessApp: item.isWindowlessApp
             )
@@ -1207,6 +1214,61 @@ public struct TaskbarWindowOrderEngine: Sendable {
                 buckets[key]?.append(id)
             }
             orderedWindowIDs = seenApps.flatMap { buckets[$0] ?? [] }
+        }
+
+        // Si el usuario activó priorizar apps fijadas, colocar primero las ventanas de cada app fijada
+        // exactamente en el mismo orden en que están fijadas, y al final las apps no fijadas (preservando el orden relativo).
+        if let pinnedApps = pinnedAppsForOrdering, !pinnedApps.isEmpty, orderedWindowIDs.count > 1 {
+            let normalizedPinned: [(bundleIDLower: String, pathLower: String, idLower: String)] = pinnedApps.map { pinned in
+                let stdPath = pinned.bundlePath.isEmpty
+                    ? ""
+                    : URL(fileURLWithPath: pinned.bundlePath).standardizedFileURL.path(percentEncoded: false).lowercased()
+                return (pinned.bundleIdentifier.lowercased(), stdPath, pinned.id.lowercased())
+            }
+
+            var pinnedBuckets: [[String]] = Array(repeating: [], count: normalizedPinned.count)
+            var unpinnedIDs: [String] = []
+            unpinnedIDs.reserveCapacity(orderedWindowIDs.count)
+
+            for id in orderedWindowIDs {
+                let item = byID[id]
+                let meta = metadataByID[id]
+                let bundleIDLower = (item?.bundleIdentifier ?? meta?.bundleIdentifier ?? "").lowercased()
+                let pathLower: String = {
+                    if let url = item?.appBundleURL {
+                        return url.standardizedFileURL.path(percentEncoded: false).lowercased()
+                    }
+                    return meta?.bundlePathLowercased ?? ""
+                }()
+                let groupKeyLower = (item?.appGroupKey ?? meta?.appGroupKey ?? "").lowercased()
+
+                let matchedIndex = normalizedPinned.firstIndex { pinned in
+                    if !pinned.bundleIDLower.isEmpty && !bundleIDLower.isEmpty && pinned.bundleIDLower == bundleIDLower {
+                        return true
+                    }
+                    if !pinned.pathLower.isEmpty && !pathLower.isEmpty && pinned.pathLower == pathLower {
+                        return true
+                    }
+                    if !pinned.idLower.isEmpty && !groupKeyLower.isEmpty && pinned.idLower == groupKeyLower {
+                        return true
+                    }
+                    return false
+                }
+
+                if let matchedIndex {
+                    pinnedBuckets[matchedIndex].append(id)
+                } else {
+                    unpinnedIDs.append(id)
+                }
+            }
+
+            var combined: [String] = []
+            combined.reserveCapacity(orderedWindowIDs.count)
+            for bucket in pinnedBuckets {
+                combined.append(contentsOf: bucket)
+            }
+            combined.append(contentsOf: unpinnedIDs)
+            orderedWindowIDs = combined
         }
 
         // Construir salida en el orden registrado para las ventanas visibles en este Space/pantalla
@@ -1573,9 +1635,42 @@ public struct TaskbarButtonLayoutPlan: Equatable, Sendable {
 
 /// Calcula dinámicamente qué ventanas muestran título o solo ícono y distribuye el espacio horizontal
 /// disponible para que las ventanas abiertas aprovechen todo el espacio liberado por las minimizadas compactas.
+/// Comportamiento cuando hay muchas ventanas abiertas y superan el ancho normal de la barra de tareas.
+public enum TaskbarOverflowMode: String, CaseIterable, Identifiable, Codable, Sendable {
+    /// Ajusta dinámicamente el ancho de los botones (y pasa a solo íconos si hace falta) para que entren todos sin scroll.
+    case shrinkToFit = "shrink_to_fit"
+    /// Mantiene un ancho mínimo fijo por botón y habilita desplazamiento horizontal (scroll).
+    case horizontalScroll = "horizontal_scroll"
+
+    public var id: String { rawValue }
+
+    @MainActor
+    public func localizedTitle(using loc: LocalizationManager = .shared) -> String {
+        switch self {
+        case .shrinkToFit:
+            return loc.text(es: "Ajustar ancho automáticamente (sin scroll)", en: "Auto-Shrink Buttons to Fit (No Scroll)")
+        case .horizontalScroll:
+            return loc.text(es: "Ancho mínimo fijo con scroll horizontal", en: "Fixed Minimum Width with Horizontal Scroll")
+        }
+    }
+
+    public var systemImage: String {
+        switch self {
+        case .shrinkToFit:
+            return "arrow.right.and.line.vertical.and.arrow.left"
+        case .horizontalScroll:
+            return "arrow.left.and.right"
+        }
+    }
+}
+
 public enum TaskbarButtonLayoutCalculator {
     public static let maxExpandedButtonWidth: CGFloat = 215
     public static let minExpandedButtonWidth: CGFloat = 96
+    /// Ancho mínimo al que puede reducirse un botón con título en modo `shrinkToFit` antes de pasar a solo íconos.
+    public static let minShrunkTitledButtonWidth: CGFloat = 56
+    /// Ancho mínimo absoluto por botón en modo solo íconos cuando hay muchísimas ventanas abiertas.
+    public static let minShrunkIconButtonWidth: CGFloat = 24
 
     public static func shouldShowTitle(
         for item: TaskbarWindowItem,
@@ -1595,7 +1690,8 @@ public enum TaskbarButtonLayoutCalculator {
         barHeight: CGFloat,
         showWindowTitles: Bool,
         minimizedDisplayMode: TaskbarMinimizedWindowDisplayMode,
-        groupWindowsByApp: Bool
+        groupWindowsByApp: Bool,
+        overflowMode: TaskbarOverflowMode = .shrinkToFit
     ) -> TaskbarButtonLayoutPlan {
         guard !windows.isEmpty else {
             return TaskbarButtonLayoutPlan(
@@ -1606,17 +1702,17 @@ public enum TaskbarButtonLayoutCalculator {
             )
         }
 
-        let leadingSpacings: [CGFloat] = windows.indices.map { idx in
+        var leadingSpacings: [CGFloat] = windows.indices.map { idx in
             guard idx > 0 else { return 0 }
             if groupWindowsByApp {
                 return windows[idx].appGroupKey == windows[idx - 1].appGroupKey ? 2 : 7
             }
             return 5
         }
-        let totalSpacing = leadingSpacings.reduce(0, +)
+        var totalSpacing = leadingSpacings.reduce(0, +)
         let iconOnlyWidth = max(34, barHeight - 2)
 
-        let showTitles = windows.map {
+        var showTitles = windows.map {
             shouldShowTitle(
                 for: $0,
                 showWindowTitles: showWindowTitles,
@@ -1627,24 +1723,90 @@ public enum TaskbarButtonLayoutCalculator {
         let compactCount = windows.count - expandedCount
         let compactTotalWidth = CGFloat(compactCount) * iconOnlyWidth
 
-        let expandedWidth: CGFloat
-        if expandedCount > 0 {
-            let remainingForExpanded = availableWidth - totalSpacing - compactTotalWidth
-            let idealExpanded = floor(remainingForExpanded / CGFloat(expandedCount))
-            expandedWidth = min(maxExpandedButtonWidth, max(minExpandedButtonWidth, idealExpanded))
-        } else {
-            expandedWidth = iconOnlyWidth
+        switch overflowMode {
+        case .horizontalScroll:
+            let expandedWidth: CGFloat
+            if expandedCount > 0 {
+                let remainingForExpanded = availableWidth - totalSpacing - compactTotalWidth
+                let idealExpanded = floor(remainingForExpanded / CGFloat(expandedCount))
+                expandedWidth = min(maxExpandedButtonWidth, max(minExpandedButtonWidth, idealExpanded))
+            } else {
+                expandedWidth = iconOnlyWidth
+            }
+
+            let buttonWidths = showTitles.map { $0 ? expandedWidth : iconOnlyWidth }
+            let totalContentWidth = compactTotalWidth + CGFloat(expandedCount) * expandedWidth + totalSpacing
+            let needsHorizontalScroll = totalContentWidth > availableWidth
+
+            return TaskbarButtonLayoutPlan(
+                buttonWidths: buttonWidths,
+                showTitles: showTitles,
+                leadingSpacings: leadingSpacings,
+                needsHorizontalScroll: needsHorizontalScroll
+            )
+
+        case .shrinkToFit:
+            // Paso 1: intentar que entren todos los botones con título reduciendo suavemente su ancho hasta `minShrunkTitledButtonWidth`
+            if expandedCount > 0 {
+                let remainingForExpanded = availableWidth - totalSpacing - compactTotalWidth
+                let idealExpanded = floor(remainingForExpanded / CGFloat(expandedCount))
+
+                if idealExpanded >= minShrunkTitledButtonWidth {
+                    let fittedExpanded = min(maxExpandedButtonWidth, idealExpanded)
+                    let buttonWidths = showTitles.map { $0 ? fittedExpanded : iconOnlyWidth }
+                    return TaskbarButtonLayoutPlan(
+                        buttonWidths: buttonWidths,
+                        showTitles: showTitles,
+                        leadingSpacings: leadingSpacings,
+                        needsHorizontalScroll: false
+                    )
+                }
+
+                // Probar compactando levemente el espaciado entre botones antes de ocultar títulos
+                let tighterSpacings: [CGFloat] = windows.indices.map { idx in
+                    guard idx > 0 else { return 0 }
+                    if groupWindowsByApp {
+                        return windows[idx].appGroupKey == windows[idx - 1].appGroupKey ? 1.5 : 4
+                    }
+                    return 3
+                }
+                let tighterTotalSpacing = tighterSpacings.reduce(0, +)
+                let remainingTighter = availableWidth - tighterTotalSpacing - compactTotalWidth
+                let idealTighter = floor(remainingTighter / CGFloat(expandedCount))
+                if idealTighter >= minShrunkTitledButtonWidth {
+                    let fittedExpanded = min(maxExpandedButtonWidth, idealTighter)
+                    let buttonWidths = showTitles.map { $0 ? fittedExpanded : iconOnlyWidth }
+                    return TaskbarButtonLayoutPlan(
+                        buttonWidths: buttonWidths,
+                        showTitles: showTitles,
+                        leadingSpacings: tighterSpacings,
+                        needsHorizontalScroll: false
+                    )
+                }
+            }
+
+            // Paso 2: si hay demasiadas ventanas para mostrar texto legible, compactar automáticamente a solo íconos ajustando su ancho para que entren todas
+            showTitles = Array(repeating: false, count: windows.count)
+            leadingSpacings = windows.indices.map { idx in
+                guard idx > 0 else { return 0 }
+                if groupWindowsByApp {
+                    return windows[idx].appGroupKey == windows[idx - 1].appGroupKey ? 1.5 : 4
+                }
+                return 2.5
+            }
+            totalSpacing = leadingSpacings.reduce(0, +)
+
+            let idealIconWidth = floor((availableWidth - totalSpacing) / CGFloat(windows.count))
+            let fittedIconWidth = min(iconOnlyWidth, max(minShrunkIconButtonWidth, idealIconWidth))
+            let totalIconContentWidth = CGFloat(windows.count) * fittedIconWidth + totalSpacing
+            let buttonWidths = Array(repeating: fittedIconWidth, count: windows.count)
+
+            return TaskbarButtonLayoutPlan(
+                buttonWidths: buttonWidths,
+                showTitles: showTitles,
+                leadingSpacings: leadingSpacings,
+                needsHorizontalScroll: totalIconContentWidth > availableWidth + 1
+            )
         }
-
-        let buttonWidths = showTitles.map { $0 ? expandedWidth : iconOnlyWidth }
-        let totalContentWidth = compactTotalWidth + CGFloat(expandedCount) * expandedWidth + totalSpacing
-        let needsHorizontalScroll = totalContentWidth > availableWidth
-
-        return TaskbarButtonLayoutPlan(
-            buttonWidths: buttonWidths,
-            showTitles: showTitles,
-            leadingSpacings: leadingSpacings,
-            needsHorizontalScroll: needsHorizontalScroll
-        )
     }
 }

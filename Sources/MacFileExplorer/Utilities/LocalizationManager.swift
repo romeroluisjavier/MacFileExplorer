@@ -54,13 +54,18 @@ public final class LocalizationManager: NSObject, NSMenuDelegate {
             applyLanguageToMainMenu()
             StatusBarManager.shared.refreshTooltipAndMenu()
             TaskbarManager.shared.refreshLocalizedUI()
+            NotchManager.shared.refreshLocalizedUI()
             AppIconPickerWindowController.shared.refreshLocalizedTitle()
             TaskbarSettingsWindowController.shared.refreshLocalizedTitle()
             TaskbarSetupWizardWindowController.shared.refreshLocalizedTitle()
             AltTabSettingsWindowController.shared.refreshLocalizedTitle()
+            NotchSettingsWindowController.shared.refreshLocalizedTitle()
             AboutWindowController.shared.refreshLocalizedTitle()
             HelpWindowController.shared.refreshLocalizedTitle()
             UpdateWindowController.shared.refreshLocalizedTitle()
+            AppShortcutsWindowController.shared.refreshLocalizedTitle()
+            ToolsSettingsWindowController.shared.refreshLocalizedTitle()
+            ClipboardShortcutsWindowController.shared.refreshLocalizedTitle()
         }
     }
 
@@ -232,6 +237,7 @@ public final class LocalizationManager: NSObject, NSMenuDelegate {
             ("Portapapeles", "Clipboard"),
             ("Barra de tareas", "Taskbar"),
             ("AltTab", "AltTab"),
+            ("Notch", "Notch"),
             ("Office", "Office"),
             ("Idioma", "Language"),
             ("Ventana", "Window"),
@@ -261,7 +267,11 @@ public final class LocalizationManager: NSObject, NSMenuDelegate {
             ("Animación de vista previa", "Hover Preview Animation"),
             ("Gestión del Dock de macOS", "macOS Dock Management"),
             ("Estilo de visualización", "Display Style"),
-            ("Etiquetas y controles", "Badges & Controls")
+            ("Etiquetas y controles", "Badges & Controls"),
+            ("Estilo de carátula", "Artwork Style"),
+            ("Pantallas", "Displays"),
+            ("Herramientas", "Tools"),
+            ("Modo de «Ver Escritorio»", "View Desktop Mode")
         ]
         for pair in pairs {
             if rawTitle.caseInsensitiveCompare(pair.es) == .orderedSame ||
@@ -401,6 +411,7 @@ public final class LocalizationManager: NSObject, NSMenuDelegate {
             ("Personalizar todos los atajos de teclado…", "Customize All Keyboard Shortcuts…"),
             ("Restablecer atajos predeterminados (Maccy)", "Reset Shortcuts to Defaults (Maccy)"),
             ("Configuración de atajos (Shortcuts)", "Shortcuts Configuration"),
+            ("Configuración del Portapapeles…", "Clipboard Settings…"),
             ("Abrir panel de atajos y ajustes…", "Open Shortcuts & Settings Panel…"),
             ("Pegar automáticamente al elegir del menú desplegable", "Auto-paste on dropdown selection"),
             ("Activar barra de tareas", "Enable Taskbar"),
@@ -410,6 +421,8 @@ public final class LocalizationManager: NSObject, NSMenuDelegate {
             ("Asistente de permisos y configuración…", "Setup & Permissions Assistant…"),
             ("Vista previa al pasar el cursor", "Hover Window Previews"),
             ("Mantener ventanas de la misma app juntas (lado a lado)", "Keep Same-App Windows Side by Side"),
+            ("Apps fijadas primero en la barra (en su mismo orden)", "Pinned Apps' Windows First (in Pinned Order)"),
+            ("Ajustar ancho sin scroll horizontal", "Auto-Shrink Buttons (No Scroll)"),
             ("Mostrar títulos de ventanas", "Show Window Titles"),
             ("Redimensionar ventanas superpuestas", "Auto-Resize Overlapping Windows"),
             ("Sincronizar con Espacios (Spaces)", "Sync with macOS Spaces"),
@@ -437,6 +450,28 @@ public final class LocalizationManager: NSObject, NSMenuDelegate {
             ("Mostrar etiquetas de minimizadas y ocultas", "Show Minimized & Hidden Badges"),
             ("Botones rápidos al pasar el mouse", "Hover Quick Actions"),
             ("Etiquetas y controles", "Badges & Controls"),
+            // Menú Notch
+            ("Activar Notch (Reproductor de música)", "Enable Notch (Now Playing)"),
+            ("Activar Notch", "Enable Notch"),
+            ("Reproducir / Pausar", "Play / Pause"),
+            ("Siguiente canción", "Next Track"),
+            ("Canción anterior", "Previous Track"),
+            ("Expandir / Contraer Notch", "Expand / Collapse Notch"),
+            ("Probar con canción demo", "Preview with Demo Track"),
+            ("Detener canción demo", "Stop Demo Track"),
+            ("Mostrar letras sincronizadas", "Show Synced Lyrics"),
+            ("Anunciar nuevas canciones", "Announce New Tracks"),
+            ("Efecto de brillo del álbum", "Ambient Album Glow"),
+            ("Ocultar en pantalla completa", "Hide in Full Screen"),
+            ("Estilo de carátula", "Artwork Style"),
+            ("Circular con anillo de progreso", "Circle with Progress Ring"),
+            ("Circular con anillo", "Circle with Ring"),
+            ("Cuadrada redondeada", "Rounded Square"),
+            ("Pantallas", "Displays"),
+            ("Solo pantalla con Notch", "Notch Display Only"),
+            ("Solo pantalla principal", "Primary Display Only"),
+            ("Todas las pantallas", "All Displays"),
+            ("Configuración de Notch…", "Notch Settings…"),
             // Menú Office
             ("Activar modo edición en Vista Rápida", "Enable Editing Mode in Quick Look"),
             ("Modo de apertura por defecto", "Default Preview Mode"),
@@ -454,6 +489,7 @@ public final class LocalizationManager: NSObject, NSMenuDelegate {
             ("Cuenta de Google para «Enviar a Drive»", "Google Account for \"Send to Drive\""),
             ("Conectar cuenta de Google…", "Sign in to Google Account…"),
             ("Agregar otra cuenta de Google…", "Add Another Google Account…"),
+            ("Configuración de «Enviar a Drive»…", "Send to Drive Settings…"),
             ("Configurar «Enviar a Drive» y carpeta…", "Configure \"Send to Drive\" & Folder…"),
             ("Restablecer carpeta destino a Mi unidad", "Reset Target Folder to My Drive"),
             ("Restablecer ajustes de Office", "Reset Office Settings"),
@@ -467,10 +503,20 @@ public final class LocalizationManager: NSObject, NSMenuDelegate {
             ("Nueva ventana", "New Window"),
             ("Buscar archivos duplicados…", "Find Duplicate Files…"),
             ("Caché oculta (.macfileexplorer)…", "Hidden Cache (.macfileexplorer)…"),
+            ("Administrar todos los atajos de teclado…", "Manage All Keyboard Shortcuts…"),
+            ("Administrar todos los atajos…", "Manage All Shortcuts…"),
+            ("Herramientas", "Tools"),
+            ("Ver Escritorio ahora", "View Desktop Now"),
+            ("Modo de «Ver Escritorio»", "View Desktop Mode"),
+            ("Mostrar Escritorio (Mission Control de macOS)", "Show Desktop (macOS Mission Control)"),
+            ("Ocultar ventanas y enfocar Escritorio (Estilo Win+D)", "Hide Windows & Focus Desktop (Win+D Style)"),
+            ("Configuración de Herramientas…", "Tools Settings…"),
+            ("Configurar «View Desktop Shortcut»…", "Configure \"View Desktop Shortcut\"…"),
             ("Guía del Menú Lateral…", "Sidebar Menu Guide…"),
             ("Guía de Búsqueda y OCR…", "Search & OCR Guide…"),
             ("Atajos de teclado…", "Keyboard Shortcuts…"),
             ("Configuraciones posibles…", "Available Settings…"),
+            ("Permisos de macOS y Privacidad…", "macOS Permissions & Privacy…"),
             ("Historial de releases…", "Release History…"),
             ("Cerrar", "Close"),
             ("Cerrar ventana", "Close Window"),
@@ -719,6 +765,22 @@ public final class LocalizationManager: NSObject, NSMenuDelegate {
             return "doc.on.doc"
         case "caché oculta (.macfileexplorer)…", "hidden cache (.macfileexplorer)…":
             return "internaldrive"
+        case "administrar todos los atajos de teclado…", "manage all keyboard shortcuts…",
+             "administrar todos los atajos…", "manage all shortcuts…":
+            return "keyboard"
+        case "herramientas", "tools":
+            return "wrench.and.screwdriver"
+        case "ver escritorio ahora", "view desktop now":
+            return "menubar.dock.rectangle"
+        case "modo de «ver escritorio»", "view desktop mode":
+            return "rectangle.inset.bottomleft.filled"
+        case "configuración de herramientas…", "tools settings…",
+             "configuración del portapapeles…", "clipboard settings…",
+             "configuración de «enviar a drive»…", "send to drive settings…",
+             "configurar «view desktop shortcut»…", "configure \"view desktop shortcut\"…":
+            return "slider.horizontal.3"
+        case "permisos de macos y privacidad…", "macos permissions & privacy…":
+            return "lock.shield"
         case "cerrar", "close":
             return "xmark.circle"
         case "cerrar ventana", "close window":
@@ -1033,6 +1095,44 @@ public final class LocalizationManager: NSObject, NSMenuDelegate {
             return "arrow.up.left.and.arrow.down.right"
         case "personalizar atajos y filtros…", "customize shortcuts & filters…":
             return "keyboard"
+
+        // Notch
+        case "notch", "activar notch (reproductor de música)", "enable notch (now playing)", "activar notch", "enable notch":
+            return "waveform"
+        case "reproducir / pausar", "play / pause":
+            return "play.fill"
+        case "siguiente canción", "next track":
+            return "forward.fill"
+        case "canción anterior", "previous track":
+            return "backward.fill"
+        case "expandir / contraer notch", "expand / collapse notch":
+            return "chevron.down.circle"
+        case "probar con canción demo", "preview with demo track":
+            return "sparkles"
+        case "detener canción demo", "stop demo track":
+            return "stop.circle"
+        case "mostrar letras sincronizadas", "show synced lyrics":
+            return "quote.bubble"
+        case "anunciar nuevas canciones", "announce new tracks":
+            return "bell.badge"
+        case "efecto de brillo del álbum", "ambient album glow":
+            return "sun.max"
+        case "ocultar en pantalla completa", "hide in full screen":
+            return "rectangle.dashed"
+        case "estilo de carátula", "artwork style":
+            return "photo.circle"
+        case "circular con anillo de progreso", "circle with progress ring", "circular con anillo", "circle with ring":
+            return "record.circle"
+        case "cuadrada redondeada", "rounded square":
+            return "square.fill"
+        case "pantallas", "displays", "todas las pantallas", "all displays":
+            return "display.2"
+        case "solo pantalla con notch", "notch display only":
+            return "laptopcomputer"
+        case "solo pantalla principal", "primary display only":
+            return "display"
+        case "configuración de notch…", "notch settings…":
+            return "slider.horizontal.3"
 
         default:
             if lower.hasPrefix("automático del sistema") || lower.hasPrefix("system default") {

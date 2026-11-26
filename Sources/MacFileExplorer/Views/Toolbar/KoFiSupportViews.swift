@@ -117,46 +117,95 @@ public struct KoFiCupIconView: View {
 }
 
 /// Código QR escaneable de Ko-fi sobre tarjeta blanca de alto contraste (siempre legible en modo claro y oscuro).
+/// Permite además ampliarlo en un clic a 240×240 pt mediante popover si se desea escanear desde más lejos.
 public struct KoFiQRCodeCardView: View {
-    public var size: CGFloat = 86
+    public var size: CGFloat = 124
+    public var showZoomHint: Bool = true
+    @ViewState private var isZoomPopoverPresented: Bool = false
 
-    public init(size: CGFloat = 86) {
+    public init(size: CGFloat = 124, showZoomHint: Bool = true) {
         self.size = size
+        self.showZoomHint = showZoomHint
     }
 
     public var body: some View {
-        Button {
-            KoFiSupportConstants.openKoFiPage()
-        } label: {
-            Group {
-                if let qrImage = FileIconProvider.shared.bundledResourceImage(named: KoFiSupportConstants.qrResourceName) {
-                    Image(nsImage: qrImage)
-                        .resizable()
-                        .interpolation(.high)
-                        .scaledToFit()
-                } else {
-                    Image(systemName: "qrcode")
-                        .font(.system(size: size * 0.55))
-                        .foregroundStyle(.black)
-                }
+        let loc = LocalizationManager.shared
+        VStack(spacing: 3) {
+            Button {
+                isZoomPopoverPresented.toggle()
+            } label: {
+                qrImageContent(side: size, padding: 2, cornerRadius: 10)
             }
-            .padding(5)
-            .frame(width: size, height: size)
-            .background(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(Color.white)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .strokeBorder(Color.black.opacity(0.10), lineWidth: 0.75)
-            )
-            .shadow(color: .black.opacity(0.12), radius: 4, y: 1.5)
+            .buttonStyle(.plain)
+            .help(loc.text(
+                es: "Escaneá con tu celular o hacé clic para agrandar el código QR",
+                en: "Scan with your phone or click to enlarge QR code"
+            ))
+            .popover(isPresented: $isZoomPopoverPresented, arrowEdge: .trailing) {
+                VStack(spacing: 10) {
+                    qrImageContent(side: 240, padding: 6, cornerRadius: 12)
+                    Text(loc.text(
+                        es: "Escaneá desde tu celular · Propina opcional (App 100% gratis)",
+                        en: "Scan with your phone · Optional tip (100% free app)"
+                    ))
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+
+                    KoFiActionButton(
+                        title: loc.text(es: "Abrir ko-fi.com/luisjavierromero", en: "Open ko-fi.com/luisjavierromero"),
+                        compact: true
+                    ) {
+                        isZoomPopoverPresented = false
+                        KoFiSupportConstants.openKoFiPage()
+                    }
+                }
+                .padding(14)
+                .frame(width: 274)
+            }
+
+            if showZoomHint {
+                Button {
+                    isZoomPopoverPresented.toggle()
+                } label: {
+                    HStack(spacing: 3) {
+                        Image(systemName: "plus.magnifyingglass")
+                            .font(.system(size: 8.5, weight: .semibold))
+                        Text(loc.text(es: "Escaneá o ampliá", en: "Scan or enlarge"))
+                            .font(.system(size: 9.5, weight: .medium))
+                    }
+                    .foregroundStyle(.tertiary)
+                }
+                .buttonStyle(.plain)
+            }
         }
-        .buttonStyle(.plain)
-        .help(LocalizationManager.shared.text(
-            es: "Escaneá con tu celular o hacé clic para abrir Ko-fi (propina opcional)",
-            en: "Scan with your phone or click to open Ko-fi (optional tip)"
-        ))
+    }
+
+    @ViewBuilder
+    private func qrImageContent(side: CGFloat, padding: CGFloat, cornerRadius: CGFloat) -> some View {
+        Group {
+            if let qrImage = FileIconProvider.shared.bundledResourceImage(named: KoFiSupportConstants.qrResourceName) {
+                Image(nsImage: qrImage)
+                    .resizable()
+                    .interpolation(.high)
+                    .scaledToFit()
+            } else {
+                Image(systemName: "qrcode")
+                    .font(.system(size: side * 0.55))
+                    .foregroundStyle(.black)
+            }
+        }
+        .padding(padding)
+        .frame(width: side, height: side)
+        .background(
+            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                .fill(Color.white)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                .strokeBorder(Color.black.opacity(0.10), lineWidth: 0.75)
+        )
+        .shadow(color: .black.opacity(0.12), radius: 4, y: 1.5)
     }
 }
 
@@ -268,14 +317,9 @@ public struct KoFiSupportCardView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
-            VStack(spacing: 3) {
-                KoFiQRCodeCardView(size: compact ? 74 : 88)
-                Text(loc.text(es: "Escaneá el QR", en: "Scan QR"))
-                    .font(.system(size: 9.5, weight: .medium))
-                    .foregroundStyle(.tertiary)
-            }
+            KoFiQRCodeCardView(size: compact ? 124 : 138, showZoomHint: true)
         }
-        .padding(compact ? 11 : 14)
+        .padding(compact ? 12 : 14)
         .background(
             RoundedRectangle(cornerRadius: 11, style: .continuous)
                 .fill(KoFiSupportConstants.coralTop.opacity(0.065))
@@ -385,12 +429,7 @@ public struct MonthlySupportFloatingToastView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-                VStack(spacing: 2.5) {
-                    KoFiQRCodeCardView(size: 76)
-                    Text(loc.text(es: "Propina QR", en: "Tip QR"))
-                        .font(.system(size: 9, weight: .medium))
-                        .foregroundStyle(.tertiary)
-                }
+                KoFiQRCodeCardView(size: 118, showZoomHint: true)
             }
 
             Divider()
@@ -424,7 +463,7 @@ public struct MonthlySupportFloatingToastView: View {
             }
         }
         .padding(14)
-        .frame(width: 376)
+        .frame(width: 416)
         .background(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .fill(.regularMaterial)

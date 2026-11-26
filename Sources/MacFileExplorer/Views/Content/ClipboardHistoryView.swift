@@ -1278,8 +1278,8 @@ private struct ClipboardQuickPopupView: View {
                     ClipboardShortcutsWindowController.shared.show()
                 } label: {
                     Label(
-                        loc.text(es: "Atajos y ajustes…", en: "Shortcuts & Settings…"),
-                        systemImage: "keyboard"
+                        loc.text(es: "Configuración del Portapapeles…", en: "Clipboard Settings…"),
+                        systemImage: "slider.horizontal.3"
                     )
                     .font(.system(size: 11.5, weight: .medium))
                 }
@@ -1392,8 +1392,8 @@ public final class ClipboardShortcutsWindowController: NSObject {
         let loc = LocalizationManager.shared
         if let existing = window {
             existing.title = loc.text(
-                es: "Configuración y Atajos del Portapapeles",
-                en: "Clipboard Settings & Keyboard Shortcuts"
+                es: "Configuración del Portapapeles",
+                en: "Clipboard Settings"
             )
             NSApplication.shared.activate(ignoringOtherApps: true)
             existing.makeKeyAndOrderFront(nil)
@@ -1409,8 +1409,8 @@ public final class ClipboardShortcutsWindowController: NSObject {
         win.isReleasedWhenClosed = false
         win.tabbingMode = .disallowed
         win.title = loc.text(
-            es: "Configuración y Atajos del Portapapeles",
-            en: "Clipboard Settings & Keyboard Shortcuts"
+            es: "Configuración del Portapapeles",
+            en: "Clipboard Settings"
         )
         win.contentViewController = NSHostingController(rootView: ClipboardShortcutsSettingsView())
         win.center()
@@ -1418,6 +1418,13 @@ public final class ClipboardShortcutsWindowController: NSObject {
 
         NSApplication.shared.activate(ignoringOtherApps: true)
         win.makeKeyAndOrderFront(nil)
+    }
+
+    public func refreshLocalizedTitle() {
+        window?.title = LocalizationManager.shared.text(
+            es: "Configuración del Portapapeles",
+            en: "Clipboard Settings"
+        )
     }
 }
 
@@ -1451,8 +1458,8 @@ public struct ClipboardShortcutsSettingsView: View {
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(loc.text(
-                        es: "Configuración del Portapapeles y Atajos (Maccy)",
-                        en: "Clipboard History & Shortcuts (Maccy)"
+                        es: "Configuración del Portapapeles",
+                        en: "Clipboard Settings"
                     ))
                     .font(.system(size: 15, weight: .semibold))
 
@@ -1667,6 +1674,9 @@ public struct ClipboardShortcutsSettingsView: View {
         stopRecording()
         recordingTarget = kind
         ClipboardShortcutsWindowController.shared.isRecordingShortcut = true
+        ToolsShortcutManager.shared.setRecordingSuspended(true)
+        ClipboardHistoryManager.shared.setRecordingSuspended(true)
+        AltTabHotkeyMonitor.shared.isRecordingShortcut = true
 
         recordingMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
             let keyCode = event.keyCode
@@ -1694,6 +1704,9 @@ public struct ClipboardShortcutsSettingsView: View {
         }
         recordingTarget = nil
         ClipboardShortcutsWindowController.shared.isRecordingShortcut = false
+        ToolsShortcutManager.shared.setRecordingSuspended(false)
+        ClipboardHistoryManager.shared.setRecordingSuspended(false)
+        AltTabHotkeyMonitor.shared.isRecordingShortcut = false
     }
 
     private func applyRecordedShortcut(_ shortcut: ClipboardKeyShortcut, to kind: ShortcutActionKind) {

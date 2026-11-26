@@ -136,12 +136,15 @@ private func taskbarAXObserverCallback(
     let notifName = notification as String
     let isGeometryChange = (notifName == (kAXWindowMovedNotification as String)) ||
         (notifName == (kAXWindowResizedNotification as String)) ||
-        (notifName == (kAXWindowCreatedNotification as String))
+        (notifName == (kAXWindowCreatedNotification as String)) ||
+        (notifName == (kAXWindowDeminiaturizedNotification as String))
     let isHighFrequency = (notifName == (kAXWindowMovedNotification as String)) ||
         (notifName == (kAXWindowResizedNotification as String)) ||
         (notifName == (kAXTitleChangedNotification as String))
+    let elementBox = isGeometryChange ? AXElementBox(element) : nil
     Task { @MainActor in
         TaskbarWindowTracker.shared.handleAXEventNotification(
+            elementBox: elementBox,
             isGeometryChange: isGeometryChange,
             isHighFrequency: isHighFrequency
         )
@@ -235,8 +238,17 @@ public final class TaskbarWindowTracker {
     /// Consumidores activos (`taskbar`, `altTab`). El monitoreo corre mientras al menos uno esté activo.
     public private(set) var activeConsumers: Set<WindowServiceConsumer> = []
 
-    /// Callback invocado cuando cambia la geometría de ventanas (para `TaskbarOverlapResizer`).
+    /// Callback invocado cuando cambia la geometría de ventanas tras completar escaneo (para `TaskbarOverlapResizer`).
     public var onWindowGeometryPotentiallyChanged: (() -> Void)?
+
+    /// Ruta rápida directa: invocado al instante con el `AXUIElement` exacto que acaba de cambiar de tamaño/posición.
+    public var onAXWindowGeometryChanged: ((AXUIElement) -> Void)?
+
+    /// Ruta rápida local: invocado al instante cuando una ventana propia de `MacFileExplorer` cambia de tamaño/posición.
+    public var onLocalWindowGeometryChanged: ((NSWindow) -> Void)?
+
+    /// Marca si debemos disparar un barrido de superposición justo al terminar el próximo escaneo (evita leer frames viejos).
+    private var pendingGeometryCheckAfterScan = false
 
     /// Cachés O(1) de aplicaciones actualmente en ejecución para evitar `NSWorkspace.runningApplications` y `stat()` en SwiftUI `body`.
     public private(set) var runningBundleIDsLowercased: Set<String> = []
@@ -503,6 +515,7 @@ public final class TaskbarWindowTracker {
 
                     self.scheduleCoalescedRefresh(delay: notifName == NSWorkspace.activeSpaceDidChangeNotification ? 0.04 : 0.03)
                     if notifName == NSWorkspace.didActivateApplicationNotification || notifName == NSWorkspace.didLaunchApplicationNotification {
+                        self.pendingGeometryCheckAfterScan = true
                         self.scheduleGeometryCheck()
                     }
                 }
@@ -540,12 +553,16 @@ public final class TaskbarWindowTracker {
                 if let win = notification.object as? NSWindow, win is NSPanel {
                     return
                 }
-                let isGeo = (name == NSWindow.didResizeNotification || name == NSWindow.didMoveNotification)
-                Task { @MainActor [weak self] in
+                let targetWin = notification.object as? NSWindow
+                let isGeo = (name == NSWindow.didResizeNotification || name == NSWindow.didMoveNotification || name == NSWindow.didDeminiaturizeNotification)
+                Task { @MainActor [weak self, weak targetWin] in
                     guard let self, self.isMonitoring else { return }
                     self.scheduleCoalescedRefresh(delay: 0.04)
                     if isGeo {
-                        self.scheduleGeometryCheck()
+                        if let targetWin {
+                            self.onLocalWindowGeometryChanged?(targetWin)
+                        }
+                        self.pendingGeometryCheckAfterScan = true
                     }
                 }
             }
@@ -636,12 +653,19 @@ public final class TaskbarWindowTracker {
         fallbackRefreshTimer = timer
     }
 
-    fileprivate func handleAXEventNotification(isGeometryChange: Bool, isHighFrequency: Bool = false) {
+    fileprivate func handleAXEventNotification(
+        elementBox: AXElementBox? = nil,
+        isGeometryChange: Bool,
+        isHighFrequency: Bool = false
+    ) {
         guard isMonitoring else { return }
-        scheduleCoalescedRefresh(delay: isHighFrequency ? 0.22 : 0.05)
         if isGeometryChange {
-            scheduleGeometryCheck()
+            pendingGeometryCheckAfterScan = true
+            if let element = elementBox?.element {
+                onAXWindowGeometryChanged?(element)
+            }
         }
+        scheduleCoalescedRefresh(delay: isHighFrequency ? 0.14 : 0.04)
     }
 
     public func scheduleCoalescedRefresh(delay: TimeInterval = 0.04) {
@@ -877,6 +901,7 @@ public final class TaskbarWindowTracker {
                         if result.axTimedOutPIDs.contains(app.pid) { continue }
                         if app.bundleIdentifier.caseInsensitiveCompare("com.apple.finder") == .orderedSame { continue }
                         if taskbarPrefs.isAppExcluded(bundleIdentifier: app.bundleIdentifier) { continue }
+                        if taskbarPrefs.isHiddenWhenWindowless(bundleIdentifier: app.bundleIdentifier) { continue }
                         let appPath = app.bundleURL?.standardizedFileURL.path(percentEncoded: false)
                         if taskbarPrefs.isPinned(bundleIdentifier: app.bundleIdentifier, bundlePath: appPath) { continue }
 
@@ -921,6 +946,7 @@ public final class TaskbarWindowTracker {
                 let taskbarOrdered = self.orderEngine.orderedWindows(
                     from: taskbarEligible,
                     groupByApp: taskbarPrefs.groupWindowsByApp,
+                    pinnedAppsForOrdering: taskbarPrefs.orderWindowsByPinnedApps ? taskbarPrefs.pinnedApps : nil,
                     liveWindowIDsAcrossAllSpaces: deduplicatedLiveIDs,
                     runningPIDs: runningPIDs
                 )
@@ -935,8 +961,15 @@ public final class TaskbarWindowTracker {
                 if self.allWindowsAcrossSpaces != mruSortedAll {
                     self.allWindowsAcrossSpaces = mruSortedAll
                 }
+                let framesChanged = self.windows.count != taskbarOrdered.count || zip(self.windows, taskbarOrdered).contains { lhs, rhs in
+                    lhs.id != rhs.id || lhs.frameAX != rhs.frameAX || lhs.isMinimized != rhs.isMinimized || lhs.isFullScreen != rhs.isFullScreen
+                }
                 if self.windows != taskbarOrdered {
                     self.windows = taskbarOrdered
+                }
+                if self.pendingGeometryCheckAfterScan || framesChanged {
+                    self.pendingGeometryCheckAfterScan = false
+                    self.onWindowGeometryPotentiallyChanged?()
                 }
 
                 // Purgar miniaturas cacheadas de ventanas cerradas
@@ -1332,10 +1365,12 @@ public final class TaskbarWindowTracker {
     /// Reaplica de forma síncrona el orden/agrupación actual sobre las ventanas visibles (0 ms de espera al activar/desactivar la opción).
     public func reapplyWindowOrderingImmediately() {
         guard !windows.isEmpty else { return }
+        let taskbarPrefs = TaskbarPreferences.shared
         let liveIDs = Set(allWindowsAcrossSpaces.map(\.id)).union(windows.map(\.id))
         let reordered = orderEngine.orderedWindows(
             from: windows,
-            groupByApp: TaskbarPreferences.shared.groupWindowsByApp,
+            groupByApp: taskbarPrefs.groupWindowsByApp,
+            pinnedAppsForOrdering: taskbarPrefs.orderWindowsByPinnedApps ? taskbarPrefs.pinnedApps : nil,
             liveWindowIDsAcrossAllSpaces: liveIDs
         )
         if reordered != windows {
@@ -1343,13 +1378,42 @@ public final class TaskbarWindowTracker {
         }
     }
 
-    public func moveWindow(sourceID: String, toTargetID targetID: String) {
+    /// Resultado de intentar reordenar manualmente un botón de ventana en la Barra de tareas.
+    public enum MoveWindowResult: Equatable, Sendable {
+        case moved
+        case blockedByPinnedOrder(sourceAppName: String, isSourcePinned: Bool)
+    }
+
+    @discardableResult
+    public func moveWindow(sourceID: String, toTargetID targetID: String) -> MoveWindowResult {
+        let taskbarPrefs = TaskbarPreferences.shared
+
+        if taskbarPrefs.orderWindowsByPinnedApps,
+           let sourceWin = windows.first(where: { $0.id == sourceID }),
+           let targetWin = windows.first(where: { $0.id == targetID }) {
+            let sourcePinned = taskbarPrefs.isPinned(
+                bundleIdentifier: sourceWin.bundleIdentifier,
+                bundlePath: sourceWin.appBundleURL?.standardizedFileURL.path(percentEncoded: false)
+            )
+            let targetPinned = taskbarPrefs.isPinned(
+                bundleIdentifier: targetWin.bundleIdentifier,
+                bundlePath: targetWin.appBundleURL?.standardizedFileURL.path(percentEncoded: false)
+            )
+            if (sourcePinned || targetPinned) && sourceWin.appGroupKey != targetWin.appGroupKey {
+                return .blockedByPinnedOrder(sourceAppName: sourceWin.appName, isSourcePinned: sourcePinned)
+            }
+        }
+
         orderEngine.moveWindow(
             sourceID: sourceID,
             toTargetID: targetID,
             visibleWindows: windows,
-            groupByApp: TaskbarPreferences.shared.groupWindowsByApp
+            groupByApp: taskbarPrefs.groupWindowsByApp
         )
+        if taskbarPrefs.orderWindowsByPinnedApps {
+            reapplyWindowOrderingImmediately()
+            return .moved
+        }
         let byID = Dictionary(uniqueKeysWithValues: windows.map { ($0.id, $0) })
         let reordered = orderEngine.orderedWindowIDs.compactMap { byID[$0] }
         if reordered.count == windows.count {
@@ -1357,6 +1421,7 @@ public final class TaskbarWindowTracker {
         } else {
             refreshNow()
         }
+        return .moved
     }
 
     // MARK: - Acciones Instantáneas Compartidas sobre Ventanas y Aplicaciones (macOS 14+ / Catalyst / PWAs / Cross-Space)
@@ -1599,7 +1664,10 @@ public final class TaskbarWindowTracker {
     }
 
     public func closeWindow(_ item: TaskbarWindowItem) {
-        guard !item.isWindowlessApp else { return }
+        if item.isWindowlessApp {
+            quitApplication(pid: item.pid, force: false)
+            return
+        }
         if item.pid == ProcessInfo.processInfo.processIdentifier {
             localWindowsByItemID[item.id]?.window?.performClose(nil)
             scheduleCoalescedRefresh(delay: 0.12)

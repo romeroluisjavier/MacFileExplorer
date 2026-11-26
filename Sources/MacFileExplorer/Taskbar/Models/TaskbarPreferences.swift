@@ -47,6 +47,18 @@ public final class TaskbarPreferences {
         "com.apple.inputmethod.EmojiFunctionRowItem"
     ]
 
+    /// Apps orientadas a documentos que en macOS quedan vivas en memoria con 0 ventanas tras cerrar el último archivo
+    /// (ej. Vista Previa / Preview, QuickTime, TextEdit, iWork). Se ocultan automáticamente de la barra mientras no tengan
+    /// ninguna ventana abierta, pero vuelven a aparecer normalmente apenas abrís un documento en ellas.
+    public static let defaultWindowlessHiddenBundleIDs: [String] = [
+        "com.apple.Preview",
+        "com.apple.QuickTimePlayerX",
+        "com.apple.TextEdit",
+        "com.apple.iWork.Pages",
+        "com.apple.iWork.Numbers",
+        "com.apple.iWork.Keynote"
+    ]
+
     private let defaults: UserDefaults
     private var isBootstrapping = false
 
@@ -69,11 +81,13 @@ public final class TaskbarPreferences {
         static let alignment = "com.macfileexplorer.taskbar.alignment"
         static let showWindowTitles = "com.macfileexplorer.taskbar.showWindowTitles"
         static let minimizedWindowDisplayMode = "com.macfileexplorer.taskbar.minimizedWindowDisplayMode"
+        static let overflowMode = "com.macfileexplorer.taskbar.overflowMode"
         static let showMinimizedIndicator = "com.macfileexplorer.taskbar.showMinimizedIndicator"
         static let showNotificationBadges = "com.macfileexplorer.taskbar.showNotificationBadges"
         static let notificationAnimation = "com.macfileexplorer.taskbar.notificationAnimation"
         static let notificationAnimationCadence = "com.macfileexplorer.taskbar.notificationAnimationCadence"
         static let groupWindowsByApp = "com.macfileexplorer.taskbar.groupWindowsByApp"
+        static let orderWindowsByPinnedApps = "com.macfileexplorer.taskbar.orderWindowsByPinnedApps"
         static let showWindowlessRunningApps = "com.macfileexplorer.taskbar.showWindowlessRunningApps"
         static let showHoverPreviews = "com.macfileexplorer.taskbar.showHoverPreviews"
         static let hoverPreviewDelay = "com.macfileexplorer.taskbar.hoverPreviewDelay"
@@ -90,6 +104,7 @@ public final class TaskbarPreferences {
         static let dockBackupSnapshot = "com.macfileexplorer.taskbar.dockBackupSnapshot"
         static let pinnedApps = "com.macfileexplorer.taskbar.pinnedApps"
         static let excludedBundleIDs = "com.macfileexplorer.taskbar.excludedBundleIDs"
+        static let windowlessHiddenBundleIDs = "com.macfileexplorer.taskbar.windowlessHiddenBundleIDs"
         static let hiddenDisplayIDs = "com.macfileexplorer.taskbar.hiddenDisplayIDs"
         static let recentAppPaths = "com.macfileexplorer.taskbar.recentAppPaths"
     }
@@ -289,6 +304,16 @@ public final class TaskbarPreferences {
         }
     }
 
+    /// Define si los botones de la barra se achican dinámicamente para entrar sin scroll (`.shrinkToFit`)
+    /// o mantienen un ancho mínimo fijo con desplazamiento horizontal (`.horizontalScroll`).
+    public var overflowMode: TaskbarOverflowMode {
+        didSet {
+            guard !isBootstrapping, overflowMode != oldValue else { return }
+            defaults.set(overflowMode.rawValue, forKey: Keys.overflowMode)
+            onAppearanceOrLayoutChanged?()
+        }
+    }
+
     public var showMinimizedIndicator: Bool {
         didSet {
             guard !isBootstrapping, showMinimizedIndicator != oldValue else { return }
@@ -327,6 +352,16 @@ public final class TaskbarPreferences {
         didSet {
             guard !isBootstrapping, groupWindowsByApp != oldValue else { return }
             defaults.set(groupWindowsByApp, forKey: Keys.groupWindowsByApp)
+            onWindowFilteringChanged?()
+        }
+    }
+
+    /// Ordena las ventanas abiertas poniendo primero las de las aplicaciones fijadas en su mismo orden,
+    /// y dejando al final las ventanas de aplicaciones no fijadas.
+    public var orderWindowsByPinnedApps: Bool {
+        didSet {
+            guard !isBootstrapping, orderWindowsByPinnedApps != oldValue else { return }
+            defaults.set(orderWindowsByPinnedApps, forKey: Keys.orderWindowsByPinnedApps)
             onWindowFilteringChanged?()
         }
     }
@@ -457,6 +492,16 @@ public final class TaskbarPreferences {
         }
     }
 
+    /// Bundle IDs que se ocultan automáticamente de la barra cuando quedan con 0 ventanas abiertas
+    /// (por defecto: Preview, QuickTime Player, TextEdit, Pages, Numbers y Keynote).
+    public var windowlessHiddenBundleIDs: [String] {
+        didSet {
+            guard !isBootstrapping, windowlessHiddenBundleIDs != oldValue else { return }
+            defaults.set(windowlessHiddenBundleIDs, forKey: Keys.windowlessHiddenBundleIDs)
+            onWindowFilteringChanged?()
+        }
+    }
+
     public var hiddenDisplayIDs: Set<String> {
         didSet {
             guard !isBootstrapping, hiddenDisplayIDs != oldValue else { return }
@@ -519,12 +564,14 @@ public final class TaskbarPreferences {
         self.alignment = (defaults.string(forKey: Keys.alignment).flatMap(TaskbarAlignment.init(rawValue:))) ?? .left
         self.showWindowTitles = defaults.object(forKey: Keys.showWindowTitles) as? Bool ?? true
         self.minimizedWindowDisplayMode = (defaults.string(forKey: Keys.minimizedWindowDisplayMode).flatMap(TaskbarMinimizedWindowDisplayMode.init(rawValue:))) ?? .sameAsNormal
+        self.overflowMode = (defaults.string(forKey: Keys.overflowMode).flatMap(TaskbarOverflowMode.init(rawValue:))) ?? .shrinkToFit
         self.showMinimizedIndicator = defaults.object(forKey: Keys.showMinimizedIndicator) as? Bool ?? true
         self.showNotificationBadges = defaults.object(forKey: Keys.showNotificationBadges) as? Bool ?? true
         self.notificationAnimation = (defaults.string(forKey: Keys.notificationAnimation).flatMap(TaskbarNotificationAnimation.init(rawValue:))) ?? .bounce
         self.notificationAnimationCadence = (defaults.string(forKey: Keys.notificationAnimationCadence).flatMap(TaskbarNotificationAnimationCadence.init(rawValue:))) ?? .periodic
 
         self.groupWindowsByApp = defaults.object(forKey: Keys.groupWindowsByApp) as? Bool ?? false
+        self.orderWindowsByPinnedApps = defaults.object(forKey: Keys.orderWindowsByPinnedApps) as? Bool ?? true
         self.showWindowlessRunningApps = defaults.object(forKey: Keys.showWindowlessRunningApps) as? Bool ?? true
         self.showHoverPreviews = defaults.object(forKey: Keys.showHoverPreviews) as? Bool ?? true
 
@@ -551,6 +598,11 @@ public final class TaskbarPreferences {
         }
 
         self.excludedBundleIDs = defaults.stringArray(forKey: Keys.excludedBundleIDs) ?? []
+        if let savedWindowlessHidden = defaults.stringArray(forKey: Keys.windowlessHiddenBundleIDs) {
+            self.windowlessHiddenBundleIDs = savedWindowlessHidden
+        } else {
+            self.windowlessHiddenBundleIDs = Self.defaultWindowlessHiddenBundleIDs
+        }
         self.hiddenDisplayIDs = Set(defaults.stringArray(forKey: Keys.hiddenDisplayIDs) ?? [])
         self.recentAppPaths = defaults.stringArray(forKey: Keys.recentAppPaths) ?? []
 
@@ -640,6 +692,37 @@ public final class TaskbarPreferences {
 
     public func removeExcludedApp(bundleIdentifier: String) {
         excludedBundleIDs.removeAll { $0.caseInsensitiveCompare(bundleIdentifier) == .orderedSame }
+    }
+
+    public func isHiddenWhenWindowless(bundleIdentifier: String) -> Bool {
+        guard !bundleIdentifier.isEmpty else { return false }
+        return windowlessHiddenBundleIDs.contains { $0.caseInsensitiveCompare(bundleIdentifier) == .orderedSame }
+    }
+
+    public func hideAppWhenWindowless(bundleIdentifier: String) {
+        let trimmed = bundleIdentifier.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        guard !windowlessHiddenBundleIDs.contains(where: { $0.caseInsensitiveCompare(trimmed) == .orderedSame }) else { return }
+        windowlessHiddenBundleIDs.append(trimmed)
+    }
+
+    public func removeAppHiddenWhenWindowless(bundleIdentifier: String) {
+        windowlessHiddenBundleIDs.removeAll { $0.caseInsensitiveCompare(bundleIdentifier) == .orderedSame }
+    }
+
+    public func resetWindowlessHiddenAppsToDefaults() {
+        windowlessHiddenBundleIDs = Self.defaultWindowlessHiddenBundleIDs
+    }
+
+    public func friendlyAppName(forBundleIdentifier bundleIdentifier: String) -> String {
+        if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleIdentifier) {
+            let name = FileManager.default.displayName(atPath: url.path(percentEncoded: false))
+                .replacingOccurrences(of: ".app", with: "", options: [.caseInsensitive, .anchored, .backwards])
+            if !name.isEmpty {
+                return name
+            }
+        }
+        return bundleIdentifier
     }
 
     public func recordRecentApp(bundleURL: URL) {

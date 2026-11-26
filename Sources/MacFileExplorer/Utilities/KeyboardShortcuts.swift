@@ -319,6 +319,67 @@ public struct ExplorerKeyEventMonitorModifier: ViewModifier {
             }
         }
 
+        // Atajos personalizables con tecla de función (`F1`–`F19`, p. ej. `F5` para actualizar) no cubiertos por `KeyEquivalent`
+        if AppKeyShortcut.isFunctionKeyCode(keyCode) {
+            let prefs = AppShortcutPreferences.shared
+            if prefs.shortcut(for: .focusAddressBar).matches(keyCode: keyCode, charactersIgnoringModifiers: characters, flags: flags) {
+                viewModel.beginAddressBarEditing()
+                return true
+            }
+            if prefs.shortcut(for: .refreshFolder).matches(keyCode: keyCode, charactersIgnoringModifiers: characters, flags: flags) {
+                viewModel.refresh(preservingSelection: true)
+                return true
+            }
+            if prefs.shortcut(for: .toggleHiddenFiles).matches(keyCode: keyCode, charactersIgnoringModifiers: characters, flags: flags) {
+                viewModel.showHiddenFiles.toggle()
+                return true
+            }
+            if prefs.shortcut(for: .viewDetails).matches(keyCode: keyCode, charactersIgnoringModifiers: characters, flags: flags) {
+                viewModel.viewMode = .details
+                return true
+            }
+            if prefs.shortcut(for: .viewLargeIcons).matches(keyCode: keyCode, charactersIgnoringModifiers: characters, flags: flags) {
+                viewModel.viewMode = .largeIcons
+                return true
+            }
+            if prefs.shortcut(for: .showProperties).matches(keyCode: keyCode, charactersIgnoringModifiers: characters, flags: flags) {
+                viewModel.showProperties()
+                return true
+            }
+            if prefs.shortcut(for: .newFolder).matches(keyCode: keyCode, charactersIgnoringModifiers: characters, flags: flags) {
+                viewModel.createNewFolder()
+                return true
+            }
+            if prefs.shortcut(for: .findDuplicateFiles).matches(keyCode: keyCode, charactersIgnoringModifiers: characters, flags: flags) {
+                viewModel.isDuplicateFinderPresented = true
+                return true
+            }
+            if prefs.shortcut(for: .openHiddenCache).matches(keyCode: keyCode, charactersIgnoringModifiers: characters, flags: flags) {
+                viewModel.isHiddenCacheManagerPresented = true
+                return true
+            }
+            if prefs.shortcut(for: .goBack).matches(keyCode: keyCode, charactersIgnoringModifiers: characters, flags: flags) && viewModel.canGoBack {
+                viewModel.goBack()
+                return true
+            }
+            if prefs.shortcut(for: .goForward).matches(keyCode: keyCode, charactersIgnoringModifiers: characters, flags: flags) && viewModel.canGoForward {
+                viewModel.goForward()
+                return true
+            }
+            if prefs.shortcut(for: .goUp).matches(keyCode: keyCode, charactersIgnoringModifiers: characters, flags: flags) && viewModel.canGoUp {
+                viewModel.goUp()
+                return true
+            }
+            if prefs.shortcut(for: .goHome).matches(keyCode: keyCode, charactersIgnoringModifiers: characters, flags: flags) {
+                viewModel.navigate(to: FileManager.default.homeDirectoryForCurrentUser)
+                return true
+            }
+            if prefs.shortcut(for: .toggleBookmarksBar).matches(keyCode: keyCode, charactersIgnoringModifiers: characters, flags: flags) {
+                BookmarksManager.shared.isBookmarksBarVisible.toggle()
+                return true
+            }
+        }
+
         // F2 (keyCode 120) o Enter/Return (keyCode 36 / 76) sin modificadores -> Renombrar en línea
         if (keyCode == 120 || keyCode == 36 || keyCode == 76) && cleanFlags.isEmpty {
             if viewModel.canRename && !viewModel.isQuickLookPresented {

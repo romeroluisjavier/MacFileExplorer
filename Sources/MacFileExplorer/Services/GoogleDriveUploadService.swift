@@ -1496,7 +1496,7 @@ public final class GoogleDriveSettingsWindowController: NSObject, NSWindowDelega
 
     public func show() {
         let loc = LocalizationManager.shared
-        let title = loc.text(es: "Configurar «Enviar a Drive»", en: "Send to Drive Settings")
+        let title = loc.text(es: "Configuración de «Enviar a Drive»", en: "Send to Drive Settings")
         NSApplication.shared.activate(ignoringOtherApps: true)
 
         if let existing = window {

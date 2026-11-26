@@ -1,0 +1,80 @@
+name: Publish DMG to GitHub Releases
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag a publicar (ej. v2.5.1). Dejar vacío para usar el último tag v*."
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    if: github.actor == 'romeroluisjavier'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Resolve tag and DMG asset
+        id: meta
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          if [ -n "$INPUT_TAG" ]; then
+            TAG="$INPUT_TAG"
+          elif [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            TAG="${GITHUB_REF#refs/tags/}"
+          else
+            TAG=$(git tag --list 'v*' --sort=-v:refname | head -n 1)
+          fi
+
+          if [ -z "$TAG" ]; then
+            echo "No se encontró ningún tag v* para publicar." >&2
+            exit 1
+          fi
+
+          VERSION="${TAG#v}"
+          DMG_FILE="releases/MacFileExplorer-${VERSION}.dmg"
+
+          if [ ! -f "$DMG_FILE" ]; then
+            echo "No se encontró ${DMG_FILE} en el repositorio." >&2
+            exit 1
+          fi
+
+          LATEST_TAG=$(git tag --list 'v*' --sort=-v:refname | head -n 1)
+          IS_LATEST="false"
+          if [ "$TAG" = "$LATEST_TAG" ]; then
+            IS_LATEST="true"
+          fi
+
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "dmg=${DMG_FILE}" >> "$GITHUB_OUTPUT"
+          echo "is_latest=${IS_LATEST}" >> "$GITHUB_OUTPUT"
+
+      - name: Create or update GitHub Release with DMG asset
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.meta.outputs.tag }}
+          DMG_FILE: ${{ steps.meta.outputs.dmg }}
+          IS_LATEST: ${{ steps.meta.outputs.is_latest }}
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$DMG_FILE" --clobber
+          else
+            NOTES=$(printf "Instalador oficial de **MacFileExplorer %s** para macOS 14+ (Apple Silicon e Intel).\n\n- 🌐 Sitio web y demos: https://romeroluisjavier.github.io/MacFileExplorer/\n- 📖 Historial de cambios: [releases/README.md](https://github.com/%s/blob/main/releases/README.md)\n" "$TAG" "${{ github.repository }}")
+            if [ "$IS_LATEST" = "true" ]; then
+              gh release create "$TAG" "$DMG_FILE" --title "MacFileExplorer ${TAG}" --notes "$NOTES" --latest
+            else
+              gh release create "$TAG" "$DMG_FILE" --title "MacFileExplorer ${TAG}" --notes "$NOTES" --latest=false
+            fi
+          fi

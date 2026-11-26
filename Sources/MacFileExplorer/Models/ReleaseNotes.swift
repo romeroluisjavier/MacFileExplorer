@@ -77,6 +77,79 @@ public struct ReleaseNoteSection: Identifiable, Sendable {
 public enum ReleaseNotesCatalog {
     public static let sections: [ReleaseNoteSection] = [
         ReleaseNoteSection(
+            id: "v2.6.0-notch-player-taskbar-smart-layout-shortcuts-tools",
+            versionLabelES: "Versión 2.6.0 — Reproductor musical «Notch», Barra de tareas inteligente sin scroll ni apps fantasma, Administrador de atajos, «Tools» (⌘D) y Permisos transparentes",
+            versionLabelEN: "Version 2.6.0 — «Notch» Music Player, Smart No-Scroll & Auto-Hide Taskbar, All Shortcuts Manager, «Tools» (⌘D) & Transparent Permissions Guide",
+            dateLabelES: "26 nov 2026",
+            dateLabelEN: "Nov 26, 2026",
+            items: [
+                ReleaseNoteItem(
+                    id: "notch-music-player-now-playing",
+                    icon: "waveform",
+                    titleES: "Nuevo reproductor de música «Notch» con animaciones fluidas, YouTube Music, Spotify y letras sincronizadas",
+                    titleEN: "New «Notch» Music Player with Fluid Animations, YouTube Music, Spotify & Synced Lyrics",
+                    summaryES: "Se incorporó un nuevo menú «Notch» en la barra superior para transformar el Notch de tu MacBook (o la parte superior de cualquier monitor) en un reproductor de música interactivo y elegante sin robarte el foco. Mientras suena música en YouTube Music, Spotify, Apple Music o el navegador, verás la carátula exacta y un ecualizador animado a los costados del Notch, con breves avisos al cambiar de canción. Al pasar el cursor o hacer clic se despliega suavemente con brillo ambiental del color de la portada, controles para pausar, cambiar o adelantar, cambio rápido de parlantes o auriculares y letras sincronizadas en vivo. Cuando no suena música ofrece accesos directos para volver a abrir tu último reproductor (como YouTube Music), la cruz «✕» cierra y oculta el Notch por completo, y podés personalizar tamaño, estilo de carátula, pantallas y comportamiento desde «Configuración de Notch…».",
+                    summaryEN: "Added a new «Notch» menu in the top bar that turns your MacBook's notch (or the top center of any display) into a sleek, interactive music player without stealing focus from your work. While listening on YouTube Music, Spotify, Apple Music, or your browser, exact album artwork and an animated equalizer sit cleanly beside the notch with brief track-change previews. Hover or click to smoothly expand with ambient artwork glow, playback and scrubbing controls, a quick audio output switcher, and live time-synced lyrics. When nothing is playing it offers quick buttons to reopen your last music app (such as YouTube Music), the «✕» button completely closes and hides the Notch, and you can customize size, artwork style, displays, and behavior in «Notch Settings…»."
+                ),
+                ReleaseNoteItem(
+                    id: "taskbar-overflow-shrink-to-fit-vs-scroll",
+                    icon: "arrow.right.and.line.vertical.and.arrow.left",
+                    titleES: "Barra de tareas con ajuste automático de ancho sin scroll (configurable)",
+                    titleEN: "Auto-Shrinking Taskbar Buttons Without Horizontal Scroll (Configurable)",
+                    summaryES: "Ahora podés elegir desde el menú Barra de tareas («Ajustar ancho sin scroll horizontal») o desde Configuración de la Barra de tareas cómo comportarse cuando abrís muchas ventanas: el modo automático (por defecto) reduce suavemente el ancho de los botones —y compacta a solo íconos si hay muchísimas— para que todas las apps entren completas a la vista sin cortes ni scroll, o podés volver al scroll horizontal con ancho mínimo fijo cuando prefieras.",
+                    summaryEN: "Choose in the Taskbar menu («Auto-Shrink Buttons (No Scroll)») or Taskbar Settings how the bar handles many open windows: the new default mode smoothly shrinks button widths (and automatically collapses to icons-only when very crowded) so every app stays fully visible without clipping or scrolling, or switch back to fixed minimum width with horizontal scroll anytime."
+                ),
+                ReleaseNoteItem(
+                    id: "taskbar-pinned-apps-first-in-pinned-order",
+                    icon: "pin.circle.fill",
+                    titleES: "Ventanas de apps fijadas primero en la Barra de tareas (con indicador sutil y aviso al arrastrar)",
+                    titleEN: "Pinned Apps' Open Windows First in the Taskbar (with Subtle Indicator & Drag Hint)",
+                    summaryES: "Ahora podés activar desde el menú Barra de tareas («Apps fijadas primero en la barra (en su mismo orden)») o desde Configuración que las ventanas abiertas de tus apps fijadas aparezcan primero respetando exactamente el orden en que están fijadas (identificadas con un pequeño ícono de pin sutil y un divisor fino antes de las apps no fijadas). Si reordenás un ícono fijado a la izquierda, las ventanas se reacomodan al instante; y si intentás arrastrar una ventana con orden fijo hacia otra app, aparece un breve aviso flotante explicando el motivo con opción de desactivarlo en un clic.",
+                    summaryEN: "Toggle «Pinned Apps' Windows First (in Pinned Order)» from the Taskbar menu or Settings to show open windows of your pinned apps first in their exact pinned order, subtly marked with a tiny pin indicator and a slim divider before unpinned apps. Reordering pinned icons on the left updates open windows immediately, and trying to drag a pinned-order window across another app displays a clear floating hint explaining why with a 1-click option to disable the lock."
+                ),
+                ReleaseNoteItem(
+                    id: "taskbar-instant-overlap-resize-on-maximize",
+                    icon: "arrow.up.left.and.arrow.down.right",
+                    titleES: "Ajuste instantáneo al maximizar ventanas (como Chrome) para no quedar detrás de la Barra de tareas",
+                    titleEN: "Instant Window Maximize Adjustment Above the Taskbar (Chrome & All Apps)",
+                    summaryES: "Se optimizó por completo el ajuste automático de ventanas superpuestas con la Barra de tareas: al hacer doble clic en la barra de título de Chrome o cualquier otra app para maximizarla (o al soltar un arrastre), la ventana se ajusta casi al instante sobre la barra sin la demora previa de 1 a 2 segundos.",
+                    summaryEN: "Significantly accelerated automatic window overlap adjustment above the Taskbar: double-clicking the title bar of Chrome or any other app to maximize (or releasing a window resize/drag) now snaps the window cleanly above the Taskbar almost instantaneously instead of waiting 1–2 seconds."
+                ),
+                ReleaseNoteItem(
+                    id: "taskbar-auto-hide-windowless-document-apps",
+                    icon: "macwindow.badge.minus",
+                    titleES: "Barra de tareas sin botones fantasma de Preview y apps de documentos sin ventanas",
+                    titleEN: "No More Ghost Buttons in Taskbar for Windowless Preview & Document Apps",
+                    summaryES: "Apps de documentos de macOS como Preview (Vista Previa), QuickTime Player, TextEdit, Pages, Numbers y Keynote ahora se ocultan automáticamente de la Barra de tareas apenas cerrás su última ventana, y vuelven a mostrarse normalmente cada vez que abrís un archivo en ellas. Además podés sumar o quitar cualquier otra app con clic derecho («Ocultar cuando no tenga ventanas») o desde Configuración de la Barra de tareas, y hacer clic medio sobre cualquier app sin ventanas para cerrarla directamente (configurable).",
+                    summaryEN: "Document-centric macOS apps such as Preview, QuickTime Player, TextEdit, Pages, Numbers, and Keynote now disappear automatically from the Taskbar as soon as their last window closes, while reappearing normally whenever you open a file. You can also add or remove any other app via right-click («Hide When Windowless») or Taskbar Settings, and middle-click any remaining windowless app button to quit it right away (respecting your middle-click setting)."
+                ),
+                ReleaseNoteItem(
+                    id: "file-shortcuts-manager-and-tools-view-desktop",
+                    icon: "keyboard",
+                    titleES: "Administrador central de atajos y submenú «Herramientas» con «View Desktop Shortcut» (⌘D)",
+                    titleEN: "Central Keyboard Shortcuts Manager & «Tools» Submenu with «View Desktop Shortcut» (⌘D)",
+                    summaryES: "En el menú Archivo ahora encontrás «Administrar todos los atajos de teclado…» para ver, buscar, activar, personalizar o restablecer todos los atajos de MacFileExplorer (Herramientas, Explorador, Portapapeles Maccy y AltTab) desde una sola ventana con detección automática de conflictos. Además se incorporó el nuevo submenú «Herramientas (Tools)» preparado para futuras utilidades: su primera configuración es «View Desktop Shortcut», que viene activado por defecto con ⌘D para mostrar y poner en foco el Escritorio de tu Mac desde cualquier app (y volver a tus ventanas al pulsarlo de nuevo), con presets rápidos (⌘D, ⌥D, ⌃⌘D, ⇧⌘D, F11) y elección entre modo nativo de macOS o estilo Windows Win+D.",
+                    summaryEN: "The File menu now includes «Manage All Keyboard Shortcuts…» so you can search, toggle, customize, and reset every shortcut across MacFileExplorer (Tools, File Explorer, Maccy Clipboard, and AltTab) from one central window with live conflict detection. A new extensible «Tools» submenu was also added under File: its first setting is «View Desktop Shortcut», enabled by default with ⌘D to reveal and focus your Mac Desktop from any app (and press again to return to your windows), complete with quick presets (⌘D, ⌥D, ⌃⌘D, ⇧⌘D, F11) and choice between native macOS Show Desktop or Windows Win+D window hiding."
+                ),
+                ReleaseNoteItem(
+                    id: "unified-feature-settings-naming",
+                    icon: "slider.horizontal.3",
+                    titleES: "Nombres de configuración unificados por módulo en todos los menús",
+                    titleEN: "Unified Settings Naming Across All Feature Menus",
+                    summaryES: "Se unificaron los nombres de acceso a las pantallas de configuración en todos los menús y ventanas para mantener coherencia entre funciones: «Clipboard Settings…» / «Configuración del Portapapeles…», «Taskbar Settings…», «AltTab Settings…», «Tools Settings…», «Notch Settings…» y «Send to Drive Settings…».",
+                    summaryEN: "Unified settings menu items and window titles across every feature for a consistent experience: «Clipboard Settings…», «Taskbar Settings…», «AltTab Settings…», «Tools Settings…», «Notch Settings…», and «Send to Drive Settings…»."
+                ),
+                ReleaseNoteItem(
+                    id: "help-macos-permissions-and-privacy-guide",
+                    icon: "lock.shield.fill",
+                    titleES: "Guía transparente de Permisos de macOS y Privacidad en la Ayuda",
+                    titleEN: "Transparent macOS Permissions & Privacy Guide in Help",
+                    summaryES: "La ventana de Ayuda de MacFileExplorer incorpora una nueva sección «Permisos de macOS» (accesible también desde Ayuda → Permisos de macOS y Privacidad…) donde se explica con claridad para qué función puntual se solicita cada permiso (Archivos y carpetas, Accesibilidad, Grabación de pantalla y Automatización), por qué solo se pide lo mínimo y necesario, qué funciones trabajan sin permisos especiales, qué permisos nunca se piden y el estado actual con accesos directos a Ajustes del Sistema.",
+                    summaryEN: "MacFileExplorer Help now includes a dedicated «macOS Permissions» section (also reachable via Help → macOS Permissions & Privacy…) that clearly explains which exact feature needs each permission (Files & Folders, Accessibility, Screen Recording, and Automation), why only the strict minimum is requested, which features require zero special permissions, what permissions are never requested, and live status indicators with direct links to macOS System Settings."
+                )
+            ]
+        ),
+        ReleaseNoteSection(
             id: "v2.5.1-kofi-monthly-checkin-start-menu-focus-mono-dark",
             versionLabelES: "Versión 2.5.1 — Menú Inicio sin robar foco, aviso mensual con actualizaciones + Ko-fi, «Acerca de» renovado e ícono Mono Oscuro",
             versionLabelEN: "Version 2.5.1 — Non-Activating Start Menu, Monthly Update Check-In + Optional Ko-fi Tip, Wider About Window & Dark Mono Default Icon",
@@ -96,8 +169,8 @@ public enum ReleaseNotesCatalog {
                     icon: "heart.circle.fill",
                     titleES: "Propina opcional en Ko-fi y aviso mensual discreto con comprobación de actualizaciones",
                     titleEN: "Optional Ko-fi Tip Support & Non-Invasive Monthly Update Check-In",
-                    summaryES: "MacFileExplorer sigue siendo 100% gratuito y sin anuncios. Se sumó una tarjeta con botón de Ko-fi y código QR escaneable tanto en «Acerca de MacFileExplorer» (ahora con ventana más ancha, redimensionable y encabezado horizontal mucho más cómodo de leer) como en «Historial de releases» por si querés dejar una propina voluntaria. Además, el ícono Mono Oscuro pasa a ser el predeterminado de la app y la web, y una vez cada 30 días se muestra un aviso flotante discreto en la esquina inferior derecha que comprueba automáticamente si hay una versión nueva lista para actualizar.",
-                    summaryEN: "MacFileExplorer remains 100% free and ad-free. Added an optional Ko-fi tip card with button and scannable QR code in both «About MacFileExplorer» (now wider, resizable, with a spacious horizontal header) and «Release History» in case you want to support development. Dark Mono is now the default app and website icon, and once every 30 days a non-invasive floating corner card automatically checks for new updates right inside the card and can be snoozed or permanently dismissed in one click."
+                    summaryES: "MacFileExplorer sigue siendo 100% gratuito y sin anuncios. Se sumó una tarjeta con botón de Ko-fi y código QR grande de fácil escaneo (ampliable a 240 px en un clic) tanto en «Acerca de MacFileExplorer» (ahora con ventana más ancha, redimensionable y encabezado horizontal mucho más cómodo de leer) como en «Historial de releases» por si querés dejar una propina voluntaria. Además, el ícono Mono Oscuro pasa a ser el predeterminado de la app y la web, y una vez cada 30 días se muestra un aviso flotante discreto en la esquina inferior derecha que comprueba automáticamente si hay una versión nueva lista para actualizar.",
+                    summaryEN: "MacFileExplorer remains 100% free and ad-free. Added an optional Ko-fi tip card with button and a large, easy-to-scan QR code (with 1-click 240 px zoom) in both «About MacFileExplorer» (now wider, resizable, with a spacious horizontal header) and «Release History» in case you want to support development. Dark Mono is now the default app and website icon, and once every 30 days a non-invasive floating corner card automatically checks for new updates right inside the card and can be snoozed or permanently dismissed in one click."
                 )
             ]
         ),
