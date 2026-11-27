@@ -26,8 +26,20 @@ public final class NotchManager {
     public private(set) var connectedDisplays: [NotchDisplayGeometry] = []
     public private(set) var isPinnedOpen: Bool = false
     public private(set) var prefersLyricsOpen: Bool = false
+    public private(set) var activeFeedback: NotchTransientFeedback = .none
+    public private(set) var pauseSqueezeActive: Bool = false
+    /// Propiedad almacenada para evitar que transiciones no-expandidas (ej. `.collapsed` ↔ `.peeking` ↔ `.hidden`)
+    /// invaliden el menú superior `CommandMenu("Notch")` y cierren submenús abiertos.
+    public private(set) var isAnyPanelExpanded: Bool = false
 
-    private var phaseByDisplayID: [String: NotchPresentationPhase] = [:]
+    private var phaseByDisplayID: [String: NotchPresentationPhase] = [:] {
+        didSet {
+            let expanded = phaseByDisplayID.values.contains(where: \.isExpanded)
+            if isAnyPanelExpanded != expanded {
+                isAnyPanelExpanded = expanded
+            }
+        }
+    }
     private var swipeNudgeByDisplayID: [String: CGFloat] = [:]
 
     // MARK: - Infraestructura Interna
@@ -42,6 +54,7 @@ public final class NotchManager {
     private var hoverExpandTaskByDisplayID: [String: Task<Void, Never>] = [:]
     private var hoverCollapseTaskByDisplayID: [String: Task<Void, Never>] = [:]
     private var peekDismissTask: Task<Void, Never>?
+    private var squeezeResetTask: Task<Void, Never>?
     private var pausedAutoHideTask: Task<Void, Never>?
     private var swipeResetTasks: [String: Task<Void, Never>] = [:]
 
@@ -63,10 +76,6 @@ public final class NotchManager {
 
     public var ownedWindowNumbers: Set<Int> {
         Set(panelsByDisplayID.values.map(\.windowNumber))
-    }
-
-    public var isAnyPanelExpanded: Bool {
-        phaseByDisplayID.values.contains(where: \.isExpanded)
     }
 
     public func phase(for displayID: String) -> NotchPresentationPhase {
@@ -96,10 +105,16 @@ public final class NotchManager {
         NotchMediaService.shared.onTrackChanged = { [weak self] newTrack in
             self?.handleTrackChanged(newTrack)
         }
+        NotchMediaService.shared.onPlaybackStateChanged = { [weak self] isPlaying, track in
+            self?.handlePlaybackStateChanged(isPlaying: isPlaying, track: track)
+        }
 
         TaskbarWindowTracker.shared.registerOwnedWindowNumbersProvider(key: "notch") { [weak self] in
             self?.ownedWindowNumbers ?? []
         }
+
+        NotchMusicDecoyService.shared.installIfNeeded()
+        NotchMusicDecoyService.shared.syncWithPreferences()
 
         if prefs.isEnabled {
             applyEnabledState(true)
@@ -128,8 +143,12 @@ public final class NotchManager {
             refreshFullScreenDisplays()
             rebuildPanels()
             evaluatePausedAutoHideSchedule()
+            NotchAudioEqualizerEngine.shared.syncWithPreferences()
+            NotchCalendarService.shared.startMonitoringIfNeeded()
         } else {
             isPinnedOpen = false
+            NotchAudioEqualizerEngine.shared.stop()
+            NotchCalendarService.shared.stopMonitoring()
             cancelAllTransientTasks()
             removeObserversAndMonitors()
             destroyAllPanels()
@@ -143,6 +162,9 @@ public final class NotchManager {
 
     /// Invocado antes de cerrar `MacFileExplorer` para liberar monitores, temporizadores y paneles.
     public func prepareForTermination() {
+        NotchAudioEqualizerEngine.shared.stop()
+        NotchCalendarService.shared.stopMonitoring()
+        NotchMusicDecoyService.shared.stop()
         cancelAllTransientTasks()
         removeObserversAndMonitors()
         destroyAllPanels()
@@ -158,8 +180,7 @@ public final class NotchManager {
         guard let targetID = resolveTargetDisplayID(preferred: displayID) else { return }
 
         cancelHoverTasks(for: targetID)
-        peekDismissTask?.cancel()
-        peekDismissTask = nil
+        clearTransientFeedback(collapsePeeking: false)
 
         let useLyrics: Bool
         if let showLyrics {
@@ -226,6 +247,38 @@ public final class NotchManager {
 
     public func togglePinned() {
         isPinnedOpen.toggle()
+    }
+
+    /// Dispara la animación superior del Notch al acercarse una reunión / Meet según la configuración elegida.
+    public func triggerCalendarMeetingAlert(for event: NotchCalendarEvent) {
+        let prefs = NotchPreferences.shared
+        guard prefs.isEnabled && prefs.calendarEnabled else { return }
+        guard prefs.calendarMusicCoexistenceMode != .manualTabOnly else { return }
+
+        // Despertar paneles si estaban ocultos por pausa
+        for (id, current) in phaseByDisplayID where current == .hidden {
+            setPhase(.collapsed, for: id)
+        }
+
+        switch prefs.calendarAlertAnimationStyle {
+        case .dropDownBanner:
+            if !isAnyPanelExpanded {
+                expand(displayID: nil, showLyrics: false)
+                peekDismissTask?.cancel()
+                peekDismissTask = Task { @MainActor [weak self] in
+                    try? await Task.sleep(for: .seconds(6.5))
+                    guard !Task.isCancelled, let self, !self.isPinnedOpen else { return }
+                    self.collapse(forceUnpin: false)
+                }
+            }
+        case .expandSideways:
+            previewTrackChangeFeedback(style: .expandSideways)
+        case .greenMeetPulse, .subtleGlow:
+            previewTrackChangeFeedback(style: .colorFlash)
+        case .none:
+            break
+        }
+        syncMousePassThrough(at: NSEvent.mouseLocation)
     }
 
     /// Alterna el modo Demo y asegura que el usuario vea el Notch inmediatamente (activándolo si estaba apagado).
@@ -389,12 +442,187 @@ public final class NotchManager {
         evaluatePausedAutoHideSchedule()
     }
 
+    /// Ejecuta una vista previa en vivo del estilo actual de cambio de canción sobre el Notch real (si está activo).
+    public func previewTrackChangeFeedback(style: NotchTrackChangeStyle? = nil) {
+        guard NotchPreferences.shared.isEnabled else { return }
+        if isAnyPanelExpanded {
+            collapse(forceUnpin: true)
+        }
+        for (id, current) in phaseByDisplayID where current == .hidden {
+            setPhase(.collapsed, for: id)
+        }
+        triggerTrackChangeFeedback(style: style ?? NotchPreferences.shared.trackChangeStyle)
+    }
+
+    /// Ejecuta una vista previa en vivo de la animación de pausa sobre el Notch real (si está activo).
+    public func previewPauseFeedback(style: NotchPauseAnimationStyle? = nil) {
+        guard NotchPreferences.shared.isEnabled else { return }
+        if isAnyPanelExpanded {
+            collapse(forceUnpin: true)
+        }
+        for (id, current) in phaseByDisplayID where current == .hidden {
+            setPhase(.collapsed, for: id)
+        }
+        triggerPauseFeedback(style: style ?? NotchPreferences.shared.pauseAnimationStyle)
+    }
+
+    private func clearTransientFeedback(collapsePeeking: Bool) {
+        peekDismissTask?.cancel()
+        peekDismissTask = nil
+        squeezeResetTask?.cancel()
+        squeezeResetTask = nil
+        pauseSqueezeActive = false
+        activeFeedback = .none
+        if collapsePeeking {
+            for (id, current) in phaseByDisplayID where current == .peeking {
+                setPhase(restingCollapsedPhase(), for: id)
+            }
+            syncMousePassThrough(at: NSEvent.mouseLocation)
+        }
+    }
+
+    private func triggerTrackChangeFeedback(style: NotchTrackChangeStyle) {
+        guard !isAnyPanelExpanded else { return }
+        let speedScale = 1.0 / min(max(NotchPreferences.shared.animationSpeed, 0.5), 2.0)
+
+        peekDismissTask?.cancel()
+        squeezeResetTask?.cancel()
+        pauseSqueezeActive = false
+
+        let token = UUID()
+        activeFeedback = .trackChanged(style, token: token)
+
+        if style.usesPeekingSilhouette {
+            for id in panelsByDisplayID.keys {
+                if phase(for: id) == .collapsed || phase(for: id) == .peeking {
+                    setPhase(.peeking, for: id)
+                }
+            }
+            syncMousePassThrough(at: NSEvent.mouseLocation)
+        } else {
+            for (id, current) in phaseByDisplayID where current == .peeking {
+                setPhase(.collapsed, for: id)
+            }
+            if style == .slideNudge {
+                for id in panelsByDisplayID.keys {
+                    triggerSwipeNudge(for: id, deltaX: 11)
+                }
+            }
+            syncMousePassThrough(at: NSEvent.mouseLocation)
+        }
+
+        let baseDurationSec: Double
+        switch style {
+        case .dropDown, .expandSideways:
+            baseDurationSec = 2.6
+        case .skipIconSwap:
+            baseDurationSec = 2.0
+        case .colorFlash:
+            baseDurationSec = 1.8
+        case .slideNudge:
+            baseDurationSec = 1.6
+        }
+        let durationNs = UInt64(max(0.85, baseDurationSec * min(max(speedScale, 0.65), 1.45)) * 1_000_000_000)
+
+        peekDismissTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: durationNs)
+            guard !Task.isCancelled, let self else { return }
+            if case .trackChanged(_, let activeToken) = self.activeFeedback, activeToken == token {
+                self.activeFeedback = .none
+            }
+            for (id, current) in self.phaseByDisplayID where current == .peeking {
+                self.setPhase(self.restingCollapsedPhase(), for: id)
+            }
+            self.syncMousePassThrough(at: NSEvent.mouseLocation)
+        }
+    }
+
+    private func triggerPauseFeedback(style: NotchPauseAnimationStyle) {
+        guard !isAnyPanelExpanded else { return }
+        let speedScale = 1.0 / min(max(NotchPreferences.shared.animationSpeed, 0.5), 2.0)
+
+        peekDismissTask?.cancel()
+        squeezeResetTask?.cancel()
+        pauseSqueezeActive = false
+
+        let token = UUID()
+        activeFeedback = .paused(style, token: token)
+
+        if style.usesPeekingSilhouette {
+            for id in panelsByDisplayID.keys {
+                if phase(for: id) == .collapsed || phase(for: id) == .peeking {
+                    setPhase(.peeking, for: id)
+                }
+            }
+            syncMousePassThrough(at: NSEvent.mouseLocation)
+        } else {
+            for (id, current) in phaseByDisplayID where current == .peeking {
+                setPhase(.collapsed, for: id)
+            }
+            if style == .gentleSqueeze && NotchPreferences.shared.enableAnimations {
+                pauseSqueezeActive = true
+                let squeezeNs = UInt64(max(0.14, 0.24 * speedScale) * 1_000_000_000)
+                squeezeResetTask = Task { [weak self] in
+                    try? await Task.sleep(nanoseconds: squeezeNs)
+                    guard !Task.isCancelled, let self else { return }
+                    self.pauseSqueezeActive = false
+                }
+            }
+            syncMousePassThrough(at: NSEvent.mouseLocation)
+        }
+
+        let baseDurationSec: Double
+        switch style {
+        case .dropDown, .expandSideways:
+            baseDurationSec = 1.9
+        case .colorDimPulse:
+            baseDurationSec = 1.5
+        case .pauseIconPop:
+            baseDurationSec = 1.4
+        case .gentleSqueeze:
+            baseDurationSec = 1.1
+        }
+        let durationNs = UInt64(max(0.75, baseDurationSec * min(max(speedScale, 0.65), 1.45)) * 1_000_000_000)
+
+        peekDismissTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: durationNs)
+            guard !Task.isCancelled, let self else { return }
+            if case .paused(_, let activeToken) = self.activeFeedback, activeToken == token {
+                self.activeFeedback = .none
+            }
+            for (id, current) in self.phaseByDisplayID where current == .peeking {
+                self.setPhase(self.restingCollapsedPhase(), for: id)
+            }
+            self.syncMousePassThrough(at: NSEvent.mouseLocation)
+        }
+    }
+
+    private func handlePlaybackStateChanged(isPlaying: Bool, track: NotchTrackInfo) {
+        guard NotchPreferences.shared.isEnabled else { return }
+        evaluatePausedAutoHideSchedule()
+
+        if isPlaying {
+            if activeFeedback.isPauseFeedback {
+                clearTransientFeedback(collapsePeeking: true)
+            }
+            return
+        }
+
+        guard NotchPreferences.shared.animateOnPause else { return }
+        guard !isAnyPanelExpanded else { return }
+        for (id, current) in phaseByDisplayID where current == .hidden {
+            setPhase(.collapsed, for: id)
+        }
+        triggerPauseFeedback(style: NotchPreferences.shared.pauseAnimationStyle)
+    }
+
     private func handleTrackChanged(_ newTrack: NotchTrackInfo?) {
         guard NotchPreferences.shared.isEnabled else { return }
 
         evaluatePausedAutoHideSchedule()
 
         guard let newTrack else {
+            clearTransientFeedback(collapsePeeking: false)
             if NotchPreferences.shared.hideWhenPaused && !isPinnedOpen {
                 for (id, current) in phaseByDisplayID where !current.isExpanded {
                     setPhase(.hidden, for: id)
@@ -412,26 +640,10 @@ public final class NotchManager {
             setPhase(.collapsed, for: id)
         }
 
-        // Anuncio suave de nueva canción ("Announce New Tracks")
+        // Aviso visual configurable al cambiar de tema ("Announce New Tracks")
         guard NotchPreferences.shared.announceNewTracks else { return }
         guard !isAnyPanelExpanded else { return }
-
-        peekDismissTask?.cancel()
-        for id in panelsByDisplayID.keys {
-            if phase(for: id) == .collapsed || phase(for: id) == .peeking {
-                setPhase(.peeking, for: id)
-            }
-        }
-        syncMousePassThrough(at: NSEvent.mouseLocation)
-
-        peekDismissTask = Task { [weak self] in
-            try? await Task.sleep(nanoseconds: 2_600_000_000)
-            guard !Task.isCancelled, let self else { return }
-            for (id, current) in self.phaseByDisplayID where current == .peeking {
-                self.setPhase(self.restingCollapsedPhase(), for: id)
-            }
-            self.syncMousePassThrough(at: NSEvent.mouseLocation)
-        }
+        triggerTrackChangeFeedback(style: NotchPreferences.shared.trackChangeStyle)
     }
 
     private func restingCollapsedPhase() -> NotchPresentationPhase {
@@ -519,7 +731,8 @@ public final class NotchManager {
             phase: currentPhase,
             geometry: geo,
             prefs: NotchPreferences.shared,
-            hasActiveTrack: NotchMediaService.shared.hasActiveTrack
+            hasActiveTrack: NotchMediaService.shared.hasActiveTrack,
+            activeFeedback: activeFeedback
         )
 
         let width = metrics.width + extraPadding * 2
@@ -765,7 +978,10 @@ public final class NotchManager {
                 guard let self else { return event }
                 switch event.type {
                 case .mouseMoved:
-                    self.handleMouseMoved(at: NSEvent.mouseLocation)
+                    // Evitar disparar expansión por hover mientras el usuario navega un menú nativo abierto
+                    if RunLoop.current.currentMode != .eventTracking {
+                        self.handleMouseMoved(at: NSEvent.mouseLocation)
+                    }
                 case .leftMouseDown:
                     self.handleGlobalLeftMouseDown(at: NSEvent.mouseLocation)
                 case .scrollWheel:
@@ -859,6 +1075,10 @@ public final class NotchManager {
         swipeResetTasks.removeAll()
         peekDismissTask?.cancel()
         peekDismissTask = nil
+        squeezeResetTask?.cancel()
+        squeezeResetTask = nil
+        pauseSqueezeActive = false
+        activeFeedback = .none
         pausedAutoHideTask?.cancel()
         pausedAutoHideTask = nil
     }

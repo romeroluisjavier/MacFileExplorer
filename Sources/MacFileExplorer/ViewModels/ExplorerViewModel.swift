@@ -83,6 +83,12 @@ public final class ExplorerViewModel {
                 } else {
                     runAdvancedSearch()
                 }
+            } else if allItems.count > 500 {
+                searchDebounceTask = Task { @MainActor [weak self] in
+                    try? await Task.sleep(for: .milliseconds(130))
+                    guard let self, !Task.isCancelled else { return }
+                    self.rebuildDisplayedItems()
+                }
             } else {
                 rebuildDisplayedItems()
             }
@@ -93,6 +99,7 @@ public final class ExplorerViewModel {
     public private(set) var isAdvancedSearchActive: Bool = false
     private var advancedSearchTask: Task<Void, Never>?
     private var searchDebounceTask: Task<Void, Never>?
+    private var rebuildDisplayedTask: Task<Void, Never>?
     public var isDuplicateFinderPresented: Bool = false
     public var isHiddenCacheManagerPresented: Bool = false
 
@@ -100,6 +107,8 @@ public final class ExplorerViewModel {
     public func runAdvancedSearch() {
         searchDebounceTask?.cancel()
         searchDebounceTask = nil
+        rebuildDisplayedTask?.cancel()
+        rebuildDisplayedTask = nil
         advancedSearchTask?.cancel()
         advancedSearchTask = nil
 
@@ -425,12 +434,58 @@ public final class ExplorerViewModel {
         currentDirectoryURL.standardizedFileURL.path != "/"
     }
 
+    /// Caché única de URL de Papelera y nombre del volumen raíz para evitar consultas síncronas repetidas a `FileManager`.
+    private static let cachedTrashURL: URL? = FileManager.default
+        .urls(for: .trashDirectory, in: .userDomainMask)
+        .first?
+        .standardizedFileURL
+
+    private static let cachedRootDisplayName: String = FileManager.default.displayName(atPath: "/")
+
+    private static let protectedSidebarPaths: Set<String> = {
+        let fm = FileManager.default
+        var paths: Set<String> = [
+            "/",
+            "/Applications",
+            "/System",
+            "/Library",
+            "/Users",
+            "/Volumes",
+            "/bin",
+            "/sbin",
+            "/usr",
+            "/etc",
+            "/var",
+            "/private",
+            "/opt",
+            "/cores",
+            fm.homeDirectoryForCurrentUser.standardizedFileURL.path(percentEncoded: false)
+        ]
+
+        let protectedDomains: [FileManager.SearchPathDirectory] = [
+            .desktopDirectory,
+            .downloadsDirectory,
+            .documentDirectory,
+            .picturesDirectory,
+            .moviesDirectory,
+            .musicDirectory,
+            .libraryDirectory,
+            .applicationDirectory
+        ]
+        for domain in protectedDomains {
+            if let dirURL = fm.urls(for: domain, in: .userDomainMask).first?.standardizedFileURL {
+                paths.insert(dirURL.path(percentEncoded: false))
+            }
+        }
+        return paths
+    }()
+
     /// Título de la carpeta activa para la ventana o pestaña.
     public var currentFolderTitle: String {
         if currentDirectoryURL.path == "/" {
-            return FileManager.default.displayName(atPath: "/")
+            return Self.cachedRootDisplayName
         }
-        if let trashURL = FileManager.default.urls(for: .trashDirectory, in: .userDomainMask).first?.standardizedFileURL,
+        if let trashURL = Self.cachedTrashURL,
            currentDirectoryURL.standardizedFileURL == trashURL {
             return LocalizationManager.shared.text(es: "Papelera", en: "Trash")
         }
@@ -441,13 +496,12 @@ public final class ExplorerViewModel {
     public var breadcrumbSegments: [BreadcrumbSegment] {
         var segments: [BreadcrumbSegment] = []
         let components = currentDirectoryURL.standardizedFileURL.pathComponents
-        let trashURL = FileManager.default.urls(for: .trashDirectory, in: .userDomainMask).first?.standardizedFileURL
+        let trashURL = Self.cachedTrashURL
         var runningURL = URL(fileURLWithPath: "/")
 
         for component in components {
             if component == "/" {
-                let rootName = FileManager.default.displayName(atPath: "/")
-                segments.append(BreadcrumbSegment(title: rootName, url: runningURL))
+                segments.append(BreadcrumbSegment(title: Self.cachedRootDisplayName, url: runningURL))
             } else {
                 runningURL.appendPathComponent(component)
                 let segmentTitle: String
@@ -465,6 +519,8 @@ public final class ExplorerViewModel {
     // MARK: - Elementos Filtrados y Ordenados
 
     private func setAllItems(_ items: [FileItem], precomputedDisplayed: [FileItem]? = nil) {
+        rebuildDisplayedTask?.cancel()
+        rebuildDisplayedTask = nil
         self.allItems = items
         self.cachedAllItemsByID = nil
         let resolvedDisplayed = precomputedDisplayed ?? Self.computeDisplayedItems(
@@ -479,23 +535,61 @@ public final class ExplorerViewModel {
     }
 
     private func rebuildDisplayedItems() {
+        rebuildDisplayedTask?.cancel()
+        rebuildDisplayedTask = nil
+
+        let items = allItems
+        let showHidden = showHiddenFiles
+        let query = searchQuery
+        let field = sortField
+        let ascending = sortAscending
+        let sortKey = currentSortCacheKey
+        let loadedURL = loadedDirectoryURL
+        let shouldCache = query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && !isShowingRecent24Hours
+            && !isAdvancedSearchActive
+
+        if items.count > 800 {
+            rebuildDisplayedTask = Task { @MainActor [weak self] in
+                let resolvedDisplayed = await Task.detached(priority: .userInitiated) {
+                    Self.computeDisplayedItems(
+                        from: items,
+                        showHiddenFiles: showHidden,
+                        searchQuery: query,
+                        sortField: field,
+                        sortAscending: ascending
+                    )
+                }.value
+                guard !Task.isCancelled, let self else { return }
+                guard self.loadedDirectoryURL == loadedURL else { return }
+                self.displayedItems = resolvedDisplayed
+                self.cachedDisplayedItemsByID = nil
+                if shouldCache, let loadedURL {
+                    DirectoryIndexCacheService.shared.storeInSynchronousMemoryCache(
+                        items,
+                        sortedItems: resolvedDisplayed,
+                        sortKey: sortKey,
+                        for: loadedURL
+                    )
+                }
+            }
+            return
+        }
+
         let resolvedDisplayed = Self.computeDisplayedItems(
-            from: allItems,
-            showHiddenFiles: showHiddenFiles,
-            searchQuery: searchQuery,
-            sortField: sortField,
-            sortAscending: sortAscending
+            from: items,
+            showHiddenFiles: showHidden,
+            searchQuery: query,
+            sortField: field,
+            sortAscending: ascending
         )
         self.displayedItems = resolvedDisplayed
         self.cachedDisplayedItemsByID = nil
-        if searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-           !isShowingRecent24Hours,
-           !isAdvancedSearchActive,
-           let loadedURL = loadedDirectoryURL {
+        if shouldCache, let loadedURL {
             DirectoryIndexCacheService.shared.storeInSynchronousMemoryCache(
-                allItems,
+                items,
                 sortedItems: resolvedDisplayed,
-                sortKey: currentSortCacheKey,
+                sortKey: sortKey,
                 for: loadedURL
             )
         }
@@ -651,42 +745,7 @@ public final class ExplorerViewModel {
         if std.deletingLastPathComponent().path(percentEncoded: false) == "/Volumes" {
             return false
         }
-
-        let fm = FileManager.default
-        var protectedPaths: Set<String> = [
-            "/",
-            "/Applications",
-            "/System",
-            "/Library",
-            "/Users",
-            "/Volumes",
-            "/bin",
-            "/sbin",
-            "/usr",
-            "/etc",
-            "/var",
-            "/private",
-            "/opt",
-            "/cores",
-            fm.homeDirectoryForCurrentUser.standardizedFileURL.path(percentEncoded: false)
-        ]
-
-        let protectedDomains: [FileManager.SearchPathDirectory] = [
-            .desktopDirectory,
-            .downloadsDirectory,
-            .documentDirectory,
-            .picturesDirectory,
-            .moviesDirectory,
-            .musicDirectory,
-            .libraryDirectory,
-            .applicationDirectory
-        ]
-        for domain in protectedDomains {
-            if let dirURL = fm.urls(for: domain, in: .userDomainMask).first?.standardizedFileURL {
-                protectedPaths.insert(dirURL.path(percentEncoded: false))
-            }
-        }
-        return !protectedPaths.contains(path)
+        return !Self.protectedSidebarPaths.contains(path)
     }
 
     // MARK: - Acciones de Navegación
@@ -2220,6 +2279,8 @@ public final class ExplorerViewModel {
 
     private func loadCurrentDirectory(preservingSelection: Bool = false) {
         directoryLoadTask?.cancel()
+        rebuildDisplayedTask?.cancel()
+        rebuildDisplayedTask = nil
         statusBarLoadingTask?.cancel()
         slowLoadingOverlayTask?.cancel()
         backgroundVerifyTask?.cancel()
@@ -2237,6 +2298,7 @@ public final class ExplorerViewModel {
         if let hotHit = DirectoryIndexCacheService.shared.synchronousMemorySnapshot(for: targetURL) {
             let trimmedQuery = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
             let sortKey = currentSortCacheKey
+            let shouldSkipBackgroundVerification = hotHit.isFolderTimestampFresh && currentDirectoryWatcher != nil
 
             if trimmedQuery.isEmpty,
                let preSorted = hotHit.sortedItems,
@@ -2250,13 +2312,15 @@ public final class ExplorerViewModel {
                     saveToDiskCache: false,
                     isFromCache: true
                 )
-                scheduleBackgroundDirectoryVerification(
-                    for: targetURL,
-                    baselineItems: hotHit.items,
-                    preservingSelection: preservingSelection,
-                    previousSelection: previousSelection,
-                    initialDelayMs: hotHit.isFolderTimestampFresh ? 260 : 0
-                )
+                if !shouldSkipBackgroundVerification {
+                    scheduleBackgroundDirectoryVerification(
+                        for: targetURL,
+                        baselineItems: hotHit.items,
+                        preservingSelection: preservingSelection,
+                        previousSelection: previousSelection,
+                        initialDelayMs: hotHit.isFolderTimestampFresh ? 260 : 0
+                    )
+                }
                 return
             }
 
@@ -2285,13 +2349,15 @@ public final class ExplorerViewModel {
                     saveToDiskCache: false,
                     isFromCache: true
                 )
-                scheduleBackgroundDirectoryVerification(
-                    for: targetURL,
-                    baselineItems: hotHit.items,
-                    preservingSelection: preservingSelection,
-                    previousSelection: previousSelection,
-                    initialDelayMs: hotHit.isFolderTimestampFresh ? 260 : 0
-                )
+                if !shouldSkipBackgroundVerification {
+                    scheduleBackgroundDirectoryVerification(
+                        for: targetURL,
+                        baselineItems: hotHit.items,
+                        preservingSelection: preservingSelection,
+                        previousSelection: previousSelection,
+                        initialDelayMs: hotHit.isFolderTimestampFresh ? 260 : 0
+                    )
+                }
                 return
             }
 
@@ -2320,13 +2386,15 @@ public final class ExplorerViewModel {
                     saveToDiskCache: false,
                     isFromCache: true
                 )
-                self.scheduleBackgroundDirectoryVerification(
-                    for: targetURL,
-                    baselineItems: hotHit.items,
-                    preservingSelection: preservingSelection,
-                    previousSelection: previousSelection,
-                    initialDelayMs: hotHit.isFolderTimestampFresh ? 260 : 0
-                )
+                if !(hotHit.isFolderTimestampFresh && self.currentDirectoryWatcher != nil) {
+                    self.scheduleBackgroundDirectoryVerification(
+                        for: targetURL,
+                        baselineItems: hotHit.items,
+                        preservingSelection: preservingSelection,
+                        previousSelection: previousSelection,
+                        initialDelayMs: hotHit.isFolderTimestampFresh ? 260 : 0
+                    )
+                }
             }
             return
         }
@@ -2411,7 +2479,7 @@ public final class ExplorerViewModel {
                 self.isLoading = false
                 self.loadedDirectoryURL = targetURL
                 self.setAllItems([], precomputedDisplayed: [])
-                if let trashURL = FileManager.default.urls(for: .trashDirectory, in: .userDomainMask).first?.standardizedFileURL,
+                if let trashURL = Self.cachedTrashURL,
                    targetURL == trashURL {
                     let loc = LocalizationManager.shared
                     self.errorMessage = loc.text(

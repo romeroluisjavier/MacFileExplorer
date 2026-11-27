@@ -2,7 +2,31 @@
 
 > ☕ **MacFileExplorer es 100% gratis y sin anuncios.** Si te resulta útil y querés colaborar con una **propina opcional** para apoyar el desarrollo, podés invitar un café en [**ko-fi.com/luisjavierromero**](https://ko-fi.com/luisjavierromero) *(o escanear el código QR desde *Acerca de MacFileExplorer* o *Ayuda → Historial de releases* dentro de la app)*.
 
-## Versión 2.7.0 (Versión Actual)
+## Versión 2.8.0 (Versión Actual)
+
+- **Instalador (GitHub Releases):** [`MacFileExplorer-2.8.0.dmg`](https://github.com/romeroluisjavier/MacFileExplorer/releases/download/v2.8.0/MacFileExplorer-2.8.0.dmg) *(copia local: [`./MacFileExplorer-2.8.0.dmg`](./MacFileExplorer-2.8.0.dmg))*
+- **Tamaño:** ~33 MB
+- **Arquitectura:** Binario Universal (`arm64` Apple Silicon + `x86_64` Intel)
+- **Requisitos del sistema:** macOS 14.0 (Sonoma) o posterior
+
+### Novedades principales en la v2.8.0:
+1. **Google Calendar y alertas de Meet integradas en el «Notch» (con 15+ configuraciones)**:
+   - Mostrá tu agenda diaria o semanal en formato Google Calendar (Agenda con barra de color, Línea de tiempo o Compacto), con colores reales de tus eventos y apertura directa en Google Chrome.
+   - Tarjeta exclusiva de aviso cuando está por empezar una Meet (sin recortar el reproductor de música), con sonido configurable, animación superior y botón **«Unirse a Meet»** en 1 clic.
+   - 5 nuevos ajustes para el ícono de Calendario en la barra del Notch: estilo (incluyendo cápsula igual a *YouTube Music*), posición, tamaño, contador de eventos y número de día actual.
+2. **Volumen, Ecualizador de 5 bandas y reproductor por defecto al presionar `▶ Play` (bloqueo de Apple Music)**:
+   - Control de Volumen del sistema y Ecualizador de sonido de 5 bandas con 8 perfiles prearmados directo en la barra superior del Notch.
+   - Elegí qué app abrir al apretar `▶ Play` (YouTube Music, Spotify, etc.) y bloqueá la apertura automática de Apple Music (0% CPU).
+3. **Visor PDF interactivo en Vista Rápida (`Espacio`)**:
+   - Seleccioná y copiá texto (`⌘C`), recortá cualquier zona o gráfico como imagen en alta resolución, pegá texto o imágenes (`⌘V`) sobre el PDF con Deshacer y Guardar (`⌘S`), buscá (`⌘F`), hacé zoom y rotá páginas.
+4. **Portapapeles con columna Fecha y Ordenar + Foco multi-monitor + Boost de velocidad e instalador mejorado**:
+   - Nueva columna **Fecha** y menú **Ordenar** (Fecha, Contenido, Tipo, Tamaño, Aplicación o Más usados) en el Historial del Portapapeles.
+   - Enfoque de una sola ventana al hacer clic en apps con varias ventanas entre monitores (como Chrome) sin moverlas de pantalla.
+   - Navegación más fluida en carpetas grandes, mejoras de estabilidad en transferencias/PDF/ecualizador, instalador atómico `Instalar MacFileExplorer.command` dentro del `.dmg` y 20 nuevos tests de validación.
+
+---
+
+## Versión 2.7.0
 
 - **Instalador (GitHub Releases):** [`MacFileExplorer-2.7.0.dmg`](https://github.com/romeroluisjavier/MacFileExplorer/releases/download/v2.7.0/MacFileExplorer-2.7.0.dmg) *(copia local: [`./MacFileExplorer-2.7.0.dmg`](./MacFileExplorer-2.7.0.dmg))*
 - **Tamaño:** ~30 MB

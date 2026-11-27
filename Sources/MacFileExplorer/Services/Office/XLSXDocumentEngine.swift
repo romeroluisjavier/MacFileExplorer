@@ -14,10 +14,15 @@ public enum OOXMLArchiveUtility {
         proc.waitUntilExit()
         if proc.terminationStatus != 0 && proc.terminationStatus != 1 {
             let errText = String(data: errPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+            let isES = LocalizationManager.currentLanguageIsSpanish()
             throw NSError(
                 domain: "MacFileExplorer.OOXML",
                 code: Int(proc.terminationStatus),
-                userInfo: [NSLocalizedDescriptionKey: "Failed to unpack OOXML archive: \(errText)"]
+                userInfo: [
+                    NSLocalizedDescriptionKey: isES
+                        ? "No se pudo descomprimir el archivo OOXML: \(errText)"
+                        : "Failed to unpack OOXML archive: \(errText)"
+                ]
             )
         }
     }
@@ -37,10 +42,15 @@ public enum OOXMLArchiveUtility {
         proc.waitUntilExit()
         guard proc.terminationStatus == 0 else {
             let errText = String(data: errPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+            let isES = LocalizationManager.currentLanguageIsSpanish()
             throw NSError(
                 domain: "MacFileExplorer.OOXML",
                 code: Int(proc.terminationStatus),
-                userInfo: [NSLocalizedDescriptionKey: "Failed to repack OOXML archive: \(errText)"]
+                userInfo: [
+                    NSLocalizedDescriptionKey: isES
+                        ? "No se pudo volver a empaquetar el archivo OOXML: \(errText)"
+                        : "Failed to repack OOXML archive: \(errText)"
+                ]
             )
         }
 

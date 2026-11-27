@@ -30,6 +30,80 @@ private enum AXPrivateBridge {
     }
 }
 
+private typealias GetProcessForPIDFn = @convention(c) (pid_t, UnsafeMutablePointer<ProcessSerialNumber>) -> OSStatus
+private typealias SLPSSetFrontProcessWithOptionsFn = @convention(c) (UnsafeMutablePointer<ProcessSerialNumber>, CGWindowID, UInt32) -> CGError
+private typealias SLPSPostEventRecordToFn = @convention(c) (UnsafeMutablePointer<ProcessSerialNumber>, UnsafeMutablePointer<UInt8>) -> CGError
+
+/// Puente dinámico seguro hacia `SkyLight` (`_SLPSSetFrontProcessWithOptions` + `SLPSPostEventRecordTo`)
+/// para enfocar y elevar **únicamente** la ventana específica (`CGWindowID`) en su monitor actual,
+/// sin traer al frente otras ventanas de la misma app (ej. Chrome en dos monitores) ni moverla de pantalla.
+private enum SkyLightSingleWindowFocusBridge {
+    private static let kCPSUserGenerated: UInt32 = 0x200
+
+    private struct Symbols: @unchecked Sendable {
+        let getProcessForPID: GetProcessForPIDFn
+        let setFrontProcessWithOptions: SLPSSetFrontProcessWithOptionsFn
+        let postEventRecordTo: SLPSPostEventRecordToFn
+    }
+
+    private static let symbols: Symbols? = {
+        guard let sl = dlopen("/System/Library/PrivateFrameworks/SkyLight.framework/SkyLight", RTLD_LAZY),
+              let appSvc = dlopen("/System/Library/Frameworks/ApplicationServices.framework/ApplicationServices", RTLD_LAZY),
+              let sGetProc = dlsym(appSvc, "GetProcessForPID"),
+              let sSetFront = dlsym(sl, "_SLPSSetFrontProcessWithOptions"),
+              let sPostEvent = dlsym(sl, "SLPSPostEventRecordTo") else {
+            return nil
+        }
+        return Symbols(
+            getProcessForPID: unsafeBitCast(sGetProc, to: GetProcessForPIDFn.self),
+            setFrontProcessWithOptions: unsafeBitCast(sSetFront, to: SLPSSetFrontProcessWithOptionsFn.self),
+            postEventRecordTo: unsafeBitCast(sPostEvent, to: SLPSPostEventRecordToFn.self)
+        )
+    }()
+
+    /// Eleva y da foco de teclado únicamente a `windowID` de `pid`, dejando intactas las demás ventanas
+    /// de esa aplicación en cualquier otro monitor o detrás de otras apps.
+    @discardableResult
+    static func focusSingleWindow(pid: pid_t, windowID: CGWindowID) -> Bool {
+        guard windowID != 0, let symbols else { return false }
+        var psn = ProcessSerialNumber(highLongOfPSN: 0, lowLongOfPSN: 0)
+        guard symbols.getProcessForPID(pid, &psn) == noErr else { return false }
+
+        let frontErr = symbols.setFrontProcessWithOptions(&psn, windowID, kCPSUserGenerated)
+        guard frontErr == .success else { return false }
+
+        var bytes1 = [UInt8](repeating: 0, count: 0xf8)
+        bytes1[0x04] = 0xf8
+        bytes1[0x08] = 0x01
+        bytes1[0x3a] = 0x10
+
+        var bytes2 = [UInt8](repeating: 0, count: 0xf8)
+        bytes2[0x04] = 0xf8
+        bytes2[0x08] = 0x02
+        bytes2[0x3a] = 0x10
+
+        var widLE = windowID.littleEndian
+        withUnsafeBytes(of: &widLE) { raw in
+            for i in 0..<4 {
+                bytes1[0x3c + i] = raw[i]
+                bytes2[0x3c + i] = raw[i]
+            }
+        }
+        for i in 0x20..<0x30 {
+            bytes1[i] = 0xff
+            bytes2[i] = 0xff
+        }
+
+        _ = bytes1.withUnsafeMutableBufferPointer { ptr in
+            symbols.postEventRecordTo(&psn, ptr.baseAddress!)
+        }
+        _ = bytes2.withUnsafeMutableBufferPointer { ptr in
+            symbols.postEventRecordTo(&psn, ptr.baseAddress!)
+        }
+        return true
+    }
+}
+
 /// Resuelve en < 0.5 ms el número de escritorio virtual (`Space 1, 2, 3…`) y si pertenece al Space activo
 /// mediante carga dinámica segura (`dlsym`), degradando limpiamente si un símbolo no estuviera disponible.
 private enum TaskbarSpaceMetadataResolver {
@@ -277,6 +351,7 @@ public final class TaskbarWindowTracker {
 
     // Seguimiento MRU (Most Recently Used) + pre-calentamiento de miniaturas al perder foco
     private var focusSequenceCounter: UInt64 = 1
+    private var focusRequestToken: UInt64 = 0
     private var lastFocusedOrderByItemID: [String: UInt64] = [:]
     private var lastFocusedWindowItemID: String?
     private var lastFocusedCGWindowID: CGWindowID = 0
@@ -1491,6 +1566,9 @@ public final class TaskbarWindowTracker {
     /// Enfoca y eleva instantáneamente la ventana exacta (incluyendo cambio de Space, minimizadas,
     /// ocultas, WhatsApp Catalyst, PWAs y ventanas propias de MacFileExplorer).
     public func focusWindow(_ item: TaskbarWindowItem) {
+        focusRequestToken &+= 1
+        let requestToken = focusRequestToken
+
         if item.isWindowlessApp {
             openWindowlessApplication(item)
             return
@@ -1512,8 +1590,13 @@ public final class TaskbarWindowTracker {
                 if localWin.isMiniaturized {
                     localWin.deminiaturize(nil)
                 }
-                NSApp.unhide(nil)
-                NSApp.activate()
+                if NSApp.isHidden {
+                    NSApp.unhide(nil)
+                }
+                let localWID = CGWindowID(max(0, localWin.windowNumber))
+                if !SkyLightSingleWindowFocusBridge.focusSingleWindow(pid: item.pid, windowID: localWID) {
+                    NSApp.activate()
+                }
                 localWin.orderFrontRegardless()
                 localWin.makeKeyAndOrderFront(nil)
             } else {
@@ -1535,52 +1618,97 @@ public final class TaskbarWindowTracker {
         }
 
         applyOptimisticFocus(windowItemID: item.id)
-        activateRunningApp(app, allWindows: false)
 
         let pid = item.pid
+        let targetWindowID = item.windowID
         let axBox = axElementsByWindowItemID[item.id].map(AXElementBox.init)
         let wasMinimized = item.isMinimized
+
+        if app.isHidden {
+            app.unhide()
+        }
+        NSApplication.shared.yieldActivation(to: app)
+
+        // Enfoque quirúrgico de UNA sola ventana vía SkyLight (`_SLPSSetFrontProcessWithOptions` + `makeKeyWindow`):
+        // evita que macOS traiga al frente el resto de las ventanas de la misma app (ej. Chrome en otro monitor)
+        // y nunca mueve la ventana de su pantalla original.
+        let skyLightFocused = (!wasMinimized && targetWindowID != 0)
+            ? SkyLightSingleWindowFocusBridge.focusSingleWindow(pid: pid, windowID: targetWindowID)
+            : false
+
+        if !skyLightFocused && !wasMinimized {
+            activateRunningApp(app, allWindows: false)
+        }
+
         actionQueue.async {
             let appElement = AXUIElementCreateApplication(pid)
             AXUIElementSetMessagingTimeout(appElement, 0.25)
 
-            if let axWin = axBox?.element {
+            // Resolver el AXUIElement exacto (cacheado o buscando en vivo por `CGWindowID`)
+            var resolvedAXWin: AXUIElement? = axBox?.element
+            if resolvedAXWin == nil && targetWindowID != 0 {
+                var windowsRef: CFTypeRef?
+                if AXUIElementCopyAttributeValue(appElement, kAXWindowsAttribute as CFString, &windowsRef) == .success,
+                   let axWindows = windowsRef as? [AXUIElement] {
+                    resolvedAXWin = axWindows.first { AXPrivateBridge.windowID(for: $0) == targetWindowID }
+                }
+            }
+
+            if let axWin = resolvedAXWin {
                 AXUIElementSetMessagingTimeout(axWin, 0.25)
                 if wasMinimized {
                     AXUIElementSetAttributeValue(axWin, kAXMinimizedAttribute as CFString, kCFBooleanFalse)
+                    usleep(40_000)
                 }
                 AXUIElementSetAttributeValue(axWin, kAXMainAttribute as CFString, kCFBooleanTrue)
                 AXUIElementSetAttributeValue(axWin, kAXFocusedAttribute as CFString, kCFBooleanTrue)
                 AXUIElementPerformAction(axWin, kAXRaiseAction as CFString)
             }
 
-            AXUIElementSetAttributeValue(appElement, kAXFrontmostAttribute as CFString, kCFBooleanTrue)
+            if wasMinimized && targetWindowID != 0 {
+                let postDeminiOK = SkyLightSingleWindowFocusBridge.focusSingleWindow(pid: pid, windowID: targetWindowID)
+                if !postDeminiOK {
+                    AXUIElementSetAttributeValue(appElement, kAXFrontmostAttribute as CFString, kCFBooleanTrue)
+                }
+            } else if !skyLightFocused {
+                AXUIElementSetAttributeValue(appElement, kAXFrontmostAttribute as CFString, kCFBooleanTrue)
+            }
 
-            if let axWin = axBox?.element {
+            if let axWin = resolvedAXWin {
                 usleep(25_000)
                 AXUIElementSetAttributeValue(axWin, kAXMainAttribute as CFString, kCFBooleanTrue)
                 AXUIElementPerformAction(axWin, kAXRaiseAction as CFString)
+                if targetWindowID != 0 {
+                    _ = SkyLightSingleWindowFocusBridge.focusSingleWindow(pid: pid, windowID: targetWindowID)
+                }
             }
         }
 
-        // Verificación rápida a los 50ms vía LaunchServices para Catalyst (WhatsApp), PWAs o saltos cross-Space
+        // Verificación rápida a los 90ms solo si el proceso aún no recibió foco (ej. salto cross-Space o Catalyst).
+        // Importante: nunca usar `allWindows: true` para no levantar otras ventanas de la misma app en otro monitor.
         let bundleURL = item.appBundleURL ?? app.bundleURL
         let bundleID = item.bundleIdentifier
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
-            guard let self else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.09) { [weak self] in
+            guard let self, self.focusRequestToken == requestToken else { return }
             let frontPID = NSWorkspace.shared.frontmostApplication?.processIdentifier
             if frontPID != pid {
-                if let liveApp = NSRunningApplication(processIdentifier: pid), !liveApp.isTerminated {
-                    self.activateRunningApp(liveApp, allWindows: true)
-                }
-                if let bundleURL {
-                    let isPWA = TaskbarStringSanitizer.isWebAppPWA(bundleIdentifier: bundleID, bundleURL: bundleURL)
-                    self.openApplicationViaWorkspaceAndFallback(bundleURL: bundleURL, isPWA: isPWA) { [weak self] in
-                        guard let self, let axBox else { return }
-                        self.actionQueue.async {
-                            AXUIElementSetMessagingTimeout(axBox.element, 0.25)
-                            AXUIElementSetAttributeValue(axBox.element, kAXMainAttribute as CFString, kCFBooleanTrue)
-                            AXUIElementPerformAction(axBox.element, kAXRaiseAction as CFString)
+                let retryOK = targetWindowID != 0
+                    ? SkyLightSingleWindowFocusBridge.focusSingleWindow(pid: pid, windowID: targetWindowID)
+                    : false
+                if !retryOK {
+                    if let liveApp = NSRunningApplication(processIdentifier: pid), !liveApp.isTerminated {
+                        self.activateRunningApp(liveApp, allWindows: false)
+                    }
+                    if let bundleURL,
+                       TaskbarStringSanitizer.isWebAppPWA(bundleIdentifier: bundleID, bundleURL: bundleURL) || targetWindowID == 0 {
+                        let isPWA = TaskbarStringSanitizer.isWebAppPWA(bundleIdentifier: bundleID, bundleURL: bundleURL)
+                        self.openApplicationViaWorkspaceAndFallback(bundleURL: bundleURL, isPWA: isPWA) { [weak self] in
+                            guard let self, self.focusRequestToken == requestToken, let axBox else { return }
+                            self.actionQueue.async {
+                                AXUIElementSetMessagingTimeout(axBox.element, 0.25)
+                                AXUIElementSetAttributeValue(axBox.element, kAXMainAttribute as CFString, kCFBooleanTrue)
+                                AXUIElementPerformAction(axBox.element, kAXRaiseAction as CFString)
+                            }
                         }
                     }
                 }

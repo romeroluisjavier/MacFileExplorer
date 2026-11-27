@@ -328,7 +328,14 @@ public struct ItemPropertiesContentView: View {
                 }
             }
             if let audioTracks = try? await asset.loadTracks(withMediaType: .audio) {
-                info.audioInfo = audioTracks.isEmpty ? "Sin audio" : "\(audioTracks.count) pista(s)"
+                let loc = LocalizationManager.shared
+                if audioTracks.isEmpty {
+                    info.audioInfo = loc.text(es: "Sin audio", en: "No audio")
+                } else {
+                    info.audioInfo = audioTracks.count == 1
+                        ? loc.text(es: "1 pista", en: "1 track")
+                        : loc.text(es: "\(audioTracks.count) pistas", en: "\(audioTracks.count) tracks")
+                }
             }
             metadata.media = info
         }

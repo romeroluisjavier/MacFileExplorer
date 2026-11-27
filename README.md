@@ -5,7 +5,7 @@ Un explorador de archivos nativo, ágil y moderno para macOS, inspirado en la pr
 ![macOS 14+](https://img.shields.io/badge/macOS-14.0%2B-blue?logo=apple)
 ![Swift 6](https://img.shields.io/badge/Swift-6.0-orange?logo=swift)
 ![Architecture](https://img.shields.io/badge/Architecture-Universal%20(Apple%20Silicon%20%2B%20Intel)-brightgreen)
-![Release](https://img.shields.io/badge/Release-v2.7.0-blueviolet)
+![Release](https://img.shields.io/badge/Release-v2.8.0-blueviolet)
 [![Downloads](https://img.shields.io/github/downloads/romeroluisjavier/MacFileExplorer/total?label=Downloads&color=0071E3)](https://github.com/romeroluisjavier/MacFileExplorer/releases)
 [![Support me on Ko-fi](https://img.shields.io/badge/Ko--fi-Support%20me%20(Optional%20Tip)-F57373?logo=ko-fi&logoColor=white)](https://ko-fi.com/luisjavierromero)
 
@@ -36,12 +36,12 @@ Un explorador de archivos nativo, ágil y moderno para macOS, inspirado en la pr
 
 ---
 
-## ✨ Novedades recientes (v2.7.0)
+## ✨ Novedades recientes (v2.8.0)
 
-- ✨ **Asistente de instalación inicial (6 pasos + *Install by Default*), Tour interactivo y Novedades al actualizar**: al instalar por primera vez podés elegir paso a paso idioma, ícono y qué módulos activar (o iniciar en 1 clic con *Instalar por defecto*), recorrer un tour con globitos suspendible en cualquier momento (`Esc`) y ver automáticamente resaltado todo lo nuevo tras cada actualización.
-- 🎨 **10 nuevas configuraciones del reproductor «Notch» + barra de avance clicable en YouTube Music**: personalizá color de acento (carátula, app o personalizado), tipo y velocidad de animaciones (`0.5×–2.0×`), 4 estilos de visualizador (*Barras*, *Onda*, *Puntos*, *Pulso*), mostrar u ocultar tapa y nombre del álbum e insignia de la app, intensidad del brillo ambiental, opacidad del fondo (vidrio translúcido a negro OLED) y tamaño de texto en letras sincronizadas — además de hacer clic o arrastrar en la barra para adelantar o retroceder canciones en YouTube Music, Spotify y Apple Music.
-- 🐞 **Reporte de errores e ideas directo desde «Acerca de» + revisión mensual del log interno**: pestaña simple y sin scroll con botón **Enviar reporte** siempre visible (y vista previa de diagnóstico sanitizado sin datos personales) más aviso mensual automático si se detectan errores nuevos.
-- 🧭 **Barra de tareas inteligente, AltTab, Administrador central de atajos y `⌘D` (View Desktop)**: ajuste automático sin scroll horizontal, apps fijadas primero, ocultamiento de Preview sin ventanas, ajuste instantáneo al maximizar Chrome y gestión unificada de atajos.
+- 📅 **Google Calendar y alertas de Meet integradas en el «Notch»**: mostrá tu agenda diaria o semanal con formato Google Calendar, colores reales de tus eventos, apertura directa en Google Chrome, 5 opciones de estilo/posición/tamaño del ícono (incluyendo cápsula igual a *YouTube Music*) y tarjeta exclusiva de aviso de Meet con botón **«Unirse a Meet»** en 1 clic sin recortar la música.
+- 🎚️ **Volumen, Ecualizador de 5 bandas y bloqueo de Apple Music en el «Notch»**: regulá el volumen y ecualizá el audio en vivo (8 perfiles) directo desde la barra superior del Notch, y elegí tu app musical por defecto al presionar `▶ Play` (bloqueando la apertura automática de Apple Music con 0% CPU).
+- 📄 **Visor PDF interactivo en Vista Rápida (`Espacio`)**: seleccioná y copiá texto (`⌘C`), recortá cualquier zona o gráfico como imagen en alta resolución, pegá texto o imágenes (`⌘V`) con Deshacer y Guardar (`⌘S`), buscá (`⌘F`), hacé zoom y rotá páginas.
+- 📋 **Historial del Portapapeles con columna Fecha y Ordenar + Foco multi-monitor + Boost de velocidad**: ordená el portapapeles por Fecha, Contenido, Tipo, Tamaño, App o Más usados; hacé clic en una ventana de la Barra de tareas (como Chrome) para enfocar solo esa ventana en su monitor sin moverla; más mejoras de fluidez en carpetas grandes, transferencias, instalador atómico y 20 tests de validación.
 
 ---
 
@@ -78,7 +78,7 @@ Un explorador de archivos nativo, ágil y moderno para macOS, inspirado en la pr
 
 ### 1. Descargar el instalador
 Descarga la versión más reciente en formato `.dmg` directamente desde GitHub Releases:
-- 👉 **[Descargar MacFileExplorer-2.7.0.dmg](https://github.com/romeroluisjavier/MacFileExplorer/releases/download/v2.7.0/MacFileExplorer-2.7.0.dmg)** *(también disponible en [GitHub Releases](https://github.com/romeroluisjavier/MacFileExplorer/releases) y en [`releases/README.md`](./releases/README.md))*
+- 👉 **[Descargar MacFileExplorer-2.8.0.dmg](https://github.com/romeroluisjavier/MacFileExplorer/releases/download/v2.8.0/MacFileExplorer-2.8.0.dmg)** *(también disponible en [GitHub Releases](https://github.com/romeroluisjavier/MacFileExplorer/releases) y en [`releases/README.md`](./releases/README.md))*
 
 ---
 

@@ -1,4 +1,5 @@
 import AppKit
+import AudioToolbox
 import CoreAudio
 import CoreGraphics
 import Foundation
@@ -223,10 +224,25 @@ public final class NotchLyricsAndAudioService {
         lyricsState == .loading
     }
 
-    // MARK: - Estado Observable de Dispositivos de Audio
+    // MARK: - Estado Observable de Dispositivos de Audio y Volumen
 
     public private(set) var outputDevices: [NotchAudioOutputDevice] = []
     public private(set) var defaultOutputDevice: NotchAudioOutputDevice?
+    public private(set) var outputVolume: Double = 0.5
+    public private(set) var isMuted: Bool = false
+
+    public var volumeSymbolName: String {
+        if isMuted || outputVolume <= 0.005 {
+            return "speaker.slash.fill"
+        }
+        if outputVolume < 0.34 {
+            return "speaker.wave.1.fill"
+        }
+        if outputVolume < 0.67 {
+            return "speaker.wave.2.fill"
+        }
+        return "speaker.wave.3.fill"
+    }
 
     // MARK: - Estado Interno
 
@@ -244,6 +260,9 @@ public final class NotchLyricsAndAudioService {
     private let audioListenerQueue = DispatchQueue(label: "com.macfileexplorer.notch.coreaudio", qos: .utility)
     private var devicesListenerBlock: AudioObjectPropertyListenerBlock?
     private var defaultOutputListenerBlock: AudioObjectPropertyListenerBlock?
+    private var monitoredVolumeDeviceID: AudioDeviceID = kAudioObjectUnknown
+    private var volumeListenerBlock: AudioObjectPropertyListenerBlock?
+    private var muteListenerBlock: AudioObjectPropertyListenerBlock?
 
     private nonisolated static let urlSession: URLSession = {
         let config = URLSessionConfiguration.ephemeral
@@ -731,16 +750,19 @@ public final class NotchLyricsAndAudioService {
         let defaultBlock: AudioObjectPropertyListenerBlock = { _, _ in
             Task { @MainActor in
                 NotchLyricsAndAudioService.shared.refreshOutputDevices()
+                NotchAudioEqualizerEngine.shared.handleDefaultOutputDeviceChanged()
             }
         }
         defaultOutputListenerBlock = defaultBlock
         AudioObjectAddPropertyListenerBlock(systemObject, &defaultAddress, queue, defaultBlock)
+        attachVolumeListenersToDefaultDevice()
     }
 
     /// Detiene los listeners de CoreAudio al desactivar Notch o cerrar la aplicación.
     public func stopAudioDeviceMonitoring() {
         guard isAudioMonitoringInstalled else { return }
         isAudioMonitoringInstalled = false
+        detachVolumeListeners()
 
         let systemObject = AudioObjectID(kAudioObjectSystemObject)
         if let devicesBlock = devicesListenerBlock {
@@ -765,11 +787,251 @@ public final class NotchLyricsAndAudioService {
 
     /// Refresca la lista de dispositivos de salida CoreAudio disponibles y el dispositivo predeterminado actual.
     public func refreshOutputDevices() {
+        let previousID = defaultOutputDevice?.id
         let fetched = Self.queryCoreAudioOutputDevices()
         if fetched != outputDevices {
             outputDevices = fetched
         }
         defaultOutputDevice = fetched.first(where: \.isDefault) ?? fetched.first
+        if isAudioMonitoringInstalled && defaultOutputDevice?.id != previousID {
+            attachVolumeListenersToDefaultDevice()
+        }
+        refreshVolumeState()
+    }
+
+    // MARK: - Control de Volumen y Silencio del Sistema (CoreAudio HAL)
+
+    /// Lee el volumen actual (`0.0...1.0`) y estado de silencio del dispositivo de salida predeterminado.
+    public func refreshVolumeState() {
+        guard let devID = defaultOutputDevice?.id ?? Self.queryDefaultOutputDeviceID() else { return }
+        if let vol = Self.readDeviceVolume(deviceID: devID) {
+            outputVolume = min(max(Double(vol), 0.0), 1.0)
+        }
+        if let muted = Self.readDeviceMute(deviceID: devID) {
+            isMuted = muted
+        } else {
+            isMuted = outputVolume <= 0.005
+        }
+    }
+
+    /// Ajusta el volumen del sistema (`0.0...1.0`) en tiempo real vía CoreAudio HAL (con respaldo AppleScript para HDMI/DP).
+    public func setOutputVolume(_ scalar: Double) {
+        let clamped = min(max(scalar, 0.0), 1.0)
+        outputVolume = clamped
+        if clamped > 0.005 && isMuted {
+            isMuted = false
+        }
+
+        let devID = defaultOutputDevice?.id ?? Self.queryDefaultOutputDeviceID()
+        if let devID, Self.writeDeviceVolume(Float32(clamped), deviceID: devID) {
+            if clamped > 0.005 {
+                _ = Self.writeDeviceMute(false, deviceID: devID)
+            }
+            return
+        }
+
+        // Respaldo para salidas digitales (HDMI / DisplayPort) sin volumen escalar directo en CoreAudio
+        let pct = Int((clamped * 100.0).rounded())
+        Task.detached(priority: .userInitiated) {
+            let script = NSAppleScript(source: "set volume output volume \(pct)")
+            var err: NSDictionary?
+            script?.executeAndReturnError(&err)
+        }
+    }
+
+    /// Sube o baja el volumen en pasos relativos (ej. `+0.10` / `-0.10`).
+    public func stepOutputVolume(by delta: Double) {
+        setOutputVolume(outputVolume + delta)
+    }
+
+    /// Alterna silencio / sonido del dispositivo de salida predeterminado.
+    public func toggleMute() {
+        let nextMuted = !isMuted
+        isMuted = nextMuted
+
+        let devID = defaultOutputDevice?.id ?? Self.queryDefaultOutputDeviceID()
+        if let devID, Self.writeDeviceMute(nextMuted, deviceID: devID) {
+            return
+        }
+
+        let flag = nextMuted ? "true" : "false"
+        Task.detached(priority: .userInitiated) {
+            let script = NSAppleScript(source: "set volume output muted \(flag)")
+            var err: NSDictionary?
+            script?.executeAndReturnError(&err)
+        }
+    }
+
+    private func attachVolumeListenersToDefaultDevice() {
+        detachVolumeListeners()
+        guard let devID = defaultOutputDevice?.id ?? Self.queryDefaultOutputDeviceID(),
+              devID != kAudioObjectUnknown else {
+            return
+        }
+        monitoredVolumeDeviceID = devID
+        let queue = audioListenerQueue
+
+        var volAddr = AudioObjectPropertyAddress(
+            mSelector: kAudioHardwareServiceDeviceProperty_VirtualMainVolume,
+            mScope: kAudioDevicePropertyScopeOutput,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        let vBlock: AudioObjectPropertyListenerBlock = { _, _ in
+            Task { @MainActor in
+                NotchLyricsAndAudioService.shared.refreshVolumeState()
+            }
+        }
+        volumeListenerBlock = vBlock
+        AudioObjectAddPropertyListenerBlock(devID, &volAddr, queue, vBlock)
+
+        var muteAddr = AudioObjectPropertyAddress(
+            mSelector: kAudioDevicePropertyMute,
+            mScope: kAudioDevicePropertyScopeOutput,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        let mBlock: AudioObjectPropertyListenerBlock = { _, _ in
+            Task { @MainActor in
+                NotchLyricsAndAudioService.shared.refreshVolumeState()
+            }
+        }
+        muteListenerBlock = mBlock
+        AudioObjectAddPropertyListenerBlock(devID, &muteAddr, queue, mBlock)
+    }
+
+    private func detachVolumeListeners() {
+        guard monitoredVolumeDeviceID != kAudioObjectUnknown else { return }
+        let devID = monitoredVolumeDeviceID
+        if let vBlock = volumeListenerBlock {
+            var volAddr = AudioObjectPropertyAddress(
+                mSelector: kAudioHardwareServiceDeviceProperty_VirtualMainVolume,
+                mScope: kAudioDevicePropertyScopeOutput,
+                mElement: kAudioObjectPropertyElementMain
+            )
+            AudioObjectRemovePropertyListenerBlock(devID, &volAddr, audioListenerQueue, vBlock)
+            volumeListenerBlock = nil
+        }
+        if let mBlock = muteListenerBlock {
+            var muteAddr = AudioObjectPropertyAddress(
+                mSelector: kAudioDevicePropertyMute,
+                mScope: kAudioDevicePropertyScopeOutput,
+                mElement: kAudioObjectPropertyElementMain
+            )
+            AudioObjectRemovePropertyListenerBlock(devID, &muteAddr, audioListenerQueue, mBlock)
+            muteListenerBlock = nil
+        }
+        monitoredVolumeDeviceID = kAudioObjectUnknown
+    }
+
+    private nonisolated static func queryDefaultOutputDeviceID() -> AudioDeviceID? {
+        var devID: AudioDeviceID = kAudioObjectUnknown
+        var size = UInt32(MemoryLayout<AudioDeviceID>.size)
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioHardwarePropertyDefaultOutputDevice,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        let status = AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject), &address, 0, nil, &size, &devID)
+        guard status == noErr, devID != kAudioObjectUnknown else { return nil }
+        return devID
+    }
+
+    private nonisolated static func readDeviceVolume(deviceID: AudioDeviceID) -> Float32? {
+        var virtualAddr = AudioObjectPropertyAddress(
+            mSelector: kAudioHardwareServiceDeviceProperty_VirtualMainVolume,
+            mScope: kAudioDevicePropertyScopeOutput,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        var vol: Float32 = 0
+        var size = UInt32(MemoryLayout<Float32>.size)
+        if AudioObjectHasProperty(deviceID, &virtualAddr),
+           AudioObjectGetPropertyData(deviceID, &virtualAddr, 0, nil, &size, &vol) == noErr {
+            return vol
+        }
+        for channel: UInt32 in [0, 1, 2] {
+            var chAddr = AudioObjectPropertyAddress(
+                mSelector: kAudioDevicePropertyVolumeScalar,
+                mScope: kAudioDevicePropertyScopeOutput,
+                mElement: channel
+            )
+            if AudioObjectHasProperty(deviceID, &chAddr),
+               AudioObjectGetPropertyData(deviceID, &chAddr, 0, nil, &size, &vol) == noErr {
+                return vol
+            }
+        }
+        return nil
+    }
+
+    private nonisolated static func writeDeviceVolume(_ scalar: Float32, deviceID: AudioDeviceID) -> Bool {
+        var vol = min(max(scalar, 0), 1)
+        let size = UInt32(MemoryLayout<Float32>.size)
+        var virtualAddr = AudioObjectPropertyAddress(
+            mSelector: kAudioHardwareServiceDeviceProperty_VirtualMainVolume,
+            mScope: kAudioDevicePropertyScopeOutput,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        var settable: DarwinBoolean = false
+        if AudioObjectHasProperty(deviceID, &virtualAddr),
+           AudioObjectIsPropertySettable(deviceID, &virtualAddr, &settable) == noErr,
+           settable.boolValue,
+           AudioObjectSetPropertyData(deviceID, &virtualAddr, 0, nil, size, &vol) == noErr {
+            return true
+        }
+
+        var wroteAny = false
+        for channel: UInt32 in [0, 1, 2] {
+            var chAddr = AudioObjectPropertyAddress(
+                mSelector: kAudioDevicePropertyVolumeScalar,
+                mScope: kAudioDevicePropertyScopeOutput,
+                mElement: channel
+            )
+            settable = false
+            if AudioObjectHasProperty(deviceID, &chAddr),
+               AudioObjectIsPropertySettable(deviceID, &chAddr, &settable) == noErr,
+               settable.boolValue,
+               AudioObjectSetPropertyData(deviceID, &chAddr, 0, nil, size, &vol) == noErr {
+                wroteAny = true
+            }
+        }
+        return wroteAny
+    }
+
+    private nonisolated static func readDeviceMute(deviceID: AudioDeviceID) -> Bool? {
+        var muted: UInt32 = 0
+        var size = UInt32(MemoryLayout<UInt32>.size)
+        for channel: UInt32 in [0, 1] {
+            var addr = AudioObjectPropertyAddress(
+                mSelector: kAudioDevicePropertyMute,
+                mScope: kAudioDevicePropertyScopeOutput,
+                mElement: channel
+            )
+            if AudioObjectHasProperty(deviceID, &addr),
+               AudioObjectGetPropertyData(deviceID, &addr, 0, nil, &size, &muted) == noErr {
+                return muted != 0
+            }
+        }
+        return nil
+    }
+
+    private nonisolated static func writeDeviceMute(_ isMuted: Bool, deviceID: AudioDeviceID) -> Bool {
+        var muted: UInt32 = isMuted ? 1 : 0
+        let size = UInt32(MemoryLayout<UInt32>.size)
+        var wroteAny = false
+        for channel: UInt32 in [0, 1, 2] {
+            var addr = AudioObjectPropertyAddress(
+                mSelector: kAudioDevicePropertyMute,
+                mScope: kAudioDevicePropertyScopeOutput,
+                mElement: channel
+            )
+            var settable: DarwinBoolean = false
+            if AudioObjectHasProperty(deviceID, &addr),
+               AudioObjectIsPropertySettable(deviceID, &addr, &settable) == noErr,
+               settable.boolValue,
+               AudioObjectSetPropertyData(deviceID, &addr, 0, nil, size, &muted) == noErr {
+                wroteAny = true
+                if channel == 0 { return true }
+            }
+        }
+        return wroteAny
     }
 
     /// Cambia el dispositivo de salida predeterminado de macOS en 1 clic.

@@ -10,6 +10,14 @@ import SwiftUI
 ///   1. Reproductor compacto de 2 columnas (carátula 78×78 con resplandor + título marquee + barra
 ///      de progreso interactiva + controles de transporte + ecualizador animado).
 ///   2. Vista dividida con letras sincronizadas estilo karaoke en vivo (LRCLIB / Demo).
+private enum NotchExpandedTopOverlay: Equatable {
+    case none
+    case calendar
+    case volume
+    case equalizer
+    case audioOutput
+}
+
 public struct NotchExpandedContentView: View {
     public let track: NotchTrackInfo?
     public let artworkImage: NSImage?
@@ -25,9 +33,11 @@ public struct NotchExpandedContentView: View {
     @Bindable private var prefs = NotchPreferences.shared
     @Bindable private var media = NotchMediaService.shared
     @Bindable private var lyricsAudio = NotchLyricsAndAudioService.shared
+    @Bindable private var eqEngine = NotchAudioEqualizerEngine.shared
+    @Bindable private var calService = NotchCalendarService.shared
     @Bindable private var loc = LocalizationManager.shared
 
-    @ViewState private var isAudioPickerOpen: Bool = false
+    @ViewState private var activeTopOverlay: NotchExpandedTopOverlay = .none
     @ViewState private var showRemainingTime: Bool = false
     @ViewState private var isArtworkHovered: Bool = false
     @ViewState private var hoveredControlID: String? = nil
@@ -62,7 +72,27 @@ public struct NotchExpandedContentView: View {
 
     private var shouldTickTimeline: Bool {
         guard let track else { return false }
-        return track.isPlaying && !isAudioPickerOpen
+        return track.isPlaying && activeTopOverlay == .none
+    }
+
+    private func toggleTopOverlay(_ target: NotchExpandedTopOverlay) {
+        let next: NotchExpandedTopOverlay = (activeTopOverlay == target) ? .none : target
+        if next == .volume {
+            lyricsAudio.refreshVolumeState()
+        } else if next == .audioOutput {
+            lyricsAudio.refreshOutputDevices()
+        } else if next == .equalizer {
+            lyricsAudio.refreshOutputDevices()
+        } else if next == .calendar {
+            calService.refreshNow()
+        }
+        if prefs.enableAnimations {
+            withAnimation(.spring(response: 0.30, dampingFraction: 0.82)) {
+                activeTopOverlay = next
+            }
+        } else {
+            activeTopOverlay = next
+        }
     }
 
     private var compactArtworkDimension: CGFloat {
@@ -82,17 +112,59 @@ public struct NotchExpandedContentView: View {
             // Barra superior de estado y micro-controles
             headerStrip
                 .padding(.horizontal, horizontalInset)
-                .padding(.bottom, isLyricsPaneOpen ? 7 : 10)
+                .padding(.bottom, activeTopOverlay == .equalizer ? 5 : (isLyricsPaneOpen ? 7 : 10))
 
-            // Cuerpo principal: Selector de audio / Estado vacío / Letras divididas / Reproductor 2 columnas
+            // Cuerpo principal: Calendario / Volumen / Ecualizador / Salida de audio / Alerta Meet exclusiva / Letras / Reproductor
             ZStack {
-                if isAudioPickerOpen {
+                if activeTopOverlay == .calendar {
+                    NotchCalendarContentView(
+                        accentColor: accentColor,
+                        showBackButton: true,
+                        onBack: { toggleTopOverlay(.calendar) }
+                    )
+                    .transition(
+                        prefs.enableAnimations
+                            ? .opacity.combined(with: .scale(scale: 0.96))
+                            : .identity
+                    )
+                } else if activeTopOverlay == .volume {
+                    volumeControlView
+                        .transition(
+                            prefs.enableAnimations
+                                ? .opacity.combined(with: .scale(scale: 0.96))
+                                : .identity
+                        )
+                } else if activeTopOverlay == .equalizer {
+                    equalizerControlView
+                        .transition(
+                            prefs.enableAnimations
+                                ? .opacity.combined(with: .scale(scale: 0.96))
+                                : .identity
+                        )
+                } else if activeTopOverlay == .audioOutput {
                     audioOutputPickerView
                         .transition(
                             prefs.enableAnimations
                                 ? .opacity.combined(with: .scale(scale: 0.96))
                                 : .identity
                         )
+                } else if prefs.calendarEnabled,
+                          prefs.calendarMusicCoexistenceMode != .manualTabOnly,
+                          let alertEvent = calService.activeAlertEvent {
+                    // Vista exclusiva de notificación de Meet (oculta temporalmente la música para verse limpia y sin recortes)
+                    NotchImminentMeetBannerView(
+                        event: alertEvent,
+                        showDirectJoinButton: prefs.calendarShowDirectJoinMeetButton,
+                        enableAnimations: prefs.enableAnimations,
+                        onJoin: { calService.joinMeeting(for: alertEvent) },
+                        onOpenCalendar: { calService.openCalendar(for: alertEvent) },
+                        onDismiss: { calService.dismissActiveAlert() }
+                    )
+                    .transition(
+                        prefs.enableAnimations
+                            ? .opacity.combined(with: .scale(scale: 0.96))
+                            : .identity
+                    )
                 } else if let track {
                     TimelineView(.animation(minimumInterval: 0.20, paused: !shouldTickTimeline)) { context in
                         let elapsed = track.interpolatedElapsedTime(at: context.date)
@@ -114,21 +186,32 @@ public struct NotchExpandedContentView: View {
                                 )
                         }
                     }
+                } else if prefs.calendarEnabled && prefs.calendarShowWhenMusicIdle {
+                    NotchCalendarContentView(
+                        accentColor: accentColor,
+                        showBackButton: false,
+                        onBack: {}
+                    )
+                    .transition(.opacity)
                 } else {
                     idleEmptyPlayerBody
                         .transition(.opacity)
                 }
             }
             .padding(.horizontal, horizontalInset)
-            .padding(.bottom, 15)
+            .padding(.bottom, activeTopOverlay == .equalizer ? 10 : 15)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .animation(
                 prefs.resolvedAnimation(baseResponse: 0.34),
-                value: isAudioPickerOpen
+                value: activeTopOverlay
             )
             .animation(
                 prefs.resolvedAnimation(baseResponse: 0.36),
                 value: isLyricsPaneOpen
+            )
+            .animation(
+                prefs.resolvedAnimation(baseResponse: 0.32),
+                value: calService.activeAlertEvent?.id
             )
         }
     }
@@ -137,9 +220,13 @@ public struct NotchExpandedContentView: View {
 
     private var headerStrip: some View {
         HStack(spacing: 8) {
-            // Grupo izquierdo: cápsula oscura con insignia de fuente + píldora de letras + demo
+            // Grupo izquierdo: cápsula oscura con insignia de fuente + calendario (si está a la izquierda) + letras + demo
             HStack(spacing: 5) {
                 sourceAppPill
+
+                if prefs.calendarEnabled && prefs.calendarIconPosition == .leftNextToMusic {
+                    calendarHeaderControl
+                }
 
                 if prefs.showSyncedLyrics && track != nil {
                     lyricsTogglePill
@@ -160,30 +247,59 @@ public struct NotchExpandedContentView: View {
                     )
             )
 
-            Spacer(minLength: 8)
+            Spacer(minLength: 4)
 
-            // Grupo derecho: micro-botones circulares translúcidos
-            HStack(spacing: 6) {
-                let rawAudioSymbol = lyricsAudio.defaultOutputDevice?.systemImage ?? "speaker.wave.2.fill"
-                let safeAudioSymbol = NSImage(systemSymbolName: rawAudioSymbol, accessibilityDescription: nil) != nil
-                    ? rawAudioSymbol
-                    : "speaker.wave.2.fill"
+            if prefs.calendarEnabled && prefs.calendarIconPosition == .center {
+                calendarHeaderControl
+                Spacer(minLength: 4)
+            }
+
+            // Grupo derecho: micro-botones circulares translúcidos (Calendario, Ecualizador, Volumen, Salida de audio, Fijar, Ajustes, Cerrar)
+            HStack(spacing: 4.5) {
+                if prefs.calendarEnabled && prefs.calendarIconPosition == .rightBeforeControls {
+                    calendarHeaderControl
+                }
+
+                // 1. Ecualizador de sonido (5 bandas + presets)
+                NotchHeaderMicroButton(
+                    systemName: "slider.vertical.3",
+                    isActive: activeTopOverlay == .equalizer || prefs.isEqualizerEnabled,
+                    activeTint: accentColor,
+                    helpText: loc.text(es: "Ecualizador de sonido", en: "Sound Equalizer"),
+                    enableAnimations: prefs.enableAnimations
+                ) {
+                    toggleTopOverlay(.equalizer)
+                }
+
+                // 2. Control de volumen del sistema + silencio
+                let volPercent = Int((lyricsAudio.outputVolume * 100.0).rounded())
+                NotchHeaderMicroButton(
+                    systemName: lyricsAudio.volumeSymbolName,
+                    isActive: activeTopOverlay == .volume || lyricsAudio.isMuted,
+                    activeTint: lyricsAudio.isMuted ? Color.orange : accentColor,
+                    helpText: lyricsAudio.isMuted
+                        ? loc.text(es: "Volumen (Silenciado)", en: "Volume (Muted)")
+                        : loc.text(es: "Volumen (\(volPercent)%)", en: "Volume (\(volPercent)%)"),
+                    enableAnimations: prefs.enableAnimations
+                ) {
+                    toggleTopOverlay(.volume)
+                }
+
+                // 3. Selector de dispositivo de salida de audio CoreAudio
+                let rawAudioSymbol = lyricsAudio.defaultOutputDevice?.systemImage ?? "airplayaudio"
+                let distinctAudioSymbol = (rawAudioSymbol == "speaker.wave.2.fill") ? "airplayaudio" : rawAudioSymbol
+                let safeAudioSymbol = NSImage(systemSymbolName: distinctAudioSymbol, accessibilityDescription: nil) != nil
+                    ? distinctAudioSymbol
+                    : "airplayaudio"
 
                 NotchHeaderMicroButton(
                     systemName: safeAudioSymbol,
-                    isActive: isAudioPickerOpen,
+                    isActive: activeTopOverlay == .audioOutput,
                     activeTint: accentColor,
                     helpText: loc.text(es: "Cambiar salida de audio", en: "Switch Audio Output"),
                     enableAnimations: prefs.enableAnimations
                 ) {
-                    lyricsAudio.refreshOutputDevices()
-                    if prefs.enableAnimations {
-                        withAnimation(.spring(response: 0.30, dampingFraction: 0.82)) {
-                            isAudioPickerOpen.toggle()
-                        }
-                    } else {
-                        isAudioPickerOpen.toggle()
-                    }
+                    toggleTopOverlay(.audioOutput)
                 }
 
                 NotchHeaderMicroButton(
@@ -205,6 +321,10 @@ public struct NotchExpandedContentView: View {
                     action: onOpenSettings
                 )
 
+                if prefs.calendarEnabled && prefs.calendarIconPosition == .rightBeforeClose {
+                    calendarHeaderControl
+                }
+
                 NotchHeaderMicroButton(
                     systemName: "xmark",
                     isActive: false,
@@ -214,6 +334,224 @@ public struct NotchExpandedContentView: View {
                 )
             }
         }
+    }
+
+    // MARK: - Botón / Cápsula Configurable de Calendario en la Barra Superior del Notch
+
+    private var calendarHeaderControl: some View {
+        let alertEvent = calService.activeAlertEvent
+        let hasImminentMeet = alertEvent != nil
+        let isActive = activeTopOverlay == .calendar || hasImminentMeet
+        let defaultBlue = Color(red: 0.30, green: 0.60, blue: 1.0)
+        let defaultMeetGreen = Color(red: 0.20, green: 0.85, blue: 0.50)
+
+        let activeTint: Color = {
+            if let alertEvent {
+                return prefs.calendarUseNativeEventColors ? alertEvent.color.swiftUIColor : defaultMeetGreen
+            }
+            if prefs.calendarUseNativeEventColors, let next = calService.nextUpcomingEvent {
+                return next.color.swiftUIColor
+            }
+            return defaultBlue
+        }()
+
+        let dayNumberString = "\(Calendar.current.component(.day, from: Date()))"
+        let upcomingCount = calService.visibleEvents.filter { !$0.isAllDay && $0.endDate > Date() }.count
+        let helpText = hasImminentMeet
+            ? loc.text(es: "Meet por iniciar (abrir Calendario)", en: "Meet starting soon (open Calendar)")
+            : loc.text(es: "Google Calendar", en: "Google Calendar")
+
+        return Button {
+            toggleTopOverlay(.calendar)
+        } label: {
+            Group {
+                switch prefs.calendarIconStyle {
+                case .microCircle:
+                    let diameter: CGFloat = {
+                        switch prefs.calendarIconSize {
+                        case .small: return 20
+                        case .medium: return 24
+                        case .large: return 28
+                        }
+                    }()
+                    let iconFont: CGFloat = {
+                        switch prefs.calendarIconSize {
+                        case .small: return 9.2
+                        case .medium: return 10.5
+                        case .large: return 12.2
+                        }
+                    }()
+                    ZStack {
+                        if prefs.calendarIconShowDayNumber && !hasImminentMeet {
+                            VStack(spacing: 0) {
+                                Rectangle()
+                                    .fill(activeTint)
+                                    .frame(width: diameter * 0.54, height: 2.5)
+                                Text(dayNumberString)
+                                    .font(.system(size: iconFont * 0.86, weight: .bold, design: .rounded).monospacedDigit())
+                                    .foregroundStyle(.white)
+                            }
+                            .frame(width: diameter * 0.58, height: diameter * 0.58)
+                            .background(
+                                RoundedRectangle(cornerRadius: 3.5, style: .continuous)
+                                    .fill(Color.white.opacity(0.10))
+                            )
+                            .clipShape(RoundedRectangle(cornerRadius: 3.5, style: .continuous))
+                        } else {
+                            Image(systemName: hasImminentMeet ? "video.fill" : "calendar")
+                                .font(.system(size: iconFont, weight: .semibold))
+                                .foregroundStyle(isActive ? activeTint : Color.white.opacity(0.84))
+                        }
+                    }
+                    .frame(width: diameter, height: diameter)
+                    .background(
+                        Circle()
+                            .fill(isActive ? activeTint.opacity(0.24) : Color.white.opacity(0.08))
+                            .overlay(
+                                Circle()
+                                    .stroke(isActive ? activeTint.opacity(0.55) : Color.white.opacity(0.10), lineWidth: 0.7)
+                            )
+                    )
+                    .contentShape(Circle())
+
+                case .dateBadgeTile:
+                    let tileSize: CGFloat = {
+                        switch prefs.calendarIconSize {
+                        case .small: return 21
+                        case .medium: return 25
+                        case .large: return 29
+                        }
+                    }()
+                    VStack(spacing: 0) {
+                        ZStack {
+                            activeTint
+                            Text(hasImminentMeet ? "MEET" : Date().formatted(.dateTime.month(.abbreviated)).prefix(3).uppercased())
+                                .font(.system(size: max(5.5, tileSize * 0.23), weight: .heavy))
+                                .foregroundStyle(.white)
+                        }
+                        .frame(height: tileSize * 0.36)
+
+                        ZStack {
+                            Color.white.opacity(isActive ? 0.20 : 0.12)
+                            if hasImminentMeet {
+                                Image(systemName: "video.fill")
+                                    .font(.system(size: tileSize * 0.36, weight: .bold))
+                                    .foregroundStyle(.white)
+                            } else {
+                                Text(dayNumberString)
+                                    .font(.system(size: tileSize * 0.44, weight: .bold, design: .rounded).monospacedDigit())
+                                    .foregroundStyle(.white)
+                            }
+                        }
+                        .frame(maxHeight: .infinity)
+                    }
+                    .frame(width: tileSize, height: tileSize)
+                    .clipShape(RoundedRectangle(cornerRadius: 6.5, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6.5, style: .continuous)
+                            .stroke(isActive ? activeTint.opacity(0.75) : Color.white.opacity(0.18), lineWidth: 0.8)
+                    )
+                    .contentShape(RoundedRectangle(cornerRadius: 6.5, style: .continuous))
+
+                case .pillLikeMusic, .pillWithNextEvent:
+                    let iconSize: CGFloat = {
+                        switch prefs.calendarIconSize {
+                        case .small: return 11
+                        case .medium: return 13
+                        case .large: return 15
+                        }
+                    }()
+                    let fontSize: CGFloat = {
+                        switch prefs.calendarIconSize {
+                        case .small: return 10
+                        case .medium: return 11
+                        case .large: return 12
+                        }
+                    }()
+                    let padH: CGFloat = {
+                        switch prefs.calendarIconSize {
+                        case .small: return 7
+                        case .medium: return 8
+                        case .large: return 10
+                        }
+                    }()
+                    let padV: CGFloat = {
+                        switch prefs.calendarIconSize {
+                        case .small: return 2.5
+                        case .medium: return 3.5
+                        case .large: return 4.5
+                        }
+                    }()
+                    let pillTitle: String = {
+                        if prefs.calendarIconStyle == .pillWithNextEvent {
+                            if let alertEvent {
+                                return alertEvent.countdownLabel(using: loc)
+                            }
+                            if let next = calService.nextUpcomingEvent {
+                                return next.formattedStartTime
+                            }
+                            return loc.text(es: "Hoy", en: "Today")
+                        }
+                        return loc.text(es: "Calendario", en: "Calendar")
+                    }()
+
+                    HStack(spacing: 5) {
+                        if prefs.calendarIconShowDayNumber && !hasImminentMeet {
+                            Text(dayNumberString)
+                                .font(.system(size: max(8.5, iconSize * 0.72), weight: .heavy, design: .rounded).monospacedDigit())
+                                .foregroundStyle(.white)
+                                .frame(width: iconSize + 2, height: iconSize + 1)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 3.5, style: .continuous)
+                                        .fill(activeTint)
+                                )
+                        } else {
+                            Image(systemName: hasImminentMeet ? "video.fill" : "calendar")
+                                .font(.system(size: iconSize - 2, weight: .bold))
+                                .foregroundStyle(activeTint)
+                        }
+
+                        Text(pillTitle)
+                            .font(.system(size: fontSize, weight: .semibold).monospacedDigit())
+                            .foregroundStyle(Color.white.opacity(0.92))
+                            .lineLimit(1)
+                    }
+                    .padding(.horizontal, padH)
+                    .padding(.vertical, padV)
+                    .background(
+                        Capsule(style: .continuous)
+                            .fill(activeTint.opacity(isActive ? 0.30 : 0.20))
+                            .overlay(
+                                Capsule(style: .continuous)
+                                    .stroke(activeTint.opacity(isActive ? 0.60 : 0.38), lineWidth: 0.7)
+                            )
+                    )
+                    .contentShape(Capsule())
+                }
+            }
+            .overlay(alignment: .topTrailing) {
+                if prefs.calendarIconShowEventBadge && (hasImminentMeet || upcomingCount > 0) {
+                    if hasImminentMeet {
+                        Circle()
+                            .fill(activeTint)
+                            .frame(width: 7, height: 7)
+                            .overlay(Circle().stroke(Color.black.opacity(0.8), lineWidth: 1))
+                            .offset(x: 2, y: -2)
+                    } else {
+                        Text("\(min(upcomingCount, 9))")
+                            .font(.system(size: 7.5, weight: .heavy, design: .rounded).monospacedDigit())
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 3.2)
+                            .padding(.vertical, 0.8)
+                            .background(Capsule().fill(activeTint))
+                            .overlay(Capsule().stroke(Color.black.opacity(0.75), lineWidth: 0.8))
+                            .offset(x: 3, y: -3)
+                    }
+                }
+            }
+        }
+        .buttonStyle(NotchSpringPressButtonStyle(pressedScale: 0.92, enableAnimations: prefs.enableAnimations))
+        .help(helpText)
     }
 
     private var sourceAppPill: some View {
@@ -261,8 +599,8 @@ public struct NotchExpandedContentView: View {
 
     private var lyricsTogglePill: some View {
         Button {
-            if isAudioPickerOpen {
-                isAudioPickerOpen = false
+            if activeTopOverlay != .none {
+                activeTopOverlay = .none
             }
             onToggleLyrics()
         } label: {
@@ -785,13 +1123,7 @@ public struct NotchExpandedContentView: View {
                 Spacer()
 
                 Button {
-                    if prefs.enableAnimations {
-                        withAnimation(.spring(response: 0.28, dampingFraction: 0.82)) {
-                            isAudioPickerOpen = false
-                        }
-                    } else {
-                        isAudioPickerOpen = false
-                    }
+                    toggleTopOverlay(.audioOutput)
                 } label: {
                     Text(loc.text(es: "Volver", en: "Done"))
                         .font(.system(size: 11, weight: .semibold))
@@ -863,6 +1195,294 @@ public struct NotchExpandedContentView: View {
                         }
                     }
                 }
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    // MARK: - Panel Integrado de Volumen del Sistema (CoreAudio HAL, Sin Robar Foco)
+
+    private var volumeControlView: some View {
+        let volPct = Int((lyricsAudio.outputVolume * 100.0).rounded())
+        let deviceName = lyricsAudio.defaultOutputDevice?.name ?? loc.text(es: "Salida del sistema", en: "System Output")
+
+        return VStack(alignment: .leading, spacing: 10) {
+            // Cabecera compacta
+            HStack(spacing: 6) {
+                Image(systemName: lyricsAudio.volumeSymbolName)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(lyricsAudio.isMuted ? Color.orange : accentColor)
+                Text(loc.text(es: "Volumen", en: "Volume"))
+                    .font(.system(size: 12.5, weight: .bold))
+                    .foregroundStyle(.white)
+                Text("· \(deviceName)")
+                    .font(.system(size: 10.5, weight: .medium))
+                    .foregroundStyle(Color.white.opacity(0.55))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+
+                Spacer(minLength: 4)
+
+                Button {
+                    toggleTopOverlay(.volume)
+                } label: {
+                    Text(loc.text(es: "Volver", en: "Done"))
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(Color.white.opacity(0.86))
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 3.5)
+                        .background(Capsule().fill(Color.white.opacity(0.12)))
+                }
+                .buttonStyle(NotchSpringPressButtonStyle(pressedScale: 0.92, enableAnimations: prefs.enableAnimations))
+            }
+
+            // Fila principal: Silencio + Deslizador interactivo + Porcentaje + Botones -/+
+            HStack(spacing: 10) {
+                Button {
+                    lyricsAudio.toggleMute()
+                } label: {
+                    ZStack {
+                        Circle()
+                            .fill(lyricsAudio.isMuted ? Color.orange.opacity(0.24) : Color.white.opacity(0.10))
+                            .overlay(
+                                Circle()
+                                    .stroke(lyricsAudio.isMuted ? Color.orange.opacity(0.60) : Color.white.opacity(0.14), lineWidth: 0.8)
+                            )
+                        Image(systemName: lyricsAudio.volumeSymbolName)
+                            .font(.system(size: 12.5, weight: .semibold))
+                            .foregroundStyle(lyricsAudio.isMuted ? Color.orange : .white)
+                    }
+                    .frame(width: 30, height: 30)
+                }
+                .buttonStyle(NotchSpringPressButtonStyle(pressedScale: 0.88, enableAnimations: prefs.enableAnimations))
+                .help(lyricsAudio.isMuted ? loc.text(es: "Quitar silencio", en: "Unmute") : loc.text(es: "Silenciar", en: "Mute"))
+
+                NotchVolumeSliderBarView(
+                    value: lyricsAudio.isMuted ? 0.0 : lyricsAudio.outputVolume,
+                    accentColor: lyricsAudio.isMuted ? Color.orange : accentColor,
+                    enableAnimations: prefs.enableAnimations
+                ) { newVol in
+                    lyricsAudio.setOutputVolume(newVol)
+                }
+
+                Text(lyricsAudio.isMuted ? loc.text(es: "Mudo", en: "Mute") : "\(volPct)%")
+                    .font(.system(size: 12, weight: .bold, design: .monospaced))
+                    .monospacedDigit()
+                    .foregroundStyle(lyricsAudio.isMuted ? Color.orange : .white)
+                    .frame(width: 40, alignment: .trailing)
+
+                HStack(spacing: 4) {
+                    volumeStepButton(symbol: "minus", help: loc.text(es: "Bajar volumen (-10%)", en: "Volume Down (-10%)")) {
+                        lyricsAudio.stepOutputVolume(by: -0.10)
+                    }
+                    volumeStepButton(symbol: "plus", help: loc.text(es: "Subir volumen (+10%)", en: "Volume Up (+10%)")) {
+                        lyricsAudio.stepOutputVolume(by: 0.10)
+                    }
+                }
+            }
+
+            // Fila inferior: Accesos rápidos de nivel (Silencio, 25%, 50%, 75%, 100%)
+            HStack(spacing: 6) {
+                let quickLevels: [(label: String, level: Double, isMutePreset: Bool)] = [
+                    (loc.text(es: "Silencio", en: "Mute"), 0.0, true),
+                    ("25%", 0.25, false),
+                    ("50%", 0.50, false),
+                    ("75%", 0.75, false),
+                    ("100%", 1.00, false)
+                ]
+                ForEach(quickLevels, id: \.label) { preset in
+                    let isSelected = preset.isMutePreset
+                        ? lyricsAudio.isMuted
+                        : (!lyricsAudio.isMuted && abs(lyricsAudio.outputVolume - preset.level) < 0.05)
+                    Button {
+                        if preset.isMutePreset {
+                            if !lyricsAudio.isMuted { lyricsAudio.toggleMute() }
+                        } else {
+                            lyricsAudio.setOutputVolume(preset.level)
+                        }
+                    } label: {
+                        Text(preset.label)
+                            .font(.system(size: 10.5, weight: isSelected ? .bold : .medium))
+                            .foregroundStyle(isSelected ? .white : Color.white.opacity(0.70))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 5)
+                            .background(
+                                Capsule(style: .continuous)
+                                    .fill(isSelected ? accentColor.opacity(0.32) : Color.white.opacity(0.07))
+                                    .overlay(
+                                        Capsule(style: .continuous)
+                                            .stroke(isSelected ? accentColor.opacity(0.65) : Color.white.opacity(0.09), lineWidth: 0.7)
+                                    )
+                            )
+                    }
+                    .buttonStyle(NotchSpringPressButtonStyle(pressedScale: 0.94, enableAnimations: prefs.enableAnimations))
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+    }
+
+    private func volumeStepButton(symbol: String, help: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.system(size: 10, weight: .bold))
+                .foregroundStyle(.white.opacity(0.88))
+                .frame(width: 22, height: 22)
+                .background(
+                    Circle()
+                        .fill(Color.white.opacity(0.11))
+                        .overlay(Circle().stroke(Color.white.opacity(0.14), lineWidth: 0.7))
+                )
+        }
+        .buttonStyle(NotchSpringPressButtonStyle(pressedScale: 0.86, enableAnimations: prefs.enableAnimations))
+        .help(help)
+    }
+
+    // MARK: - Panel Integrado de Ecualizador de Sonido de 5 Bandas (Real-Time DSP)
+
+    private var equalizerControlView: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            // Cabecera: Título + Switch ON/OFF + Estado + Plano + Volver
+            HStack(spacing: 6) {
+                Image(systemName: "slider.vertical.3")
+                    .font(.system(size: 11.5, weight: .semibold))
+                    .foregroundStyle(prefs.isEqualizerEnabled ? accentColor : Color.white.opacity(0.7))
+                Text(loc.text(es: "Ecualizador", en: "Equalizer"))
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(.white)
+
+                // Botón ON / OFF del ecualizador en tiempo real
+                Button {
+                    prefs.isEqualizerEnabled.toggle()
+                } label: {
+                    HStack(spacing: 4) {
+                        Circle()
+                            .fill(
+                                prefs.isEqualizerEnabled
+                                    ? (eqEngine.status == .activeSystemDSP ? Color.green : Color.orange)
+                                    : Color.white.opacity(0.35)
+                            )
+                            .frame(width: 6, height: 6)
+                        Text(prefs.isEqualizerEnabled ? loc.text(es: "Activo", en: "On") : loc.text(es: "Apagado", en: "Off"))
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(prefs.isEqualizerEnabled ? .white : Color.white.opacity(0.65))
+                    }
+                    .padding(.horizontal, 7.5)
+                    .padding(.vertical, 3)
+                    .background(
+                        Capsule(style: .continuous)
+                            .fill(prefs.isEqualizerEnabled ? accentColor.opacity(0.32) : Color.white.opacity(0.08))
+                            .overlay(
+                                Capsule(style: .continuous)
+                                    .stroke(prefs.isEqualizerEnabled ? accentColor.opacity(0.65) : Color.white.opacity(0.12), lineWidth: 0.7)
+                            )
+                    )
+                }
+                .buttonStyle(NotchSpringPressButtonStyle(pressedScale: 0.93, enableAnimations: prefs.enableAnimations))
+
+                Spacer(minLength: 4)
+
+                Button {
+                    prefs.resetEqualizerToFlat()
+                } label: {
+                    Text(loc.text(es: "Plano", en: "Flat"))
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(Color.white.opacity(0.75))
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 3)
+                        .background(Capsule().fill(Color.white.opacity(0.08)))
+                }
+                .buttonStyle(NotchSpringPressButtonStyle(pressedScale: 0.92, enableAnimations: prefs.enableAnimations))
+                .help(loc.text(es: "Restablecer todas las bandas a 0 dB", en: "Reset all bands to 0 dB"))
+
+                Button {
+                    toggleTopOverlay(.equalizer)
+                } label: {
+                    Text(loc.text(es: "Volver", en: "Done"))
+                        .font(.system(size: 10.5, weight: .semibold))
+                        .foregroundStyle(Color.white.opacity(0.86))
+                        .padding(.horizontal, 8.5)
+                        .padding(.vertical, 3)
+                        .background(Capsule().fill(Color.white.opacity(0.12)))
+                }
+                .buttonStyle(NotchSpringPressButtonStyle(pressedScale: 0.92, enableAnimations: prefs.enableAnimations))
+            }
+
+            // Presets horizontales en 1 clic
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 5) {
+                    ForEach(NotchEQPreset.selectablePresets) { preset in
+                        let selected = prefs.eqPreset == preset
+                        Button {
+                            prefs.applyEQPreset(preset)
+                        } label: {
+                            Text(preset.localizedTitle(using: loc))
+                                .font(.system(size: 10, weight: selected ? .bold : .medium))
+                                .foregroundStyle(selected ? .white : Color.white.opacity(0.72))
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 3)
+                                .background(
+                                    Capsule(style: .continuous)
+                                        .fill(selected ? accentColor.opacity(0.36) : Color.white.opacity(0.07))
+                                        .overlay(
+                                            Capsule(style: .continuous)
+                                                .stroke(selected ? accentColor.opacity(0.72) : Color.white.opacity(0.09), lineWidth: 0.7)
+                                        )
+                                )
+                        }
+                        .buttonStyle(NotchSpringPressButtonStyle(pressedScale: 0.94, enableAnimations: prefs.enableAnimations))
+                    }
+                }
+            }
+
+            if eqEngine.status == .permissionRequired && prefs.isEqualizerEnabled {
+                HStack(spacing: 6) {
+                    Image(systemName: "lock.shield.fill")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.orange)
+                    Text(loc.text(
+                        es: "Permití «Grabación de audio del sistema» para aplicar el EQ en vivo.",
+                        en: "Allow \"System Audio Recording\" in Privacy to apply live EQ."
+                    ))
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.86))
+                    .lineLimit(2)
+                    Spacer(minLength: 4)
+                    Button {
+                        eqEngine.openSystemAudioPrivacySettings()
+                    } label: {
+                        Text(loc.text(es: "Abrir Ajustes", en: "Open Settings"))
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(.black)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3.5)
+                            .background(Capsule().fill(Color.orange))
+                    }
+                    .buttonStyle(NotchSpringPressButtonStyle(pressedScale: 0.93, enableAnimations: prefs.enableAnimations))
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 5)
+                .background(
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(Color.orange.opacity(0.14))
+                        .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(Color.orange.opacity(0.45), lineWidth: 0.7))
+                )
+            } else {
+                // 5 faders verticales interactivos (-12 dB .. +12 dB)
+                HStack(spacing: 8) {
+                    ForEach(0..<5, id: \.self) { index in
+                        let gain = index < prefs.eqBandGains.count ? prefs.eqBandGains[index] : 0.0
+                        NotchEQVerticalBandSlider(
+                            label: NotchEQPreset.bandLabels[index],
+                            gainDB: gain,
+                            accentColor: accentColor,
+                            isEnabled: prefs.isEqualizerEnabled
+                        ) { newDB in
+                            prefs.setEQBandGain(newDB, at: index)
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -1391,5 +2011,166 @@ public struct NotchSyncedLyricsColumnView: View {
             startPoint: .top,
             endPoint: .bottom
         )
+    }
+}
+
+// MARK: - Deslizador Horizontal de Volumen del Notch (Arrastrable, Sin Robar Foco)
+
+private struct NotchVolumeSliderBarView: View {
+    let value: Double
+    let accentColor: Color
+    let enableAnimations: Bool
+    let onChange: (Double) -> Void
+
+    @ViewState private var isDragging: Bool = false
+    @ViewState private var dragValue: Double = 0.5
+
+    private var displayedValue: Double {
+        min(max(isDragging ? dragValue : value, 0.0), 1.0)
+    }
+
+    var body: some View {
+        GeometryReader { geo in
+            let w = max(geo.size.width, 1)
+            let filled = max(6, w * CGFloat(displayedValue))
+            let knobSize: CGFloat = isDragging ? 14 : 12
+
+            ZStack(alignment: .leading) {
+                Capsule(style: .continuous)
+                    .fill(Color.white.opacity(0.16))
+                    .frame(height: 6)
+
+                Capsule(style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [accentColor.opacity(0.92), Color.white.opacity(0.96)],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .frame(width: min(w, filled), height: 6)
+                    .shadow(color: accentColor.opacity(0.50), radius: 3)
+
+                Circle()
+                    .fill(Color.white)
+                    .frame(width: knobSize, height: knobSize)
+                    .shadow(color: accentColor.opacity(0.65), radius: 4)
+                    .shadow(color: Color.black.opacity(0.45), radius: 2)
+                    .offset(x: min(max(0, w * CGFloat(displayedValue) - knobSize * 0.5), w - knobSize))
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+            .contentShape(Rectangle())
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { gesture in
+                        isDragging = true
+                        let ratio = min(max(Double(gesture.location.x / w), 0.0), 1.0)
+                        dragValue = ratio
+                        onChange(ratio)
+                    }
+                    .onEnded { gesture in
+                        let ratio = min(max(Double(gesture.location.x / w), 0.0), 1.0)
+                        dragValue = ratio
+                        isDragging = false
+                        onChange(ratio)
+                    }
+            )
+        }
+        .frame(height: 22)
+    }
+}
+
+// MARK: - Fader Vertical de Banda del Ecualizador (5 Bandas, -12 dB a +12 dB)
+
+private struct NotchEQVerticalBandSlider: View {
+    let label: String
+    let gainDB: Double
+    let accentColor: Color
+    let isEnabled: Bool
+    let onChange: (Double) -> Void
+
+    @ViewState private var isDragging: Bool = false
+
+    private var formattedGain: String {
+        let rounded = (gainDB * 2.0).rounded() / 2.0
+        if abs(rounded) < 0.1 { return "0" }
+        let prefix = rounded > 0 ? "+" : ""
+        if rounded.truncatingRemainder(dividingBy: 1) == 0 {
+            return "\(prefix)\(Int(rounded))"
+        }
+        return String(format: "%@%.1f", prefix, rounded)
+    }
+
+    var body: some View {
+        VStack(spacing: 1.5) {
+            Text(formattedGain)
+                .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
+                .monospacedDigit()
+                .foregroundStyle(
+                    abs(gainDB) >= 0.4 && isEnabled
+                        ? accentColor
+                        : Color.white.opacity(0.55)
+                )
+
+            GeometryReader { geo in
+                let h = max(geo.size.height, 16)
+                let normalized = min(max((gainDB + 12.0) / 24.0, 0.0), 1.0)
+                let thumbY = h * (1.0 - CGFloat(normalized))
+                let centerY = h * 0.5
+                let fillTop = min(thumbY, centerY)
+                let fillHeight = max(2, abs(thumbY - centerY))
+                let trackTint = isEnabled ? accentColor : Color.white.opacity(0.45)
+
+                ZStack {
+                    // Línea central de 0 dB
+                    Capsule()
+                        .fill(Color.white.opacity(0.24))
+                        .frame(width: 12, height: 1)
+                        .position(x: geo.size.width * 0.5, y: centerY)
+
+                    // Pista vertical
+                    Capsule(style: .continuous)
+                        .fill(Color.white.opacity(0.14))
+                        .frame(width: 4, height: h)
+                        .position(x: geo.size.width * 0.5, y: h * 0.5)
+
+                    // Relleno desde 0 dB hasta el valor actual
+                    Capsule(style: .continuous)
+                        .fill(trackTint.opacity(isEnabled ? 0.92 : 0.45))
+                        .frame(width: 4, height: fillHeight)
+                        .position(x: geo.size.width * 0.5, y: fillTop + fillHeight * 0.5)
+
+                    // Cabezal táctil
+                    Circle()
+                        .fill(Color.white)
+                        .frame(width: isDragging ? 11 : 9, height: isDragging ? 11 : 9)
+                        .shadow(color: trackTint.opacity(0.65), radius: 3)
+                        .position(x: geo.size.width * 0.5, y: min(max(5, thumbY), h - 5))
+                }
+                .contentShape(Rectangle())
+                .gesture(
+                    DragGesture(minimumDistance: 0)
+                        .onChanged { gesture in
+                            isDragging = true
+                            let ratio = 1.0 - min(max(Double(gesture.location.y / h), 0.0), 1.0)
+                            let rawDB = (ratio * 24.0) - 12.0
+                            onChange(rawDB)
+                        }
+                        .onEnded { gesture in
+                            let ratio = 1.0 - min(max(Double(gesture.location.y / h), 0.0), 1.0)
+                            let rawDB = (ratio * 24.0) - 12.0
+                            isDragging = false
+                            onChange(rawDB)
+                        }
+                )
+            }
+            .frame(maxWidth: .infinity, minHeight: 28, maxHeight: 56)
+
+            Text(label)
+                .font(.system(size: 8.5, weight: .semibold, design: .rounded))
+                .foregroundStyle(Color.white.opacity(0.66))
+                .lineLimit(1)
+        }
+        .frame(maxWidth: .infinity)
     }
 }

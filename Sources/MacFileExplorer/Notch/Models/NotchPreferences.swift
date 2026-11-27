@@ -74,6 +74,36 @@ public final class NotchPreferences {
         static let backgroundOpacity = "com.macfileexplorer.notch.backgroundOpacity"
         static let showSourceBadgeOnArtwork = "com.macfileexplorer.notch.showSourceBadgeOnArtwork"
         static let lyricsFontSize = "com.macfileexplorer.notch.lyricsFontSize"
+        static let trackChangeStyle = "com.macfileexplorer.notch.trackChangeStyle"
+        static let animateOnPause = "com.macfileexplorer.notch.animateOnPause"
+        static let pauseAnimationStyle = "com.macfileexplorer.notch.pauseAnimationStyle"
+        static let showPauseIconWhenPaused = "com.macfileexplorer.notch.showPauseIconWhenPaused"
+        static let isEqualizerEnabled = "com.macfileexplorer.notch.isEqualizerEnabled"
+        static let eqPreset = "com.macfileexplorer.notch.eqPreset"
+        static let eqBandGains = "com.macfileexplorer.notch.eqBandGains"
+        static let blockAppleMusicAutoLaunch = "com.macfileexplorer.notch.blockAppleMusicAutoLaunch"
+        static let musicDecoyRedirectAppPath = "com.macfileexplorer.notch.musicDecoyRedirectAppPath"
+        // 10+ configuraciones de Google Calendar y alertas de Meet en el Notch
+        static let calendarEnabled = "com.macfileexplorer.notch.calendar.enabled"
+        static let calendarSource = "com.macfileexplorer.notch.calendar.source"
+        static let calendarSelectedGoogleAccountID = "com.macfileexplorer.notch.calendar.selectedGoogleAccountID"
+        static let calendarRangeMode = "com.macfileexplorer.notch.calendar.rangeMode"
+        static let calendarDisplayFormat = "com.macfileexplorer.notch.calendar.displayFormat"
+        static let calendarOpenTarget = "com.macfileexplorer.notch.calendar.openTarget"
+        static let calendarAlertLeadMinutes = "com.macfileexplorer.notch.calendar.alertLeadMinutes"
+        static let calendarAlertSoundEnabled = "com.macfileexplorer.notch.calendar.alertSoundEnabled"
+        static let calendarAlertSound = "com.macfileexplorer.notch.calendar.alertSound"
+        static let calendarAlertAnimationStyle = "com.macfileexplorer.notch.calendar.alertAnimationStyle"
+        static let calendarShowDirectJoinMeetButton = "com.macfileexplorer.notch.calendar.showDirectJoinMeetButton"
+        static let calendarMusicCoexistenceMode = "com.macfileexplorer.notch.calendar.musicCoexistenceMode"
+        static let calendarShowWhenMusicIdle = "com.macfileexplorer.notch.calendar.showWhenMusicIdle"
+        static let calendarHideAllDayEvents = "com.macfileexplorer.notch.calendar.hideAllDayEvents"
+        static let calendarIconStyle = "com.macfileexplorer.notch.calendar.iconStyle"
+        static let calendarIconPosition = "com.macfileexplorer.notch.calendar.iconPosition"
+        static let calendarIconSize = "com.macfileexplorer.notch.calendar.iconSize"
+        static let calendarIconShowEventBadge = "com.macfileexplorer.notch.calendar.iconShowEventBadge"
+        static let calendarIconShowDayNumber = "com.macfileexplorer.notch.calendar.iconShowDayNumber"
+        static let calendarUseNativeEventColors = "com.macfileexplorer.notch.calendar.useNativeEventColors"
         static let lastPlayedSource = "com.macfileexplorer.notch.lastPlayedSource"
         static let lastPlayedBundleID = "com.macfileexplorer.notch.lastPlayedBundleID"
         static let lastPlayedAppName = "com.macfileexplorer.notch.lastPlayedAppName"
@@ -174,6 +204,325 @@ public final class NotchPreferences {
             guard !isBootstrapping, announceNewTracks != oldValue else { return }
             defaults.set(announceNewTracks, forKey: Keys.announceNewTracks)
         }
+    }
+
+    /// Estilo visual al cambiar de canción (5 opciones: desplegar abajo, ensancharse, color, «≫», impulso lateral).
+    public var trackChangeStyle: NotchTrackChangeStyle {
+        didSet {
+            guard !isBootstrapping, trackChangeStyle != oldValue else { return }
+            defaults.set(trackChangeStyle.rawValue, forKey: Keys.trackChangeStyle)
+            onAppearanceOrLayoutChanged?()
+        }
+    }
+
+    /// Si está activo, ejecuta una breve animación seleccionable en el Notch al pausar la música.
+    public var animateOnPause: Bool {
+        didSet {
+            guard !isBootstrapping, animateOnPause != oldValue else { return }
+            defaults.set(animateOnPause, forKey: Keys.animateOnPause)
+        }
+    }
+
+    /// Estilo de animación al pausar la música (5 opciones seleccionables).
+    public var pauseAnimationStyle: NotchPauseAnimationStyle {
+        didSet {
+            guard !isBootstrapping, pauseAnimationStyle != oldValue else { return }
+            defaults.set(pauseAnimationStyle.rawValue, forKey: Keys.pauseAnimationStyle)
+            onAppearanceOrLayoutChanged?()
+        }
+    }
+
+    /// Si está activo, reemplaza el ecualizador de ondas por el símbolo de pausa (`⏸`) mientras la canción está pausada.
+    public var showPauseIconWhenPaused: Bool {
+        didSet {
+            guard !isBootstrapping, showPauseIconWhenPaused != oldValue else { return }
+            defaults.set(showPauseIconWhenPaused, forKey: Keys.showPauseIconWhenPaused)
+            onAppearanceOrLayoutChanged?()
+        }
+    }
+
+    // MARK: - Ecualizador de Sonido de 5 Bandas
+
+    /// Activa o desactiva el procesamiento de ecualización de audio del sistema desde el Notch.
+    public var isEqualizerEnabled: Bool {
+        didSet {
+            guard !isBootstrapping, isEqualizerEnabled != oldValue else { return }
+            defaults.set(isEqualizerEnabled, forKey: Keys.isEqualizerEnabled)
+            NotchAudioEqualizerEngine.shared.syncWithPreferences()
+        }
+    }
+
+    /// Preset activo del ecualizador (`Plano`, `Graves`, `Voces`, `Rock`, `Pop`, `Electro`, `Acústico`, `Noche`, `Propio`).
+    public var eqPreset: NotchEQPreset {
+        didSet {
+            guard !isBootstrapping, eqPreset != oldValue else { return }
+            defaults.set(eqPreset.rawValue, forKey: Keys.eqPreset)
+        }
+    }
+
+    /// Ganancias en dB (`-12.0...12.0`) de las 5 bandas (`60Hz`, `250Hz`, `1kHz`, `4kHz`, `12kHz`).
+    public var eqBandGains: [Double] {
+        didSet {
+            let normalized = Self.normalizeEQGains(eqBandGains)
+            if normalized != eqBandGains {
+                eqBandGains = normalized
+                return
+            }
+            guard !isBootstrapping, normalized != oldValue else { return }
+            defaults.set(normalized, forKey: Keys.eqBandGains)
+            NotchAudioEqualizerEngine.shared.updateGains(normalized)
+        }
+    }
+
+    /// Aplica un preset de ecualización actualizando las 5 bandas y activando el ecualizador si no es `.flat`.
+    public func applyEQPreset(_ preset: NotchEQPreset) {
+        eqPreset = preset
+        if preset != .custom {
+            eqBandGains = preset.defaultGains
+        }
+        if preset != .flat && !isEqualizerEnabled {
+            isEqualizerEnabled = true
+        } else {
+            NotchAudioEqualizerEngine.shared.updateGains(eqBandGains)
+        }
+    }
+
+    /// Ajusta una banda individual del ecualizador (`0...4`) en dB (`-12...12`).
+    public func setEQBandGain(_ gainDB: Double, at index: Int) {
+        guard index >= 0 && index < 5 else { return }
+        var updated = Self.normalizeEQGains(eqBandGains)
+        let clamped = min(max((gainDB * 2.0).rounded() / 2.0, -12.0), 12.0)
+        updated[index] = clamped
+        eqPreset = .custom
+        eqBandGains = updated
+        if !isEqualizerEnabled && abs(clamped) >= 0.5 {
+            isEqualizerEnabled = true
+        }
+    }
+
+    /// Restablece todas las bandas a `0 dB` (Plano).
+    public func resetEqualizerToFlat() {
+        eqPreset = .flat
+        eqBandGains = NotchEQPreset.flat.defaultGains
+        NotchAudioEqualizerEngine.shared.updateGains(eqBandGains)
+    }
+
+    // MARK: - Bloqueador de Apertura Automática de Apple Music (Music Decoy)
+
+    /// Impide que macOS lance Apple Music automáticamente al presionar ▶ Play o conectar auriculares Bluetooth (0% CPU).
+    public var blockAppleMusicAutoLaunch: Bool {
+        didSet {
+            guard !isBootstrapping, blockAppleMusicAutoLaunch != oldValue else { return }
+            defaults.set(blockAppleMusicAutoLaunch, forKey: Keys.blockAppleMusicAutoLaunch)
+            NotchMusicDecoyService.shared.syncWithPreferences()
+        }
+    }
+
+    /// Ruta opcional de una app de música alternativa (ej. YouTube Music o Spotify) para abrir al presionar ▶ Play.
+    /// Vacío = solo bloquea Apple Music en silencio sin abrir nada.
+    public var musicDecoyRedirectAppPath: String {
+        didSet {
+            guard !isBootstrapping, musicDecoyRedirectAppPath != oldValue else { return }
+            defaults.set(musicDecoyRedirectAppPath, forKey: Keys.musicDecoyRedirectAppPath)
+            NotchMusicDecoyService.shared.syncRedirectAppPreference(musicDecoyRedirectAppPath)
+        }
+    }
+
+    // MARK: - Google Calendar y Alertas de Meet en el Notch (10+ Configuraciones)
+
+    /// 1. Activar el módulo de Calendario (estilo Google Calendar) dentro del Notch.
+    public var calendarEnabled: Bool {
+        didSet {
+            guard !isBootstrapping, calendarEnabled != oldValue else { return }
+            defaults.set(calendarEnabled, forKey: Keys.calendarEnabled)
+            onAppearanceOrLayoutChanged?()
+            if calendarEnabled {
+                NotchCalendarService.shared.startMonitoringIfNeeded()
+            } else {
+                NotchCalendarService.shared.stopMonitoring()
+            }
+        }
+    }
+
+    /// 2. Fuente de eventos: Google Calendar (cuenta Gmail en MacFileExplorer), Calendario de macOS o Ambos.
+    public var calendarSource: NotchCalendarSourceMode {
+        didSet {
+            guard !isBootstrapping, calendarSource != oldValue else { return }
+            defaults.set(calendarSource.rawValue, forKey: Keys.calendarSource)
+            NotchCalendarService.shared.refreshNow()
+        }
+    }
+
+    /// Cuenta de Google específica a mostrar (vacío = todas las cuentas Gmail logueadas).
+    public var calendarSelectedGoogleAccountID: String {
+        didSet {
+            guard !isBootstrapping, calendarSelectedGoogleAccountID != oldValue else { return }
+            defaults.set(calendarSelectedGoogleAccountID, forKey: Keys.calendarSelectedGoogleAccountID)
+            NotchCalendarService.shared.refreshNow()
+        }
+    }
+
+    /// 3. Rango visible: Diario (Hoy) o Semanal (7 días).
+    public var calendarRangeMode: NotchCalendarRangeMode {
+        didSet {
+            guard !isBootstrapping, calendarRangeMode != oldValue else { return }
+            defaults.set(calendarRangeMode.rawValue, forKey: Keys.calendarRangeMode)
+            onAppearanceOrLayoutChanged?()
+        }
+    }
+
+    /// 4. Formato visual estilo Google Calendar: Agenda Google, Línea de tiempo o Compacto.
+    public var calendarDisplayFormat: NotchCalendarDisplayFormat {
+        didSet {
+            guard !isBootstrapping, calendarDisplayFormat != oldValue else { return }
+            defaults.set(calendarDisplayFormat.rawValue, forKey: Keys.calendarDisplayFormat)
+            onAppearanceOrLayoutChanged?()
+        }
+    }
+
+    /// 5. Dónde abrir Google Calendar / Meet al hacer clic (Google Chrome por defecto).
+    public var calendarOpenTarget: NotchCalendarOpenTarget {
+        didSet {
+            guard !isBootstrapping, calendarOpenTarget != oldValue else { return }
+            defaults.set(calendarOpenTarget.rawValue, forKey: Keys.calendarOpenTarget)
+        }
+    }
+
+    /// 6. Minutos de anticipación antes de una reunión / Meet para avisar en el Notch (1, 2, 5, 10, 15).
+    public var calendarAlertLeadMinutes: Int {
+        didSet {
+            let clamped = min(max(calendarAlertLeadMinutes, 1), 30)
+            if clamped != calendarAlertLeadMinutes {
+                calendarAlertLeadMinutes = clamped
+                return
+            }
+            guard !isBootstrapping, clamped != oldValue else { return }
+            defaults.set(clamped, forKey: Keys.calendarAlertLeadMinutes)
+            NotchCalendarService.shared.evaluateImminentMeetingAlert()
+        }
+    }
+
+    /// 7. Reproducir sonido suave al acercarse una Meet.
+    public var calendarAlertSoundEnabled: Bool {
+        didSet {
+            guard !isBootstrapping, calendarAlertSoundEnabled != oldValue else { return }
+            defaults.set(calendarAlertSoundEnabled, forKey: Keys.calendarAlertSoundEnabled)
+        }
+    }
+
+    /// Sonido nativo de macOS para la alerta de reunión.
+    public var calendarAlertSound: NotchCalendarAlertSound {
+        didSet {
+            guard !isBootstrapping, calendarAlertSound != oldValue else { return }
+            defaults.set(calendarAlertSound.rawValue, forKey: Keys.calendarAlertSound)
+        }
+    }
+
+    /// 8. Animación superior en el Notch cuando está por comenzar una Meet.
+    public var calendarAlertAnimationStyle: NotchCalendarAlertAnimationStyle {
+        didSet {
+            guard !isBootstrapping, calendarAlertAnimationStyle != oldValue else { return }
+            defaults.set(calendarAlertAnimationStyle.rawValue, forKey: Keys.calendarAlertAnimationStyle)
+            onAppearanceOrLayoutChanged?()
+        }
+    }
+
+    /// 9. Mostrar botón directo «Unirse a Meet» (1 clic) dentro del aviso y en cada evento con videollamada.
+    public var calendarShowDirectJoinMeetButton: Bool {
+        didSet {
+            guard !isBootstrapping, calendarShowDirectJoinMeetButton != oldValue else { return }
+            defaults.set(calendarShowDirectJoinMeetButton, forKey: Keys.calendarShowDirectJoinMeetButton)
+            onAppearanceOrLayoutChanged?()
+        }
+    }
+
+    /// 10. Cómo convive el Calendario con la música cuando hay una canción sonando.
+    public var calendarMusicCoexistenceMode: NotchCalendarMusicCoexistenceMode {
+        didSet {
+            guard !isBootstrapping, calendarMusicCoexistenceMode != oldValue else { return }
+            defaults.set(calendarMusicCoexistenceMode.rawValue, forKey: Keys.calendarMusicCoexistenceMode)
+            onAppearanceOrLayoutChanged?()
+        }
+    }
+
+    /// Mostrar automáticamente la vista de Calendario cuando el Notch está expandido y no suena música.
+    public var calendarShowWhenMusicIdle: Bool {
+        didSet {
+            guard !isBootstrapping, calendarShowWhenMusicIdle != oldValue else { return }
+            defaults.set(calendarShowWhenMusicIdle, forKey: Keys.calendarShowWhenMusicIdle)
+            onAppearanceOrLayoutChanged?()
+        }
+    }
+
+    /// Ocultar eventos de todo el día (ej. feriados o cumpleaños) para priorizar reuniones con horario.
+    public var calendarHideAllDayEvents: Bool {
+        didSet {
+            guard !isBootstrapping, calendarHideAllDayEvents != oldValue else { return }
+            defaults.set(calendarHideAllDayEvents, forKey: Keys.calendarHideAllDayEvents)
+            onAppearanceOrLayoutChanged?()
+        }
+    }
+
+    /// 11. Estilo visual del botón/ícono del Calendario en la barra superior del Notch.
+    public var calendarIconStyle: NotchCalendarIconStyle {
+        didSet {
+            guard !isBootstrapping, calendarIconStyle != oldValue else { return }
+            defaults.set(calendarIconStyle.rawValue, forKey: Keys.calendarIconStyle)
+            onAppearanceOrLayoutChanged?()
+        }
+    }
+
+    /// 12. Posición del botón/ícono del Calendario dentro de la barra superior del Notch.
+    public var calendarIconPosition: NotchCalendarIconPosition {
+        didSet {
+            guard !isBootstrapping, calendarIconPosition != oldValue else { return }
+            defaults.set(calendarIconPosition.rawValue, forKey: Keys.calendarIconPosition)
+            onAppearanceOrLayoutChanged?()
+        }
+    }
+
+    /// 13. Tamaño del botón/ícono del Calendario (Pequeño, Mediano igual a YouTube Music, o Grande).
+    public var calendarIconSize: NotchCalendarIconSize {
+        didSet {
+            guard !isBootstrapping, calendarIconSize != oldValue else { return }
+            defaults.set(calendarIconSize.rawValue, forKey: Keys.calendarIconSize)
+            onAppearanceOrLayoutChanged?()
+        }
+    }
+
+    /// 14. Mostrar contador/insignia de eventos pendientes de hoy sobre el botón del Calendario.
+    public var calendarIconShowEventBadge: Bool {
+        didSet {
+            guard !isBootstrapping, calendarIconShowEventBadge != oldValue else { return }
+            defaults.set(calendarIconShowEventBadge, forKey: Keys.calendarIconShowEventBadge)
+            onAppearanceOrLayoutChanged?()
+        }
+    }
+
+    /// 15. Mostrar el número del día actual (ej. 27) dentro del ícono del Calendario.
+    public var calendarIconShowDayNumber: Bool {
+        didSet {
+            guard !isBootstrapping, calendarIconShowDayNumber != oldValue else { return }
+            defaults.set(calendarIconShowDayNumber, forKey: Keys.calendarIconShowDayNumber)
+            onAppearanceOrLayoutChanged?()
+        }
+    }
+
+    /// 16. Usar los mismos colores de eventos y Meets configurados en Google Calendar / Calendario de macOS.
+    public var calendarUseNativeEventColors: Bool {
+        didSet {
+            guard !isBootstrapping, calendarUseNativeEventColors != oldValue else { return }
+            defaults.set(calendarUseNativeEventColors, forKey: Keys.calendarUseNativeEventColors)
+            onAppearanceOrLayoutChanged?()
+        }
+    }
+
+    private static func normalizeEQGains(_ raw: [Double]) -> [Double] {
+        var out = [Double](repeating: 0.0, count: 5)
+        for i in 0..<min(raw.count, 5) {
+            out[i] = min(max(raw[i], -12.0), 12.0)
+        }
+        return out
     }
 
     public var showVisualizerBars: Bool {
@@ -482,6 +831,36 @@ public final class NotchPreferences {
         self.showTrackTitleInCollapsedPill = defaults.object(forKey: Keys.showTrackTitleInCollapsedPill) as? Bool ?? true
         self.enableMarqueeTitle = defaults.object(forKey: Keys.enableMarqueeTitle) as? Bool ?? true
         self.announceNewTracks = defaults.object(forKey: Keys.announceNewTracks) as? Bool ?? true
+        self.trackChangeStyle = (defaults.string(forKey: Keys.trackChangeStyle).flatMap(NotchTrackChangeStyle.init(rawValue:))) ?? .dropDown
+        self.animateOnPause = defaults.object(forKey: Keys.animateOnPause) as? Bool ?? true
+        self.pauseAnimationStyle = (defaults.string(forKey: Keys.pauseAnimationStyle).flatMap(NotchPauseAnimationStyle.init(rawValue:))) ?? .pauseIconPop
+        self.showPauseIconWhenPaused = defaults.object(forKey: Keys.showPauseIconWhenPaused) as? Bool ?? true
+        self.isEqualizerEnabled = defaults.object(forKey: Keys.isEqualizerEnabled) as? Bool ?? false
+        self.eqPreset = (defaults.string(forKey: Keys.eqPreset).flatMap(NotchEQPreset.init(rawValue:))) ?? .flat
+        let savedGains = (defaults.array(forKey: Keys.eqBandGains) as? [Double]) ?? NotchEQPreset.flat.defaultGains
+        self.eqBandGains = Self.normalizeEQGains(savedGains)
+        self.blockAppleMusicAutoLaunch = defaults.object(forKey: Keys.blockAppleMusicAutoLaunch) as? Bool ?? false
+        self.musicDecoyRedirectAppPath = defaults.string(forKey: Keys.musicDecoyRedirectAppPath) ?? ""
+        self.calendarEnabled = defaults.object(forKey: Keys.calendarEnabled) as? Bool ?? true
+        self.calendarSource = (defaults.string(forKey: Keys.calendarSource).flatMap(NotchCalendarSourceMode.init(rawValue:))) ?? .googleCalendar
+        self.calendarSelectedGoogleAccountID = defaults.string(forKey: Keys.calendarSelectedGoogleAccountID) ?? ""
+        self.calendarRangeMode = (defaults.string(forKey: Keys.calendarRangeMode).flatMap(NotchCalendarRangeMode.init(rawValue:))) ?? .daily
+        self.calendarDisplayFormat = (defaults.string(forKey: Keys.calendarDisplayFormat).flatMap(NotchCalendarDisplayFormat.init(rawValue:))) ?? .googleAgenda
+        self.calendarOpenTarget = (defaults.string(forKey: Keys.calendarOpenTarget).flatMap(NotchCalendarOpenTarget.init(rawValue:))) ?? .googleChrome
+        self.calendarAlertLeadMinutes = defaults.object(forKey: Keys.calendarAlertLeadMinutes) as? Int ?? 5
+        self.calendarAlertSoundEnabled = defaults.object(forKey: Keys.calendarAlertSoundEnabled) as? Bool ?? true
+        self.calendarAlertSound = (defaults.string(forKey: Keys.calendarAlertSound).flatMap(NotchCalendarAlertSound.init(rawValue:))) ?? .glass
+        self.calendarAlertAnimationStyle = (defaults.string(forKey: Keys.calendarAlertAnimationStyle).flatMap(NotchCalendarAlertAnimationStyle.init(rawValue:))) ?? .dropDownBanner
+        self.calendarShowDirectJoinMeetButton = defaults.object(forKey: Keys.calendarShowDirectJoinMeetButton) as? Bool ?? true
+        self.calendarMusicCoexistenceMode = (defaults.string(forKey: Keys.calendarMusicCoexistenceMode).flatMap(NotchCalendarMusicCoexistenceMode.init(rawValue:))) ?? .alertMeetOverMusic
+        self.calendarShowWhenMusicIdle = defaults.object(forKey: Keys.calendarShowWhenMusicIdle) as? Bool ?? true
+        self.calendarHideAllDayEvents = defaults.object(forKey: Keys.calendarHideAllDayEvents) as? Bool ?? false
+        self.calendarIconStyle = (defaults.string(forKey: Keys.calendarIconStyle).flatMap(NotchCalendarIconStyle.init(rawValue:))) ?? .microCircle
+        self.calendarIconPosition = (defaults.string(forKey: Keys.calendarIconPosition).flatMap(NotchCalendarIconPosition.init(rawValue:))) ?? .rightBeforeControls
+        self.calendarIconSize = (defaults.string(forKey: Keys.calendarIconSize).flatMap(NotchCalendarIconSize.init(rawValue:))) ?? .medium
+        self.calendarIconShowEventBadge = defaults.object(forKey: Keys.calendarIconShowEventBadge) as? Bool ?? true
+        self.calendarIconShowDayNumber = defaults.object(forKey: Keys.calendarIconShowDayNumber) as? Bool ?? false
+        self.calendarUseNativeEventColors = defaults.object(forKey: Keys.calendarUseNativeEventColors) as? Bool ?? true
         self.showVisualizerBars = defaults.object(forKey: Keys.showVisualizerBars) as? Bool ?? true
         self.showAmbientArtworkGlow = defaults.object(forKey: Keys.showAmbientArtworkGlow) as? Bool ?? true
         self.showSyncedLyrics = defaults.object(forKey: Keys.showSyncedLyrics) as? Bool ?? true
@@ -537,6 +916,35 @@ public final class NotchPreferences {
         showTrackTitleInCollapsedPill = true
         enableMarqueeTitle = true
         announceNewTracks = true
+        trackChangeStyle = .dropDown
+        animateOnPause = true
+        pauseAnimationStyle = .pauseIconPop
+        showPauseIconWhenPaused = true
+        isEqualizerEnabled = false
+        eqPreset = .flat
+        eqBandGains = NotchEQPreset.flat.defaultGains
+        blockAppleMusicAutoLaunch = false
+        musicDecoyRedirectAppPath = ""
+        calendarEnabled = true
+        calendarSource = .googleCalendar
+        calendarSelectedGoogleAccountID = ""
+        calendarRangeMode = .daily
+        calendarDisplayFormat = .googleAgenda
+        calendarOpenTarget = .googleChrome
+        calendarAlertLeadMinutes = 5
+        calendarAlertSoundEnabled = true
+        calendarAlertSound = .glass
+        calendarAlertAnimationStyle = .dropDownBanner
+        calendarShowDirectJoinMeetButton = true
+        calendarMusicCoexistenceMode = .alertMeetOverMusic
+        calendarShowWhenMusicIdle = true
+        calendarHideAllDayEvents = false
+        calendarIconStyle = .microCircle
+        calendarIconPosition = .rightBeforeControls
+        calendarIconSize = .medium
+        calendarIconShowEventBadge = true
+        calendarIconShowDayNumber = false
+        calendarUseNativeEventColors = true
         showVisualizerBars = true
         showAmbientArtworkGlow = true
         showSyncedLyrics = true

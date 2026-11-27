@@ -299,9 +299,6 @@ public struct NavigationPaneView: View {
         .task {
             await sidebarViewModel.loadInitialSections(includeHidden: viewModel.showHiddenFiles)
         }
-        .onAppear {
-            sidebarViewModel.reloadQuickAccessNodes()
-        }
         .onChange(of: quickAccessPrefs.visibleFolders) { _, _ in
             sidebarViewModel.reloadQuickAccessNodes()
         }
@@ -644,8 +641,13 @@ private struct SidebarTreeNodeView: View {
         sidebarViewModel.isExpanded(node)
     }
 
+    private static let cachedTrashURL: URL? = FileManager.default
+        .urls(for: .trashDirectory, in: .userDomainMask)
+        .first?
+        .standardizedFileURL
+
     private var isTrashNode: Bool {
-        guard let trashURL = FileManager.default.urls(for: .trashDirectory, in: .userDomainMask).first?.standardizedFileURL else {
+        guard let trashURL = Self.cachedTrashURL else {
             return false
         }
         return node.url.standardizedFileURL == trashURL

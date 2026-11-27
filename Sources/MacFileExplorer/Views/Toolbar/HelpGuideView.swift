@@ -138,8 +138,27 @@ private struct HelpShortcutRow: Identifiable {
     let categoryES: String
     let categoryEN: String
     let keys: String
+    let keysEN: String?
     let actionES: String
     let actionEN: String
+
+    init(
+        id: String,
+        categoryES: String,
+        categoryEN: String,
+        keys: String,
+        keysEN: String? = nil,
+        actionES: String,
+        actionEN: String
+    ) {
+        self.id = id
+        self.categoryES = categoryES
+        self.categoryEN = categoryEN
+        self.keys = keys
+        self.keysEN = keysEN
+        self.actionES = actionES
+        self.actionEN = actionEN
+    }
 }
 
 /// Ventana interactiva de Ayuda con navegación por secciones, buscador en vivo y catálogo basado en los releases.
@@ -520,6 +539,7 @@ public struct HelpGuideView: View {
             }
         let matchingShortcuts = Self.allShortcuts.filter { row in
             matches(row.keys, query: q)
+                || (row.keysEN.map { matches($0, query: q) } ?? false)
                 || matches(row.actionES, query: q) || matches(row.actionEN, query: q)
                 || matches(row.categoryES, query: q) || matches(row.categoryEN, query: q)
         }
@@ -676,7 +696,7 @@ public struct HelpGuideView: View {
         VStack(spacing: 0) {
             ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
                 HStack(spacing: 12) {
-                    Text(row.keys)
+                    Text(loc.text(es: row.keys, en: row.keysEN ?? row.keys))
                         .font(.system(size: 11.5, weight: .semibold, design: .monospaced))
                         .foregroundStyle(Color.accentColor)
                         .padding(.horizontal, 8)
@@ -961,6 +981,26 @@ extension HelpGuideView {
 
     private static let highlightedTopics: [HelpTopicCard] = [
         HelpTopicCard(
+            id: "hl-v280-notch-calendar-eq-decoy",
+            icon: "calendar.badge.clock",
+            badgeES: "Nuevo · v2.8",
+            badgeEN: "New · v2.8",
+            titleES: "Google Calendar + Meet, Volumen, Ecualizador 5 bandas y Bloqueo de Apple Music en el «Notch»",
+            titleEN: "Google Calendar & Meet Alerts, Volume, 5-Band EQ & Apple Music Blocker in «Notch»",
+            bodyES: "El Notch ahora integra tu Google Calendar (diario o semanal, con apertura directa en Google Chrome, colores reales de tus eventos y 5 estilos/posiciones del ícono incluyendo cápsula igual a YouTube Music), avisa antes de cada Meet con tarjeta exclusiva sin recortar la música y botón «Unirse a Meet» en 1 clic, suma control de Volumen y Ecualizador de 5 bandas en vivo en la barra superior, y te deja elegir qué app abrir al apretar ▶ Play (bloqueando Apple Music automáticamente).",
+            bodyEN: "Notch now integrates your Google Calendar (daily or weekly, direct Chrome opening, native event colors, and 5 icon styles/positions including a pill matching YouTube Music), alerts you before each Meet with a dedicated full card and 1-click \"Join Meet\" button without clipping music, adds live Volume & 5-band Equalizer controls to the top bar, and lets you pick your default ▶ Play music app while blocking Apple Music auto-launch."
+        ),
+        HelpTopicCard(
+            id: "hl-v280-pdf-clipboard-multimonitor",
+            icon: "doc.richtext",
+            badgeES: "Nuevo · v2.8",
+            badgeEN: "New · v2.8",
+            titleES: "Visor PDF interactivo, Portapapeles con Fecha/Ordenar y Foco de una sola ventana multi-monitor",
+            titleEN: "Interactive PDF Preview, Clipboard Date/Sort & Multi-Monitor Single-Window Focus",
+            bodyES: "Al abrir un PDF con Espacio ahora podés seleccionar y copiar texto (⌘C), recortar cualquier gráfico como imagen en alta resolución, pegar texto o imágenes (⌘V) con Deshacer y Guardar (⌘S), buscar texto (⌘F) y rotar páginas. El Historial del Portapapeles suma columna Fecha y menú Ordenar (Fecha, Contenido, Tipo, Tamaño, App o Más usados), y hacer clic en una ventana de la Barra de tareas (como Chrome) enfoca solo esa ventana en su propio monitor sin moverla.",
+            bodyEN: "Previewing a PDF with Spacebar now lets you select and copy text (⌘C), drag-capture any diagram as an HD image, paste text or images (⌘V) with Undo and Save (⌘S), search text (⌘F), and rotate pages. Clipboard History adds a Date column and Sort menu (Date, Content, Type, Size, Source App, or Most Used), and clicking a Taskbar window (like Chrome) focuses only that exact window on its own display without moving it."
+        ),
+        HelpTopicCard(
             id: "hl-setup-wizard-tour-upgrade-highlights",
             icon: "sparkles",
             badgeES: "Nuevo · v2.7",
@@ -1243,19 +1283,20 @@ extension HelpGuideView {
         HelpShortcutRow(id: "sc-view1", categoryES: "Vistas e Interfaz", categoryEN: "Views & UI", keys: "⌘ 1  /  ⌘ 2", actionES: "Cambiar a vista Detalles (⌘1) o Iconos Grandes (⌘2)", actionEN: "Switch to Details (⌘1) or Large Icons (⌘2) view"),
         HelpShortcutRow(id: "sc-hidden", categoryES: "Vistas e Interfaz", categoryEN: "Views & UI", keys: "⇧ ⌘ .", actionES: "Mostrar u ocultar archivos ocultos", actionEN: "Show or hide hidden files"),
         HelpShortcutRow(id: "sc-bookmarks", categoryES: "Vistas e Interfaz", categoryEN: "Views & UI", keys: "⇧ ⌘ B", actionES: "Mostrar u ocultar barra de marcadores web", actionEN: "Show or hide bookmarks bar"),
-        HelpShortcutRow(id: "sc-quicklook", categoryES: "Previsualización e Info", categoryEN: "Preview & Info", keys: "Espacio / Space", actionES: "Abrir o cerrar Vista Rápida (arrastrable libremente fuera de la app y entre monitores)", actionEN: "Toggle Quick Look (freely draggable outside the app and across displays)"),
-        HelpShortcutRow(id: "sc-quicklook-copy-media", categoryES: "Previsualización e Info", categoryEN: "Preview & Info", keys: "⌘ C  (en Preview)", actionES: "Copiar imagen + archivo (o archivo de video) directamente desde la Vista Rápida", actionEN: "Copy image & file (or video file) directly from inside Quick Look Preview"),
-        HelpShortcutRow(id: "sc-office-drag-select", categoryES: "Editor Office y CSV", categoryEN: "Office & CSV Editor", keys: "Clic y arrastrar", actionES: "Seleccionar múltiples filas y columnas arrastrando en celdas, números (#) o encabezados (A, B, C) en CSV/Excel", actionEN: "Drag-select multiple rows & columns across cells, row numbers (#), or column headers (A, B, C) in CSV/Excel"),
+        HelpShortcutRow(id: "sc-quicklook", categoryES: "Previsualización e Info", categoryEN: "Preview & Info", keys: "Espacio", keysEN: "Space", actionES: "Abrir o cerrar Vista Rápida (arrastrable libremente fuera de la app y entre monitores)", actionEN: "Toggle Quick Look (freely draggable outside the app and across displays)"),
+        HelpShortcutRow(id: "sc-pdf-interactive", categoryES: "Visor PDF (Vista Rápida)", categoryEN: "PDF Viewer (Quick Look)", keys: "⌘ C  /  ⌘ V  /  ⌘ F  /  ⌘ S", actionES: "Copiar texto seleccionado, pegar texto o imagen sobre la página, buscar texto o guardar cambios en un PDF", actionEN: "Copy selected text, paste text or image onto the page, find text, or save changes in a PDF"),
+        HelpShortcutRow(id: "sc-quicklook-copy-media", categoryES: "Previsualización e Info", categoryEN: "Preview & Info", keys: "⌘ C  (en Preview)", keysEN: "⌘ C  (in Preview)", actionES: "Copiar imagen + archivo (o archivo de video) directamente desde la Vista Rápida", actionEN: "Copy image & file (or video file) directly from inside Quick Look Preview"),
+        HelpShortcutRow(id: "sc-office-drag-select", categoryES: "Editor Office y CSV", categoryEN: "Office & CSV Editor", keys: "Clic y arrastrar", keysEN: "Click & Drag", actionES: "Seleccionar múltiples filas y columnas arrastrando en celdas, números (#) o encabezados (A, B, C) en CSV/Excel", actionEN: "Drag-select multiple rows & columns across cells, row numbers (#), or column headers (A, B, C) in CSV/Excel"),
         HelpShortcutRow(id: "sc-office-save", categoryES: "Editor Office y CSV", categoryEN: "Office & CSV Editor", keys: "⌘ S  /  ⇧ ⌘ S", actionES: "Guardar cambios o Guardar copia dentro del Editor Office y CSV", actionEN: "Save changes or Save Copy inside the Quick Look Office & CSV editor"),
         HelpShortcutRow(id: "sc-office-find", categoryES: "Editor Office y CSV", categoryEN: "Office & CSV Editor", keys: "⌘ F", actionES: "Filtrar filas en CSV o buscar texto dentro del Editor Office", actionEN: "Filter rows in CSV or find text inside the Office editor"),
-        HelpShortcutRow(id: "sc-taskbar-drag", categoryES: "Barra de tareas", categoryEN: "Taskbar", keys: "Arrastrar + 1 s", actionES: "Mantener un archivo quieto 1 s sobre un botón de la barra para abrir esa app y soltarlo adentro", actionEN: "Hold a dragged file still for 1 s over any Taskbar button to raise that app and drop inside"),
+        HelpShortcutRow(id: "sc-taskbar-drag", categoryES: "Barra de tareas", categoryEN: "Taskbar", keys: "Arrastrar + 1 s", keysEN: "Drag + 1 s", actionES: "Mantener un archivo quieto 1 s sobre un botón de la barra para abrir esa app y soltarlo adentro", actionEN: "Hold a dragged file still for 1 s over any Taskbar button to raise that app and drop inside"),
         HelpShortcutRow(id: "sc-info", categoryES: "Previsualización e Info", categoryEN: "Preview & Info", keys: "⌘ I", actionES: "Abrir ventana de Propiedades y metadatos EXIF / multimedia", actionEN: "Open Properties & EXIF / media metadata"),
         HelpShortcutRow(id: "sc-newfolder", categoryES: "Edición y Archivos", categoryEN: "Edit & Files", keys: "⇧ ⌘ N", actionES: "Crear nueva carpeta", actionEN: "Create new folder"),
-        HelpShortcutRow(id: "sc-rename", categoryES: "Edición y Archivos", categoryEN: "Edit & Files", keys: "F2  o  Enter", actionES: "Renombrar (1 elemento en línea, varios con Renombrado masivo)", actionEN: "Rename (inline for 1 item, Bulk Rename for multiple)"),
+        HelpShortcutRow(id: "sc-rename", categoryES: "Edición y Archivos", categoryEN: "Edit & Files", keys: "F2  o  Enter", keysEN: "F2  or  Enter", actionES: "Renombrar (1 elemento en línea, varios con Renombrado masivo)", actionEN: "Rename (inline for 1 item, Bulk Rename for multiple)"),
         HelpShortcutRow(id: "sc-clipboard", categoryES: "Edición y Archivos", categoryEN: "Edit & Files", keys: "⌘ X  /  ⌘ C  /  ⌘ V", actionES: "Cortar, Copiar y Pegar archivos o carpetas", actionEN: "Cut, Copy, and Paste files or folders"),
         HelpShortcutRow(id: "sc-selectall", categoryES: "Edición y Archivos", categoryEN: "Edit & Files", keys: "⌘ A", actionES: "Seleccionar todo en la carpeta actual", actionEN: "Select All in current folder"),
         HelpShortcutRow(id: "sc-undoredo", categoryES: "Edición y Archivos", categoryEN: "Edit & Files", keys: "⌘ Z  /  ⇧ ⌘ Z", actionES: "Deshacer / Rehacer última operación de archivo", actionEN: "Undo / Redo last file operation"),
-        HelpShortcutRow(id: "sc-trash", categoryES: "Edición y Archivos", categoryEN: "Edit & Files", keys: "⌘ ⌫  o  ⌫", actionES: "Mover seleccionados a la Papelera", actionEN: "Move selected items to Trash"),
+        HelpShortcutRow(id: "sc-trash", categoryES: "Edición y Archivos", categoryEN: "Edit & Files", keys: "⌘ ⌫  o  ⌫", keysEN: "⌘ ⌫  or  ⌫", actionES: "Mover seleccionados a la Papelera", actionEN: "Move selected items to Trash"),
         HelpShortcutRow(id: "sc-permdelete", categoryES: "Edición y Archivos", categoryEN: "Edit & Files", keys: "⇧ ⌫", actionES: "Eliminar permanentemente (con confirmación centrada)", actionEN: "Delete permanently (with confirmation modal)"),
         HelpShortcutRow(id: "sc-maccy", categoryES: "Portapapeles Maccy", categoryEN: "Maccy Clipboard", keys: "⌃ ⌘ V  (+ ⌘1..9)", actionES: "Abrir menú rápido global del Portapapeles (personalizable)", actionEN: "Open global Clipboard Quick Dropdown (customizable)"),
         HelpShortcutRow(id: "sc-webzoom", categoryES: "Pestañas Web", categoryEN: "Web Tabs", keys: "⌘ +  /  ⌘ -  /  ⌘ 0", actionES: "Acercar, alejar o restablecer zoom web (100%)", actionEN: "Zoom In, Zoom Out, or Reset Web Zoom (100%)"),
@@ -1273,6 +1314,14 @@ extension HelpGuideView {
             titleEN: "Reopen Setup Wizard, Replay Interactive Tour & Post-Upgrade Highlights (Help Menu)",
             bodyES: "Podés volver a abrir el asistente en cualquier momento desde Ayuda → Asistente de instalación inicial… (precargando tus ajustes actuales) o iniciar los globitos guiados desde Ayuda → Iniciar tour interactivo… y suspenderlos cuando quieras con «Suspender tour» o Esc. Cuando actualizás desde una versión anterior, MacFileExplorer detecta el cambio automáticamente y abre las Notas de la versión destacando solo lo nuevo desde tu versión previa, con un botón «Ver todo sin resaltar» si preferís la vista clásica.",
             bodyEN: "Reopen the setup assistant anytime via Help → Setup Wizard… (pre-filled with your current settings) or launch the guided callout bubbles via Help → Start Interactive Tour… and stop them anytime with «Stop Tour» or Esc. Whenever you update from an older version, MacFileExplorer automatically detects the upgrade and opens Release Notes highlighting only what's new since your previous version, with a «View all without highlights» button whenever you want the classic view."
+        ),
+        HelpTopicCard(
+            id: "cfg-notch-calendar-eq-decoy",
+            icon: "calendar.badge.clock",
+            titleES: "Calendario, Meet, Volumen, Ecualizador y Bloqueo de Apple Music (Configuración de Notch)",
+            titleEN: "Calendar, Meet Alerts, Volume, Equalizer & Apple Music Blocker (Notch Settings)",
+            bodyES: "En Configuración de Notch → Calendario y Meet elegís fuente (Google Calendar de tu Gmail logueado o Calendario de macOS), vista Diaria o Semanal, formato visual, apertura en Chrome, anticipación, sonido, animación superior, botón «Unirse a Meet», 5 opciones de estilo/posición/tamaño del ícono en la barra del Notch y si usar los colores reales de tus eventos. En la pestaña Audio/General activás el Ecualizador de 5 bandas y el bloqueo de Apple Music al presionar ▶ Play.",
+            bodyEN: "Under Notch Settings → Calendar & Meet configure your source (Google Calendar from your signed-in Gmail or macOS Calendar), Daily or Weekly view, visual format, Chrome opening, alert lead time, sound, top animation, \"Join Meet\" button, 5 top-bar icon style/position/size options, and native calendar event colors. Under Audio/General enable the 5-band Equalizer and Apple Music blocker for the ▶ Play key."
         ),
         HelpTopicCard(
             id: "cfg-notch",
@@ -1420,8 +1469,8 @@ extension HelpGuideView {
             badgeEN: "Privacy First",
             titleES: "Funciones sin permisos especiales — y permisos que NUNCA pedimos",
             titleEN: "Zero-Permission Features — & Permissions We NEVER Request",
-            bodyES: "• Funcionan de fábrica sin permisos especiales: Vista Rápida (Quick Look), Editor de Word/Excel/PowerPoint/CSV, Acciones rápidas de imágenes y videos (quitar fondo, rotar, convertir, recortar, limpiar metadatos), Buscador Avanzado y OCR local (Apple Vision), Buscador de duplicados, Compresión ZIP/TAR y atajos globales como «View Desktop Shortcut» (⌘D) o abrir el menú del Portapapeles (⌃⌘V).\n• Permisos que MacFileExplorer NUNCA solicita: Cámara, Micrófono, Contactos, Fotos, Calendario, Ubicación, Bluetooth ni Acceso total al disco (Full Disk Access).",
-            bodyEN: "• Work out of the box with zero special permissions: Quick Look previews, Word/Excel/PowerPoint/CSV Editor, image & video Quick Actions (remove background, rotate, convert, trim, strip metadata), Advanced Search & local Vision OCR, Duplicate Finder, ZIP/TAR archiving, and global shortcuts like «View Desktop Shortcut» (⌘D) or opening the Clipboard dropdown (⌃⌘V).\n• Permissions MacFileExplorer NEVER requests: Camera, Microphone, Contacts, Photos, Calendar, Location, Bluetooth, or Full Disk Access."
+            bodyES: "• Funcionan de fábrica sin permisos especiales: Vista Rápida (incluyendo visor PDF interactivo), Editor de Word/Excel/PowerPoint/CSV, Acciones rápidas de imágenes y videos (quitar fondo, rotar, convertir, recortar, limpiar metadatos), Buscador Avanzado y OCR local (Apple Vision), Buscador de duplicados, Compresión ZIP/TAR y atajos globales como «View Desktop Shortcut» (⌘D) o abrir el menú del Portapapeles (⌃⌘V).\n• Permisos opcionales solo si activás la función: Audio del Sistema (solo si encendés el Ecualizador de 5 bandas del Notch) y Calendario de macOS (solo si elegís mostrar el Calendario nativo de macOS; Google Calendar usa tu sesión Gmail).\n• Permisos que MacFileExplorer NUNCA solicita: Cámara, Micrófono, Contactos, Fotos, Ubicación, Bluetooth ni Acceso total al disco (Full Disk Access).",
+            bodyEN: "• Work out of the box with zero special permissions: Quick Look previews (including interactive PDF viewer), Word/Excel/PowerPoint/CSV Editor, image & video Quick Actions (remove background, rotate, convert, trim, strip metadata), Advanced Search & local Vision OCR, Duplicate Finder, ZIP/TAR archiving, and global shortcuts like «View Desktop Shortcut» (⌘D) or opening the Clipboard dropdown (⌃⌘V).\n• Optional permissions only when you enable the feature: System Audio capture (only if you turn on the Notch 5-band Equalizer) and macOS Calendar (only if you choose native macOS Calendar; Google Calendar uses your signed-in Gmail session).\n• Permissions MacFileExplorer NEVER requests: Camera, Microphone, Contacts, Photos, Location, Bluetooth, or Full Disk Access."
         )
     ]
 }

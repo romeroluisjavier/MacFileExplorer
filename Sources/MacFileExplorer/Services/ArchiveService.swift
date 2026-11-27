@@ -41,6 +41,10 @@ public enum ArchiveService {
         return nil
     }
 
+    private static func localizedText(es: String, en: String) -> String {
+        LocalizationManager.currentLanguageIsSpanish() ? es : en
+    }
+
     // MARK: - Compresión
 
     public static func compress(
@@ -50,16 +54,25 @@ public enum ArchiveService {
     ) async throws -> URL {
         guard let first = urls.first else {
             throw NSError(domain: "ArchiveService", code: 1, userInfo: [
-                NSLocalizedDescriptionKey: "No hay elementos seleccionados para comprimir."
+                NSLocalizedDescriptionKey: localizedText(
+                    es: "No hay elementos seleccionados para comprimir.",
+                    en: "No items selected to compress."
+                )
             ])
         }
         let parentDir = first.deletingLastPathComponent()
         let baseName = urls.count == 1
             ? first.deletingPathExtension().lastPathComponent
-            : "Archivo_\(urls.count)_elementos"
+            : localizedText(
+                es: "Archivo_\(urls.count)_elementos",
+                en: "Archive_\(urls.count)_items"
+            )
         let destURL = uniqueURL(in: parentDir, baseName: baseName, ext: format.rawValue)
 
-        progressHandler?(0.15, "Comprimiendo en .\(format.rawValue)…")
+        progressHandler?(0.15, localizedText(
+            es: "Comprimiendo en .\(format.rawValue)…",
+            en: "Compressing into .\(format.rawValue)…"
+        ))
 
         try await Task.detached(priority: .userInitiated) {
             let names = urls.map(\.lastPathComponent)
@@ -81,7 +94,10 @@ public enum ArchiveService {
             case .sevenZ:
                 guard let sevenZip = findExecutable(names: ["7zz", "7z", "7za"]) else {
                     throw NSError(domain: "ArchiveService", code: 2, userInfo: [
-                        NSLocalizedDescriptionKey: "Para crear archivos .7z instala p7zip/sevenzip (brew install sevenzip)."
+                        NSLocalizedDescriptionKey: localizedText(
+                            es: "Para crear archivos .7z instala p7zip/sevenzip (brew install sevenzip).",
+                            en: "To create .7z archives, install p7zip/sevenzip (brew install sevenzip)."
+                        )
                     ])
                 }
                 try runProcess(
@@ -92,7 +108,7 @@ public enum ArchiveService {
             }
         }.value
 
-        progressHandler?(1.0, "Completado")
+        progressHandler?(1.0, localizedText(es: "Completado", en: "Completed"))
         return destURL
     }
 
@@ -111,7 +127,10 @@ public enum ArchiveService {
             return archiveURL.deletingPathExtension().lastPathComponent
         }()
 
-        progressHandler?(0.15, "Extrayendo \(archiveURL.lastPathComponent)…")
+        progressHandler?(0.15, localizedText(
+            es: "Extrayendo \(archiveURL.lastPathComponent)…",
+            en: "Extracting \(archiveURL.lastPathComponent)…"
+        ))
 
         let createdURLs: [URL] = try await Task.detached(priority: .userInitiated) {
             let fm = FileManager.default
@@ -139,7 +158,10 @@ public enum ArchiveService {
             } else if archiveURL.pathExtension.lowercased() == "7z" {
                 guard let sevenZip = findExecutable(names: ["7zz", "7z", "7za", "unar"]) else {
                     throw NSError(domain: "ArchiveService", code: 3, userInfo: [
-                        NSLocalizedDescriptionKey: "Para extraer .7z instala sevenzip o unar (brew install sevenzip)."
+                        NSLocalizedDescriptionKey: localizedText(
+                            es: "Para extraer .7z instala sevenzip o unar (brew install sevenzip).",
+                            en: "To extract .7z archives, install sevenzip or unar (brew install sevenzip)."
+                        )
                     ])
                 }
                 if sevenZip.hasSuffix("unar") {
@@ -150,7 +172,10 @@ public enum ArchiveService {
             } else if archiveURL.pathExtension.lowercased() == "rar" {
                 guard let unrar = findExecutable(names: ["unrar", "unar", "7zz", "7z"]) else {
                     throw NSError(domain: "ArchiveService", code: 4, userInfo: [
-                        NSLocalizedDescriptionKey: "Para extraer .rar instala unar o rar (brew install unar)."
+                        NSLocalizedDescriptionKey: localizedText(
+                            es: "Para extraer .rar instala unar o rar (brew install unar).",
+                            en: "To extract .rar archives, install unar or rar (brew install unar)."
+                        )
                     ])
                 }
                 if unrar.hasSuffix("unar") {
@@ -160,7 +185,10 @@ public enum ArchiveService {
                 }
             } else {
                 throw NSError(domain: "ArchiveService", code: 5, userInfo: [
-                    NSLocalizedDescriptionKey: "Formato de archivo comprimido no soportado."
+                    NSLocalizedDescriptionKey: localizedText(
+                        es: "Formato de archivo comprimido no soportado.",
+                        en: "Unsupported archive format."
+                    )
                 ])
             }
 
@@ -196,7 +224,7 @@ public enum ArchiveService {
             return [containerURL]
         }.value
 
-        progressHandler?(1.0, "Completado")
+        progressHandler?(1.0, localizedText(es: "Completado", en: "Completed"))
         return createdURLs
     }
 
@@ -221,7 +249,12 @@ public enum ArchiveService {
             let errData = errPipe.fileHandleForReading.readDataToEndOfFile()
             let errMsg = String(data: errData, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
             throw NSError(domain: "ArchiveService", code: Int(process.terminationStatus), userInfo: [
-                NSLocalizedDescriptionKey: errMsg.isEmpty ? "Error al procesar el archivo comprimido." : errMsg
+                NSLocalizedDescriptionKey: errMsg.isEmpty
+                    ? localizedText(
+                        es: "Error al procesar el archivo comprimido.",
+                        en: "Error processing the archive."
+                    )
+                    : errMsg
             ])
         }
     }

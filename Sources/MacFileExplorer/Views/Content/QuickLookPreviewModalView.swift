@@ -546,6 +546,9 @@ public struct QuickLookPreviewModalView: View {
                     } else if let activeURL, RichCodePreviewSupport.supportsRichPreview(for: activeURL) {
                         RichCodePreviewView(fileURL: activeURL)
                             .id(item.id)
+                    } else if let activeURL, QuickActionsService.isPDFURL(activeURL) {
+                        PDFPreviewView(fileURL: activeURL)
+                            .id(item.id)
                     } else {
                         Color(nsColor: .underPageBackgroundColor)
                         NativeQLPreviewRepresentable(

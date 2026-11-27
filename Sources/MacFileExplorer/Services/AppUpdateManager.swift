@@ -13,13 +13,13 @@ public enum AppVersionInfo {
     public static var currentVersion: String {
         (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String)
             .flatMap { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : $0 }
-            ?? "2.7.0"
+            ?? "2.8.0"
     }
 
     public static var currentBuild: String {
         (Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String)
             .flatMap { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : $0 }
-            ?? "17"
+            ?? "18"
     }
 }
 
@@ -367,17 +367,80 @@ public enum GitHubUpdateParser {
         }
 
         let sectionText = String(sectionSlice)
-        guard let regex = try? NSRegularExpression(pattern: "\(key):\\s*\"([^\"]+)\"") else {
+        guard let regex = try? NSRegularExpression(pattern: "\(key):\\s*\"((?:[^\"\\\\]|\\\\.)+)\"") else {
             return nil
         }
         let range = NSRange(sectionText.startIndex..<sectionText.endIndex, in: sectionText)
         let matches = regex.matches(in: sectionText, range: range)
-        let titles = matches.prefix(6).compactMap { match -> String? in
+        let titles = matches.prefix(8).compactMap { match -> String? in
             guard let r = Range(match.range(at: 1), in: sectionText) else { return nil }
-            let value = String(sectionText[r]).trimmingCharacters(in: .whitespacesAndNewlines)
+            let value = String(sectionText[r])
+                .replacingOccurrences(of: "\\\"", with: "\"")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
             return value.isEmpty ? nil : "• \(value)"
         }
         return titles.isEmpty ? nil : titles.joined(separator: "\n")
+    }
+
+    /// Limpia sintaxis Markdown cruda (`[texto](url)`, `**negrita**`, encabezados `###`, enlaces boilerplate)
+    /// para mostrar notas de actualización claras y amigables para cualquier usuario.
+    public static func sanitizeReleaseNotesForDisplay(_ raw: String) -> String {
+        let markdownLinkRegex = try? NSRegularExpression(pattern: #"\[([^\]]+)\]\((https?://[^)]+)\)"#)
+        let rawLines = raw.components(separatedBy: .newlines)
+        var cleanedLines: [String] = []
+
+        for line in rawLines {
+            var trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmed.isEmpty || trimmed == "---" || trimmed == "***" { continue }
+
+            let lower = trimmed.lowercased()
+            // Omitir líneas boilerplate de enlaces o instrucciones repetitivas del README de GitHub
+            if lower.contains("sitio web y demos")
+                || lower.contains("historial de cambios")
+                || lower.contains("releases/readme.md")
+                || lower.contains("sha-256")
+                || lower.contains("shasum")
+                || lower.contains("xattr -dr")
+                || lower.hasPrefix("## instalación")
+                || lower.hasPrefix("## instalacion")
+                || lower.hasPrefix("## how to install")
+                || lower.hasPrefix("### instalación")
+                || lower.hasPrefix("```") {
+                continue
+            }
+
+            // Reemplazar enlaces Markdown `[label](url)` por solo `label`
+            if let regex = markdownLinkRegex {
+                let range = NSRange(trimmed.startIndex..<trimmed.endIndex, in: trimmed)
+                trimmed = regex.stringByReplacingMatches(in: trimmed, range: range, withTemplate: "$1")
+            }
+
+            // Limpiar marcadores de Markdown crudo
+            trimmed = trimmed
+                .replacingOccurrences(of: "**", with: "")
+                .replacingOccurrences(of: "__", with: "")
+                .replacingOccurrences(of: "`", with: "")
+
+            while trimmed.hasPrefix("#") {
+                trimmed.removeFirst()
+            }
+            trimmed = trimmed.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else { continue }
+
+            if trimmed.hasPrefix("- ") || trimmed.hasPrefix("* ") {
+                trimmed = "• " + String(trimmed.dropFirst(2)).trimmingCharacters(in: .whitespaces)
+            }
+
+            // Evitar líneas que sean únicamente una URL suelta
+            if trimmed.lowercased().hasPrefix("http://") || trimmed.lowercased().hasPrefix("https://") {
+                continue
+            }
+
+            cleanedLines.append(trimmed)
+            if cleanedLines.count >= 12 { break }
+        }
+
+        return cleanedLines.joined(separator: "\n")
     }
 
     private static func bestAsset(in assets: [GitHubReleaseDTO.AssetDTO]) -> AssetMatch? {
@@ -525,6 +588,7 @@ public final class AppUpdateManager {
 
         let bridge = DownloadDelegateBridge(
             destinationURL: destinationURL,
+            expectedFileSize: info.expectedFileSize,
             onProgress: { [weak self] written, totalExpected in
                 Task { @MainActor [weak self] in
                     guard let self else { return }
@@ -741,22 +805,29 @@ public final class AppUpdateManager {
             }
         }
 
-        if resolvedNotes == nil {
-            let owner = AppVersionInfo.repositoryOwner
-            let repo = AppVersionInfo.repositoryName
-            let rawNotesURLs = [
-                URL(string: "https://raw.githubusercontent.com/\(owner)/\(repo)/\(candidate.tagName)/Sources/MacFileExplorer/Models/ReleaseNotes.swift")!,
-                URL(string: "https://raw.githubusercontent.com/\(owner)/\(repo)/main/Sources/MacFileExplorer/Models/ReleaseNotes.swift")!
-            ]
-            let isSpanish = LocalizationManager.shared.effectiveLanguage == .spanish
-            for notesURL in rawNotesURLs {
-                if let data = await fetchData(from: notesURL, isGitHubAPI: false).data,
-                   let source = String(data: data, encoding: .utf8),
-                   let extracted = GitHubUpdateParser.extractLatestSectionTitles(fromReleaseNotesSwift: source, isSpanish: isSpanish) {
-                    resolvedNotes = extracted
-                    break
-                }
+        // Preferir siempre viñetas limpias en el idioma elegido por el usuario desde `ReleaseNotes.swift` remoto;
+        // si no está disponible, usar el cuerpo del release de GitHub saneado (sin Markdown crudo).
+        let owner = AppVersionInfo.repositoryOwner
+        let repo = AppVersionInfo.repositoryName
+        let rawNotesURLs = [
+            URL(string: "https://raw.githubusercontent.com/\(owner)/\(repo)/\(candidate.tagName)/Sources/MacFileExplorer/Models/ReleaseNotes.swift")!,
+            URL(string: "https://raw.githubusercontent.com/\(owner)/\(repo)/main/Sources/MacFileExplorer/Models/ReleaseNotes.swift")!
+        ]
+        let isSpanish = LocalizationManager.shared.effectiveLanguage == .spanish
+        var localizedBullets: String?
+        for notesURL in rawNotesURLs {
+            if let data = await fetchData(from: notesURL, isGitHubAPI: false).data,
+               let source = String(data: data, encoding: .utf8),
+               let extracted = GitHubUpdateParser.extractLatestSectionTitles(fromReleaseNotesSwift: source, isSpanish: isSpanish) {
+                localizedBullets = extracted
+                break
             }
+        }
+        if let localizedBullets, !localizedBullets.isEmpty {
+            resolvedNotes = localizedBullets
+        } else if let existingBody = resolvedNotes {
+            let sanitized = GitHubUpdateParser.sanitizeReleaseNotesForDisplay(existingBody)
+            resolvedNotes = sanitized.isEmpty ? nil : sanitized
         }
 
         return UpdateRemoteInfo(
@@ -852,6 +923,7 @@ public final class AppUpdateManager {
 /// descargado de forma sincrónica antes de que macOS elimine el archivo temporal.
 private final class DownloadDelegateBridge: NSObject, URLSessionDownloadDelegate, @unchecked Sendable {
     private let destinationURL: URL
+    private let expectedFileSize: Int64?
     private let onProgress: @Sendable (Int64, Int64) -> Void
     private let onCompletion: @Sendable (Result<URL, Error>) -> Void
 
@@ -860,10 +932,12 @@ private final class DownloadDelegateBridge: NSObject, URLSessionDownloadDelegate
 
     init(
         destinationURL: URL,
+        expectedFileSize: Int64?,
         onProgress: @escaping @Sendable (Int64, Int64) -> Void,
         onCompletion: @escaping @Sendable (Result<URL, Error>) -> Void
     ) {
         self.destinationURL = destinationURL
+        self.expectedFileSize = expectedFileSize
         self.onProgress = onProgress
         self.onCompletion = onCompletion
     }
@@ -915,6 +989,30 @@ private final class DownloadDelegateBridge: NSObject, URLSessionDownloadDelegate
                     ]
                 )
                 finishOnce(.failure(corruptError))
+                return
+            }
+
+            let resolvedExpectedSize: Int64
+            if let expectedFileSize, expectedFileSize > 0 {
+                resolvedExpectedSize = expectedFileSize
+            } else if let responseLength = downloadTask.response?.expectedContentLength, responseLength > 0 {
+                resolvedExpectedSize = responseLength
+            } else {
+                resolvedExpectedSize = 0
+            }
+
+            if resolvedExpectedSize > 0 && downloadedSize != resolvedExpectedSize {
+                let isES = LocalizationManager.currentLanguageIsSpanish()
+                let truncatedError = NSError(
+                    domain: "AppUpdateManager.Download",
+                    code: -3,
+                    userInfo: [
+                        NSLocalizedDescriptionKey: isES
+                            ? "La descarga quedó incompleta (\(downloadedSize) de \(resolvedExpectedSize) bytes). Intentá nuevamente."
+                            : "The downloaded update file is incomplete (\(downloadedSize) of \(resolvedExpectedSize) bytes). Please try again."
+                    ]
+                )
+                finishOnce(.failure(truncatedError))
                 return
             }
 

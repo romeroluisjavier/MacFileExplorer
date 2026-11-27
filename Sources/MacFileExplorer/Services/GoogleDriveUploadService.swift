@@ -1530,6 +1530,10 @@ public final class GoogleDriveSettingsWindowController: NSObject, NSWindowDelega
         created.makeKeyAndOrderFront(nil)
     }
 
+    public func refreshLocalizedTitle() {
+        window?.title = LocalizationManager.shared.text(es: "Configuración de «Enviar a Drive»", en: "Send to Drive Settings")
+    }
+
     public func windowWillClose(_ notification: Notification) {
         window?.contentView = nil
     }

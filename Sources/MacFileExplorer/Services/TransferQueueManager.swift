@@ -89,30 +89,36 @@ public final class TransferQueueManager {
 
     private init() {}
 
-    /// Calcula de forma asíncrona el tamaño total en bytes de una lista de URLs (archivos y carpetas).
+    /// Calcula de forma asíncrona el tamaño total en bytes de una lista de URLs (archivos, carpetas y paquetes).
     public static func calculateTotalBytes(of urls: [URL]) async -> Int64 {
         await Task.detached(priority: .userInitiated) {
             let fm = FileManager.default
             var total: Int64 = 0
             for rawURL in urls {
                 let url = rawURL.standardizedFileURL
-                if let vals = try? url.resourceValues(forKeys: [.isDirectoryKey, .isPackageKey, .fileSizeKey]),
-                   vals.isDirectory == true && vals.isPackage != true {
+                let vals = try? url.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey, .fileSizeKey])
+                if vals?.isSymbolicLink == true {
+                    if let size = vals?.fileSize {
+                        total += Int64(size)
+                    }
+                    continue
+                }
+                if vals?.isDirectory == true {
                     if let enumerator = fm.enumerator(
                         at: url,
-                        includingPropertiesForKeys: [.fileSizeKey, .isRegularFileKey],
-                        options: [.skipsPackageDescendants]
+                        includingPropertiesForKeys: [.fileSizeKey, .isRegularFileKey, .isSymbolicLinkKey],
+                        options: []
                     ) {
                         while let child = enumerator.nextObject() as? URL {
-                            if let childVals = try? child.resourceValues(forKeys: [.fileSizeKey, .isRegularFileKey]),
+                            if let childVals = try? child.resourceValues(forKeys: [.fileSizeKey, .isRegularFileKey, .isSymbolicLinkKey]),
+                               childVals.isSymbolicLink != true,
                                childVals.isRegularFile == true,
                                let size = childVals.fileSize {
                                 total += Int64(size)
                             }
                         }
                     }
-                } else if let vals = try? url.resourceValues(forKeys: [.fileSizeKey]),
-                          let size = vals.fileSize {
+                } else if let size = vals?.fileSize {
                     total += Int64(size)
                 }
             }
@@ -190,6 +196,7 @@ public final class TransferQueueManager {
 
         let task = Task { [weak self] in
             guard let self else { return }
+            var shouldKeepVisible = false
             do {
                 let created = try await self.executeTransfer(
                     job: job,
@@ -205,11 +212,22 @@ public final class TransferQueueManager {
                         handler(created)
                     }
                 }
+            } catch is CancellationError {
+                self.completionHandlers.removeValue(forKey: jobID)
+                if job.status != .cancelled {
+                    job.status = .cancelled
+                }
             } catch {
                 self.completionHandlers.removeValue(forKey: jobID)
+                if job.status != .cancelled && !Task.isCancelled {
+                    job.status = .failed(error.localizedDescription)
+                    shouldKeepVisible = true
+                }
             }
             self.activeTasks.removeValue(forKey: jobID)
-            self.jobs.removeAll { $0.id == jobID }
+            if !shouldKeepVisible {
+                self.jobs.removeAll { $0.id == jobID }
+            }
             self.startNextIfIdle()
         }
         activeTasks[jobID] = task
@@ -231,46 +249,92 @@ public final class TransferQueueManager {
                 originalName: source.lastPathComponent
             )
 
-            let vals = try? source.resourceValues(forKeys: [.isDirectoryKey, .isPackageKey])
-            let isFolder = (vals?.isDirectory == true) && (vals?.isPackage != true)
+            let vals = try? source.resourceValues(forKeys: [.isDirectoryKey, .isPackageKey, .isSymbolicLinkKey])
+            let isSymlink = vals?.isSymbolicLink == true
+            let isPackage = vals?.isPackage == true
+            let isFolder = (vals?.isDirectory == true) && !isPackage && !isSymlink
 
             if kind == .move, isSameVolume(source, destinationDirectory) {
-                await MainActor.run {
-                    job.currentFileName = source.lastPathComponent
-                }
+                job.currentFileName = source.lastPathComponent
                 try await Task.detached(priority: .userInitiated) {
                     try FileManager.default.moveItem(at: source, to: destURL)
                 }.value
                 let size = await Self.calculateTotalBytes(of: [destURL])
-                await MainActor.run {
-                    job.transferredBytes += size
-                }
+                job.transferredBytes += size
                 createdTopLevelURLs.append(destURL)
                 continue
             }
 
-            if isFolder {
+            if isSymlink || isPackage {
+                try await copyItemDirectly(from: source, to: destURL, job: job)
+            } else if isFolder {
                 try await copyDirectoryChunked(
                     from: source,
                     to: destURL,
                     job: job
                 )
-                if kind == .move {
-                    try? FileManager.default.removeItem(at: source)
-                }
             } else {
                 try await copyFileChunked(
                     from: source,
                     to: destURL,
                     job: job
                 )
-                if kind == .move {
-                    try? FileManager.default.removeItem(at: source)
-                }
+            }
+
+            if kind == .move {
+                try? await Task.detached(priority: .userInitiated) {
+                    try FileManager.default.removeItem(at: source)
+                }.value
             }
             createdTopLevelURLs.append(destURL)
         }
         return createdTopLevelURLs
+    }
+
+    private func copyItemDirectly(
+        from sourceURL: URL,
+        to destURL: URL,
+        job: TransferJob
+    ) async throws {
+        try await waitIfPausedOrCancelled(job: job)
+        job.currentFileName = sourceURL.lastPathComponent
+        let copiedBytes: Int64 = try await Task.detached(priority: .userInitiated) {
+            let fm = FileManager.default
+            try fm.createDirectory(at: destURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try fm.copyItem(at: sourceURL, to: destURL)
+            let vals = try? destURL.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey, .fileSizeKey])
+            if vals?.isSymbolicLink == true {
+                return Int64(vals?.fileSize ?? 0)
+            }
+            if vals?.isDirectory == true {
+                var total: Int64 = 0
+                if let enumerator = fm.enumerator(
+                    at: destURL,
+                    includingPropertiesForKeys: [.fileSizeKey, .isRegularFileKey, .isSymbolicLinkKey],
+                    options: []
+                ) {
+                    while let child = enumerator.nextObject() as? URL {
+                        if let cVals = try? child.resourceValues(forKeys: [.fileSizeKey, .isRegularFileKey, .isSymbolicLinkKey]),
+                           cVals.isSymbolicLink != true,
+                           cVals.isRegularFile == true,
+                           let sz = cVals.fileSize {
+                            total += Int64(sz)
+                        }
+                    }
+                }
+                return total
+            }
+            return Int64(vals?.fileSize ?? 0)
+        }.value
+        job.transferredBytes += copiedBytes
+    }
+
+    private struct DirectoryEntry: Sendable {
+        let sourceURL: URL
+        let relativePath: String
+        let isDirectory: Bool
+        let isPackage: Bool
+        let isSymbolicLink: Bool
     }
 
     private func copyDirectoryChunked(
@@ -278,34 +342,62 @@ public final class TransferQueueManager {
         to destDir: URL,
         job: TransferJob
     ) async throws {
-        let fm = FileManager.default
-        try fm.createDirectory(at: destDir, withIntermediateDirectories: true)
+        let entries: [DirectoryEntry] = try await Task.detached(priority: .userInitiated) {
+            let fm = FileManager.default
+            try fm.createDirectory(at: destDir, withIntermediateDirectories: true)
 
-        guard let enumerator = fm.enumerator(
-            at: sourceDir,
-            includingPropertiesForKeys: [.isDirectoryKey, .isPackageKey],
-            options: [.skipsPackageDescendants]
-        ) else {
-            return
-        }
+            guard let enumerator = fm.enumerator(
+                at: sourceDir,
+                includingPropertiesForKeys: [.isDirectoryKey, .isPackageKey, .isSymbolicLinkKey],
+                options: [.skipsPackageDescendants]
+            ) else {
+                return []
+            }
 
-        let sourcePath = sourceDir.path(percentEncoded: false)
-        while let child = enumerator.nextObject() as? URL {
+            let sourcePath = sourceDir.path(percentEncoded: false)
+            var collected: [DirectoryEntry] = []
+            while let child = enumerator.nextObject() as? URL {
+                let childPath = child.path(percentEncoded: false)
+                guard childPath.hasPrefix(sourcePath) else { continue }
+                var relative = String(childPath.dropFirst(sourcePath.count))
+                if relative.hasPrefix("/") { relative.removeFirst() }
+                guard !relative.isEmpty else { continue }
+
+                let vals = try? child.resourceValues(forKeys: [.isDirectoryKey, .isPackageKey, .isSymbolicLinkKey])
+                collected.append(
+                    DirectoryEntry(
+                        sourceURL: child,
+                        relativePath: relative,
+                        isDirectory: vals?.isDirectory == true,
+                        isPackage: vals?.isPackage == true,
+                        isSymbolicLink: vals?.isSymbolicLink == true
+                    )
+                )
+            }
+            return collected
+        }.value
+
+        for entry in entries {
             try await waitIfPausedOrCancelled(job: job)
-            let childPath = child.path(percentEncoded: false)
-            guard childPath.hasPrefix(sourcePath) else { continue }
-            var relative = String(childPath.dropFirst(sourcePath.count))
-            if relative.hasPrefix("/") { relative.removeFirst() }
-            let targetChild = destDir.appendingPathComponent(relative)
+            let targetChild = destDir.appendingPathComponent(entry.relativePath)
 
-            let vals = try? child.resourceValues(forKeys: [.isDirectoryKey, .isPackageKey])
-            if vals?.isDirectory == true && vals?.isPackage != true {
-                try fm.createDirectory(at: targetChild, withIntermediateDirectories: true)
+            if entry.isSymbolicLink || entry.isPackage {
+                try await copyItemDirectly(from: entry.sourceURL, to: targetChild, job: job)
+            } else if entry.isDirectory {
+                try await Task.detached(priority: .userInitiated) {
+                    try FileManager.default.createDirectory(at: targetChild, withIntermediateDirectories: true)
+                }.value
             } else {
-                try fm.createDirectory(at: targetChild.deletingLastPathComponent(), withIntermediateDirectories: true)
-                try await copyFileChunked(from: child, to: targetChild, job: job)
+                try await Task.detached(priority: .userInitiated) {
+                    try FileManager.default.createDirectory(at: targetChild.deletingLastPathComponent(), withIntermediateDirectories: true)
+                }.value
+                try await copyFileChunked(from: entry.sourceURL, to: targetChild, job: job)
             }
         }
+
+        await Task.detached(priority: .userInitiated) {
+            Self.preserveAttributes(from: sourceDir, to: destDir)
+        }.value
     }
 
     private func copyFileChunked(
@@ -313,23 +405,40 @@ public final class TransferQueueManager {
         to destURL: URL,
         job: TransferJob
     ) async throws {
-        await MainActor.run {
-            job.currentFileName = sourceURL.lastPathComponent
+        let vals = try? sourceURL.resourceValues(forKeys: [.isSymbolicLinkKey, .isPackageKey, .isDirectoryKey])
+        if vals?.isSymbolicLink == true || vals?.isPackage == true || vals?.isDirectory == true {
+            try await copyItemDirectly(from: sourceURL, to: destURL, job: job)
+            return
         }
 
-        let fm = FileManager.default
+        job.currentFileName = sourceURL.lastPathComponent
+
         let chunkSize = 4 * 1024 * 1024 // 4 MB por chunk para pausar/reanudar al instante
 
-        let readHandle = try FileHandle(forReadingFrom: sourceURL)
-        defer { try? readHandle.close() }
+        let (readHandle, writeHandle): (FileHandle, FileHandle) = try await Task.detached(priority: .userInitiated) {
+            let fm = FileManager.default
+            let rHandle = try FileHandle(forReadingFrom: sourceURL)
+            let destPath = destURL.path(percentEncoded: false)
+            if !fm.createFile(atPath: destPath, contents: nil) {
+                try? rHandle.close()
+                throw CocoaError(.fileWriteUnknown, userInfo: [NSFilePathErrorKey: destPath])
+            }
+            do {
+                let wHandle = try FileHandle(forWritingTo: destURL)
+                return (rHandle, wHandle)
+            } catch {
+                try? rHandle.close()
+                try? fm.removeItem(at: destURL)
+                throw error
+            }
+        }.value
 
-        fm.createFile(atPath: destURL.path(percentEncoded: false), contents: nil)
-        let writeHandle = try FileHandle(forWritingTo: destURL)
         var didComplete = false
         defer {
+            try? readHandle.close()
             try? writeHandle.close()
             if !didComplete {
-                try? fm.removeItem(at: destURL)
+                try? FileManager.default.removeItem(at: destURL)
             }
         }
 
@@ -344,12 +453,34 @@ public final class TransferQueueManager {
             try await Task.detached(priority: .userInitiated) {
                 try writeHandle.write(contentsOf: data)
             }.value
-            let chunkBytes = Int64(data.count)
-            await MainActor.run {
-                job.transferredBytes += chunkBytes
-            }
+            job.transferredBytes += Int64(data.count)
         }
         didComplete = true
+
+        try? writeHandle.close()
+        await Task.detached(priority: .userInitiated) {
+            Self.preserveAttributes(from: sourceURL, to: destURL)
+        }.value
+    }
+
+    private nonisolated static func preserveAttributes(from sourceURL: URL, to destURL: URL) {
+        let fm = FileManager.default
+        let srcPath = sourceURL.path(percentEncoded: false)
+        let dstPath = destURL.path(percentEncoded: false)
+        guard let srcAttrs = try? fm.attributesOfItem(atPath: srcPath) else { return }
+        var preserved: [FileAttributeKey: Any] = [:]
+        if let perms = srcAttrs[.posixPermissions] {
+            preserved[.posixPermissions] = perms
+        }
+        if let creation = srcAttrs[.creationDate] {
+            preserved[.creationDate] = creation
+        }
+        if let modification = srcAttrs[.modificationDate] {
+            preserved[.modificationDate] = modification
+        }
+        if !preserved.isEmpty {
+            try? fm.setAttributes(preserved, ofItemAtPath: dstPath)
+        }
     }
 
     private func waitIfPausedOrCancelled(job: TransferJob) async throws {

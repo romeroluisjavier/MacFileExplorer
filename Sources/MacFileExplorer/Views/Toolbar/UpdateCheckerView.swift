@@ -3,31 +3,96 @@ import SwiftUI
 
 /// Controlador singleton de la ventana nativa de búsqueda y descarga de actualizaciones desde GitHub.
 @MainActor
-public final class UpdateWindowController {
+public final class UpdateWindowController: NSObject, NSWindowDelegate {
     public static let shared = UpdateWindowController()
 
     private var window: NSWindow?
+    private var lastAppliedStateKind: String = ""
 
-    private init() {}
+    private override init() {
+        super.init()
+    }
 
     public func refreshLocalizedTitle() {
-        window?.title = LocalizationManager.shared.text(
-            es: "Buscar actualizaciones",
-            en: "Check for Updates"
+        window?.title = localizedWindowTitle()
+    }
+
+    private func localizedWindowTitle() -> String {
+        LocalizationManager.shared.text(
+            es: "Actualización de MacFileExplorer",
+            en: "MacFileExplorer Update"
         )
+    }
+
+    /// Calcula el alto ideal de la ventana según el estado actual para evitar cualquier recorte vertical.
+    private static func idealContentSize(for state: AppUpdateState) -> NSSize {
+        let width: CGFloat = 540
+        switch state {
+        case .idle, .checking, .upToDate:
+            return NSSize(width: width, height: 218)
+        case .failed:
+            return NSSize(width: width, height: 268)
+        case .updateAvailable(let info), .updateAvailableNoInstaller(let info):
+            let hasNotes = !(info.releaseNotesText?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
+            return NSSize(width: width, height: hasNotes ? 406 : 246)
+        case .downloading(let info, _, _, _):
+            let hasNotes = !(info.releaseNotesText?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
+            return NSSize(width: width, height: hasNotes ? 430 : 272)
+        case .downloaded(let info, _, _):
+            let hasNotes = !(info.releaseNotesText?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
+            return NSSize(width: width, height: hasNotes ? 470 : 320)
+        }
+    }
+
+    private static func stateSizeKey(for state: AppUpdateState) -> String {
+        switch state {
+        case .idle: return "idle"
+        case .checking: return "checking"
+        case .upToDate: return "upToDate"
+        case .failed: return "failed"
+        case .updateAvailable(let info): return "avail_\(info.releaseNotesText != nil)"
+        case .updateAvailableNoInstaller(let info): return "noinst_\(info.releaseNotesText != nil)"
+        case .downloading(let info, _, _, _): return "dl_\(info.releaseNotesText != nil)"
+        case .downloaded(let info, _, _): return "done_\(info.releaseNotesText != nil)"
+        }
+    }
+
+    /// Ajusta suavemente la altura de la ventana manteniendo fijo el borde superior y centrado horizontal.
+    public func resizeWindowIfNeeded(for state: AppUpdateState, animated: Bool = true) {
+        guard let window else { return }
+        let key = Self.stateSizeKey(for: state)
+        guard key != lastAppliedStateKind else { return }
+        lastAppliedStateKind = key
+
+        let targetContent = Self.idealContentSize(for: state)
+        let targetFrameSize = window.frameRect(forContentRect: NSRect(origin: .zero, size: targetContent)).size
+        var nextFrame = window.frame
+        let heightDelta = targetFrameSize.height - nextFrame.height
+        let widthDelta = targetFrameSize.width - nextFrame.width
+        nextFrame.origin.y -= heightDelta
+        nextFrame.origin.x -= widthDelta * 0.5
+        nextFrame.size = targetFrameSize
+
+        if let visible = window.screen?.visibleFrame ?? NSScreen.main?.visibleFrame {
+            if nextFrame.minY < visible.minY + 12 {
+                nextFrame.origin.y = visible.minY + 12
+            }
+            if nextFrame.maxY > visible.maxY - 12 {
+                nextFrame.origin.y = visible.maxY - 12 - nextFrame.height
+            }
+        }
+
+        window.setFrame(nextFrame, display: true, animate: animated)
     }
 
     /// Muestra la ventana de actualizaciones (sin reiniciar si ya está comprobando o descargando).
     public func show() {
-        let title = LocalizationManager.shared.text(
-            es: "Buscar actualizaciones",
-            en: "Check for Updates"
-        )
-
+        let title = localizedWindowTitle()
         NSApplication.shared.activate(ignoringOtherApps: true)
 
         if let existingWindow = window {
             existingWindow.title = title
+            resizeWindowIfNeeded(for: AppUpdateManager.shared.state, animated: false)
             if !existingWindow.isVisible {
                 existingWindow.center()
             }
@@ -35,25 +100,33 @@ public final class UpdateWindowController {
             return
         }
 
+        let initialSize = Self.idealContentSize(for: AppUpdateManager.shared.state)
         let createdWindow = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 490, height: 220),
-            styleMask: [.titled, .closable, .fullSizeContentView],
+            contentRect: NSRect(origin: .zero, size: initialSize),
+            styleMask: [.titled, .closable, .resizable],
             backing: .buffered,
             defer: false
         )
+        createdWindow.delegate = self
         createdWindow.title = title
-        createdWindow.titlebarAppearsTransparent = true
-        createdWindow.titleVisibility = .hidden
+        createdWindow.minSize = NSSize(width: 500, height: 210)
+        createdWindow.maxSize = NSSize(width: 720, height: 680)
         createdWindow.isMovableByWindowBackground = true
         createdWindow.isReleasedWhenClosed = false
+        createdWindow.tabbingMode = .disallowed
 
         let hostingView = NSHostingView(
-            rootView: UpdateCheckerView(onClose: { [weak self] in
-                self?.close()
-            })
+            rootView: UpdateCheckerView(
+                onClose: { [weak self] in
+                    self?.close()
+                },
+                onStateChanged: { [weak self] newState in
+                    self?.resizeWindowIfNeeded(for: newState, animated: true)
+                }
+            )
         )
-        hostingView.sizingOptions = [.intrinsicContentSize]
         createdWindow.contentView = hostingView
+        lastAppliedStateKind = Self.stateSizeKey(for: AppUpdateManager.shared.state)
         createdWindow.center()
         createdWindow.makeKeyAndOrderFront(nil)
         self.window = createdWindow
@@ -77,53 +150,82 @@ public final class UpdateWindowController {
     }
 }
 
-/// Vista SwiftUI nativa para consultar GitHub, mostrar novedades y descargar automáticamente `.dmg`.
+/// Vista SwiftUI nativa para consultar GitHub, mostrar novedades legibles y descargar automáticamente `.dmg`.
 public struct UpdateCheckerView: View {
     @Environment(\.colorScheme) private var colorScheme
     @Bindable private var loc = LocalizationManager.shared
     @Bindable private var manager = AppUpdateManager.shared
 
     private let onClose: () -> Void
+    private let onStateChanged: ((AppUpdateState) -> Void)?
 
-    public init(onClose: @escaping () -> Void) {
+    public init(
+        onClose: @escaping () -> Void,
+        onStateChanged: ((AppUpdateState) -> Void)? = nil
+    ) {
         self.onClose = onClose
+        self.onStateChanged = onStateChanged
     }
 
     public var body: some View {
         VStack(alignment: .leading, spacing: 0) {
+            // Encabezado limpio con ícono, título, píldora de versión y subtítulo
             HStack(alignment: .top, spacing: 16) {
                 appIconWithBadge
                     .padding(.top, 2)
 
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(headerTitle)
-                        .font(.system(size: 14.5, weight: .semibold))
-                        .foregroundStyle(.primary)
+                VStack(alignment: .leading, spacing: 5) {
+                    HStack(alignment: .center, spacing: 8) {
+                        Text(headerTitle)
+                            .font(.system(size: 15.5, weight: .bold))
+                            .foregroundStyle(.primary)
+                            .lineLimit(2)
+
+                        if let badgeText = versionTransitionBadge {
+                            Text(badgeText)
+                                .font(.system(size: 10.5, weight: .semibold, design: .monospaced))
+                                .foregroundStyle(Color.accentColor)
+                                .padding(.horizontal, 7.5)
+                                .padding(.vertical, 2.5)
+                                .background(
+                                    Capsule(style: .continuous)
+                                        .fill(Color.accentColor.opacity(0.13))
+                                )
+                                .fixedSize()
+                        }
+                    }
 
                     Text(headerSubtitle)
                         .font(.system(size: 12))
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                         .lineSpacing(1.5)
-
-                    detailContent
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             .padding(.horizontal, 22)
-            .padding(.top, 26)
-            .padding(.bottom, 18)
+            .padding(.top, 18)
+            .padding(.bottom, 14)
+
+            // Cuerpo principal adaptable (nunca recorta el encabezado ni el pie)
+            detailContent
+                .padding(.horizontal, 22)
+                .padding(.bottom, 14)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
 
             Divider()
 
+            // Barra inferior de acciones siempre visible y anclada abajo
             footerButtons
                 .padding(.horizontal, 20)
                 .padding(.vertical, 12)
-                .background(Color(nsColor: .windowBackgroundColor).opacity(0.6))
+                .background(Color(nsColor: .windowBackgroundColor).opacity(0.65))
         }
-        .frame(width: 490)
-        .fixedSize(horizontal: false, vertical: true)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(nsColor: .windowBackgroundColor))
+        .onChange(of: manager.state) { _, newState in
+            onStateChanged?(newState)
+        }
         .onExitCommand {
             if !manager.isBusy {
                 onClose()
@@ -133,6 +235,19 @@ public struct UpdateCheckerView: View {
 
     // MARK: - Subvistas
 
+    private var versionTransitionBadge: String? {
+        let current = AppVersionInfo.currentVersion
+        switch manager.state {
+        case .updateAvailable(let info),
+             .downloading(let info, _, _, _),
+             .downloaded(let info, _, _),
+             .updateAvailableNoInstaller(let info):
+            return "v\(current) → v\(info.versionString)"
+        default:
+            return nil
+        }
+    }
+
     private var appIconWithBadge: some View {
         ZStack(alignment: .bottomTrailing) {
             Group {
@@ -141,18 +256,18 @@ public struct UpdateCheckerView: View {
                         .resizable()
                         .interpolation(.high)
                         .scaledToFit()
-                        .frame(width: 56, height: 56)
+                        .frame(width: 54, height: 54)
                 } else {
                     Image(systemName: "folder.fill.badge.gearshape")
-                        .font(.system(size: 36, weight: .semibold))
+                        .font(.system(size: 34, weight: .semibold))
                         .foregroundStyle(Color.accentColor)
-                        .frame(width: 56, height: 56)
+                        .frame(width: 54, height: 54)
                 }
             }
 
             if let badge = statusBadge {
                 Image(systemName: badge.symbol)
-                    .font(.system(size: 12, weight: .bold))
+                    .font(.system(size: 11.5, weight: .bold))
                     .foregroundStyle(.white)
                     .frame(width: 22, height: 22)
                     .background(
@@ -166,7 +281,7 @@ public struct UpdateCheckerView: View {
                     .offset(x: 4, y: 4)
             }
         }
-        .frame(width: 60, height: 60)
+        .frame(width: 58, height: 58)
     }
 
     private var statusBadge: (symbol: String, color: Color)? {
@@ -193,161 +308,234 @@ public struct UpdateCheckerView: View {
             EmptyView()
 
         case .checking:
-            HStack(spacing: 8) {
+            HStack(spacing: 9) {
                 ProgressView()
                     .controlSize(.small)
                 Text(loc.text(
-                    es: "Conectando con github.com/\(AppVersionInfo.repositoryOwner)/\(AppVersionInfo.repositoryName)…",
-                    en: "Connecting to github.com/\(AppVersionInfo.repositoryOwner)/\(AppVersionInfo.repositoryName)…"
+                    es: "Consultando la última versión publicada en GitHub…",
+                    en: "Checking the latest published release on GitHub…"
                 ))
-                .font(.system(size: 11))
-                .foregroundStyle(.tertiary)
+                .font(.system(size: 12))
+                .foregroundStyle(.secondary)
             }
-            .padding(.top, 4)
+            .padding(11)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 9, style: .continuous)
+                    .fill(Color.primary.opacity(0.04))
+            )
 
         case .upToDate(_, let latestKnown):
             if let latestKnown {
-                Text(loc.text(
-                    es: "Última versión publicada: v\(latestKnown.versionString)",
-                    en: "Latest published version: v\(latestKnown.versionString)"
-                ))
-                .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(.tertiary)
-                .padding(.top, 2)
+                HStack(spacing: 8) {
+                    Image(systemName: "checkmark.seal.fill")
+                        .foregroundStyle(.green)
+                    Text(loc.text(
+                        es: "Ya tenés la última versión publicada (v\(latestKnown.versionString)).",
+                        en: "You already have the latest published version (v\(latestKnown.versionString))."
+                    ))
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(.secondary)
+                }
+                .padding(10)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(
+                    RoundedRectangle(cornerRadius: 9, style: .continuous)
+                        .fill(Color.green.opacity(0.08))
+                )
             }
 
         case .updateAvailable(let info):
             releaseNotesBox(info.releaseNotesText)
 
         case .downloading(let info, let downloadedBytes, let totalBytes, let progress):
-            VStack(alignment: .leading, spacing: 6) {
-                if let progress {
-                    ProgressView(value: progress, total: 1.0)
-                        .progressViewStyle(.linear)
-                        .controlSize(.small)
-                } else {
-                    ProgressView()
-                        .progressViewStyle(.linear)
-                        .controlSize(.small)
-                }
+            VStack(alignment: .leading, spacing: 10) {
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        HStack(spacing: 6) {
+                            Image(systemName: "arrow.down.circle.fill")
+                                .font(.system(size: 12))
+                                .foregroundStyle(Color.accentColor)
+                            Text(info.installerFileName ?? "MacFileExplorer-\(info.versionString).dmg")
+                                .font(.system(size: 12, weight: .semibold))
+                                .lineLimit(1)
+                                .truncationMode(.middle)
+                        }
+                        Spacer()
+                        if let progress {
+                            Text("\(Int((progress * 100).rounded()))%")
+                                .font(.system(size: 12, weight: .bold).monospacedDigit())
+                                .foregroundStyle(Color.accentColor)
+                        }
+                    }
 
-                HStack {
+                    if let progress {
+                        ProgressView(value: progress, total: 1.0)
+                            .progressViewStyle(.linear)
+                            .controlSize(.regular)
+                    } else {
+                        ProgressView()
+                            .progressViewStyle(.linear)
+                            .controlSize(.regular)
+                    }
+
                     Text(byteProgressText(downloaded: downloadedBytes, total: totalBytes))
                         .font(.system(size: 11).monospacedDigit())
                         .foregroundStyle(.secondary)
-
-                    Spacer()
-
-                    if let progress {
-                        Text("\(Int((progress * 100).rounded()))%")
-                            .font(.system(size: 11, weight: .semibold).monospacedDigit())
-                            .foregroundStyle(Color.accentColor)
-                    }
                 }
+                .padding(11)
+                .background(
+                    RoundedRectangle(cornerRadius: 9, style: .continuous)
+                        .fill(Color.accentColor.opacity(0.06))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 9, style: .continuous)
+                                .strokeBorder(Color.accentColor.opacity(0.18), lineWidth: 0.8)
+                        )
+                )
 
                 releaseNotesBox(info.releaseNotesText)
             }
-            .padding(.top, 4)
 
         case .downloaded(let info, let fileURL, let reusedExisting):
-            VStack(alignment: .leading, spacing: 8) {
-                HStack(spacing: 6) {
+            VStack(alignment: .leading, spacing: 10) {
+                // Tarjeta del archivo descargado
+                HStack(spacing: 8) {
                     Image(systemName: "externaldrive.fill.badge.checkmark")
-                        .font(.system(size: 11.5))
+                        .font(.system(size: 13.5))
                         .foregroundStyle(.green)
 
-                    Text(fileURL.lastPathComponent)
-                        .font(.system(size: 11.5, weight: .semibold))
-                        .foregroundStyle(.primary)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
+                    VStack(alignment: .leading, spacing: 1) {
+                        HStack(spacing: 6) {
+                            Text(fileURL.lastPathComponent)
+                                .font(.system(size: 12.2, weight: .semibold))
+                                .foregroundStyle(.primary)
+                                .lineLimit(1)
+                                .truncationMode(.middle)
 
-                    if let sizeText = formattedFileSize(for: fileURL, fallback: info.expectedFileSize) {
-                        Text("(\(sizeText))")
-                            .font(.system(size: 11).monospacedDigit())
-                            .foregroundStyle(.secondary)
+                            if let sizeText = formattedFileSize(for: fileURL, fallback: info.expectedFileSize) {
+                                Text("(\(sizeText))")
+                                    .font(.system(size: 11).monospacedDigit())
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        Text(loc.text(
+                            es: reusedExisting ? "Ya guardado en tu carpeta Descargas" : "Descargado en tu carpeta Descargas",
+                            en: reusedExisting ? "Already saved in your Downloads folder" : "Saved to your Downloads folder"
+                        ))
+                        .font(.system(size: 10.8))
+                        .foregroundStyle(.secondary)
                     }
 
-                    Spacer(minLength: 4)
+                    Spacer(minLength: 6)
 
                     Button {
                         manager.downloadUpdate(info, forceRedownload: true)
                     } label: {
                         Image(systemName: "arrow.clockwise")
-                            .font(.system(size: 11, weight: .medium))
+                            .font(.system(size: 11.5, weight: .medium))
                             .foregroundStyle(.secondary)
+                            .frame(width: 24, height: 24)
+                            .background(Circle().fill(Color.primary.opacity(0.06)))
                     }
                     .buttonStyle(.plain)
                     .help(loc.text(es: "Volver a descargar", en: "Re-download"))
                 }
-                .padding(.horizontal, 9)
-                .padding(.vertical, 5)
+                .padding(.horizontal, 11)
+                .padding(.vertical, 8)
                 .background(
-                    RoundedRectangle(cornerRadius: 7, style: .continuous)
-                        .fill(Color.primary.opacity(0.05))
+                    RoundedRectangle(cornerRadius: 9, style: .continuous)
+                        .fill(Color.green.opacity(0.08))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 9, style: .continuous)
+                                .strokeBorder(Color.green.opacity(0.24), lineWidth: 0.8)
+                        )
                 )
 
-                Text(loc.text(
-                    es: reusedExisting
-                        ? "Ya existía en tu carpeta Descargas. Abre el .dmg y arrastra MacFileExplorer a Aplicaciones."
-                        : "Guardado en ~/Downloads. Abre el .dmg y arrastra MacFileExplorer a Aplicaciones para instalar.",
-                    en: reusedExisting
-                        ? "Already saved in Downloads. Open the .dmg and drag MacFileExplorer to Applications."
-                        : "Saved to ~/Downloads. Open the .dmg and drag MacFileExplorer to Applications to install."
-                ))
-                .font(.system(size: 11))
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
+                // Pasos simples para instalar en 2 clics
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(loc.text(es: "Cómo actualizar en 2 pasos:", en: "How to install in 2 quick steps:"))
+                        .font(.system(size: 11.5, weight: .semibold))
+                        .foregroundStyle(.primary)
+                    Text(loc.text(
+                        es: "1. Hacé clic en «Abrir instalador (.dmg)» abajo.\n2. Hacé clic derecho → Abrir en «Instalar MacFileExplorer.command» (o arrastrá la app a Aplicaciones).",
+                        en: "1. Click \"Open Installer (.dmg)\" below.\n2. Right-click → Open \"Instalar MacFileExplorer.command\" (or drag the app to Applications)."
+                    ))
+                    .font(.system(size: 11.3))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .lineSpacing(2)
+                }
+                .padding(.horizontal, 11)
+                .padding(.vertical, 8)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(
+                    RoundedRectangle(cornerRadius: 9, style: .continuous)
+                        .fill(Color.primary.opacity(0.035))
+                )
 
                 releaseNotesBox(info.releaseNotesText)
             }
-            .padding(.top, 4)
 
         case .updateAvailableNoInstaller(let info):
             releaseNotesBox(info.releaseNotesText)
 
         case .failed(let message):
-            Text(message)
-                .font(.system(size: 11.5))
-                .foregroundStyle(.red)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(8)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(
-                    RoundedRectangle(cornerRadius: 7, style: .continuous)
-                        .fill(Color.red.opacity(0.08))
-                )
-                .padding(.top, 2)
+            HStack(alignment: .top, spacing: 8) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundStyle(.red)
+                    .padding(.top, 1)
+                Text(message)
+                    .font(.system(size: 11.8))
+                    .foregroundStyle(.red)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(10)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 9, style: .continuous)
+                    .fill(Color.red.opacity(0.08))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 9, style: .continuous)
+                            .strokeBorder(Color.red.opacity(0.20), lineWidth: 0.8)
+                    )
+            )
         }
     }
 
     @ViewBuilder
     private func releaseNotesBox(_ notes: String?) -> some View {
-        if let notes, !notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(loc.text(es: "Novedades:", en: "What's new:"))
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(.secondary)
+        let cleaned = notes.map { GitHubUpdateParser.sanitizeReleaseNotesForDisplay($0) } ?? ""
+        if !cleaned.isEmpty {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 5) {
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 10.5, weight: .semibold))
+                        .foregroundStyle(Color.accentColor)
+                    Text(loc.text(es: "Qué trae de nuevo", en: "What's new"))
+                        .font(.system(size: 11.5, weight: .semibold))
+                        .foregroundStyle(.primary)
+                }
 
-                ScrollView {
-                    Text(notes)
-                        .font(.system(size: 11))
+                ScrollView(.vertical, showsIndicators: true) {
+                    Text(cleaned)
+                        .font(.system(size: 11.5))
                         .foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .lineSpacing(2)
+                        .lineSpacing(3)
+                        .textSelection(.enabled)
                 }
-                .frame(maxHeight: 92)
+                .frame(minHeight: 72, maxHeight: .infinity)
             }
-            .padding(9)
+            .padding(11)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .background(
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                RoundedRectangle(cornerRadius: 9, style: .continuous)
                     .fill(Color.primary.opacity(0.035))
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .strokeBorder(Color.primary.opacity(0.07), lineWidth: 0.7)
+                RoundedRectangle(cornerRadius: 9, style: .continuous)
+                    .strokeBorder(Color.primary.opacity(0.08), lineWidth: 0.8)
             )
-            .padding(.top, 4)
         }
     }
 
@@ -460,9 +648,9 @@ public struct UpdateCheckerView: View {
         case .idle:
             return loc.text(es: "Buscar actualizaciones", en: "Check for Updates")
         case .checking:
-            return loc.text(es: "Buscando actualizaciones…", en: "Checking for Upgrades…")
+            return loc.text(es: "Buscando actualizaciones…", en: "Checking for Updates…")
         case .upToDate:
-            return loc.text(es: "Estás al día", en: "You're up to date")
+            return loc.text(es: "¡Estás al día!", en: "You're Up to Date!")
         case .updateAvailable(let info):
             return loc.text(
                 es: "Nueva versión \(info.versionString) disponible",
@@ -470,13 +658,13 @@ public struct UpdateCheckerView: View {
             )
         case .downloading(let info, _, _, _):
             return loc.text(
-                es: "Descargando versión \(info.versionString)…",
-                en: "Downloading Version \(info.versionString)…"
+                es: "Descargando MacFileExplorer \(info.versionString)…",
+                en: "Downloading MacFileExplorer \(info.versionString)…"
             )
         case .downloaded(let info, _, _):
             return loc.text(
-                es: "Actualización v\(info.versionString) lista",
-                en: "Update v\(info.versionString) Ready"
+                es: "¡Actualización v\(info.versionString) lista!",
+                en: "Update v\(info.versionString) Ready!"
             )
         case .updateAvailableNoInstaller(let info):
             return loc.text(
@@ -485,54 +673,58 @@ public struct UpdateCheckerView: View {
             )
         case .failed:
             return loc.text(
-                es: "Error al buscar actualizaciones",
-                en: "Upgrade Check Failed"
+                es: "No se pudo comprobar actualizaciones",
+                en: "Update Check Failed"
             )
         }
     }
 
     private var headerSubtitle: String {
-        let installed = "\(AppVersionInfo.currentVersion) (Build \(AppVersionInfo.currentBuild))"
+        let installed = "v\(AppVersionInfo.currentVersion) (Build \(AppVersionInfo.currentBuild))"
         switch manager.state {
         case .idle:
             return loc.text(
-                es: "Versión instalada: \(installed). Comprobará si hay un nuevo instalador en GitHub.",
-                en: "Installed version: \(installed). Checks GitHub for a newer release installer."
+                es: "Versión instalada: \(installed). Comprobará si hay una versión nueva lista para instalar.",
+                en: "Installed version: \(installed). Checks GitHub for a newer installer."
             )
         case .checking:
             return loc.text(
-                es: "Versión actual: \(installed)",
-                en: "Current version: \(installed)"
+                es: "Versión instalada actualmente: \(installed).",
+                en: "Currently installed version: \(installed)."
             )
         case .upToDate:
             return loc.text(
-                es: "MacFileExplorer \(installed) es la versión más reciente disponible en el repositorio.",
-                en: "MacFileExplorer \(installed) is the latest version available in the GitHub repository."
+                es: "MacFileExplorer \(installed) es la versión más reciente disponible.",
+                en: "MacFileExplorer \(installed) is the latest available version."
             )
         case .updateAvailable(let info):
             return loc.text(
-                es: "Se encontró la versión \(info.versionString) (tienes instalada la \(AppVersionInfo.currentVersion)).",
-                en: "Version \(info.versionString) is available (currently installed: \(AppVersionInfo.currentVersion))."
+                es: "Hay una nueva versión lista para descargar (tenés instalada la v\(AppVersionInfo.currentVersion)).",
+                en: "Version \(info.versionString) is ready to download (you currently have v\(AppVersionInfo.currentVersion))."
             )
         case .downloading(let info, _, _, _):
             return loc.text(
-                es: "Descargando \(info.installerFileName ?? "instalador") desde GitHub (actual: \(AppVersionInfo.currentVersion))…",
-                en: "Downloading \(info.installerFileName ?? "installer") from GitHub (current: \(AppVersionInfo.currentVersion))…"
+                es: "Descargando el instalador oficial v\(info.versionString) desde GitHub…",
+                en: "Downloading the official v\(info.versionString) installer from GitHub…"
             )
-        case .downloaded(let info, _, _):
+        case .downloaded(let info, _, let reusedExisting):
             return loc.text(
-                es: "Versión \(info.versionString) descargada correctamente desde GitHub.",
-                en: "Version \(info.versionString) downloaded successfully from GitHub."
+                es: reusedExisting
+                    ? "El instalador de la versión \(info.versionString) ya está listo en tu Mac."
+                    : "La versión \(info.versionString) se descargó correctamente y está lista para instalar.",
+                en: reusedExisting
+                    ? "The version \(info.versionString) installer is ready on your Mac."
+                    : "Version \(info.versionString) downloaded successfully and is ready to install."
             )
         case .updateAvailableNoInstaller(let info):
             return loc.text(
-                es: "La versión \(info.versionString) existe en GitHub (actual: \(AppVersionInfo.currentVersion)), pero aún no tiene un paquete .dmg disponible para descarga directa.",
-                en: "Version \(info.versionString) exists on GitHub (current: \(AppVersionInfo.currentVersion)), but no .dmg installer is published for it yet."
+                es: "La versión \(info.versionString) ya figura en GitHub, pero su archivo .dmg todavía se está publicando.",
+                en: "Version \(info.versionString) is live on GitHub, but its .dmg installer hasn't been published yet."
             )
         case .failed:
             return loc.text(
-                es: "No se pudo completar la operación para la versión actual (\(installed)).",
-                en: "Could not complete the check for your current version (\(installed))."
+                es: "No se pudo completar la consulta para tu versión actual (\(installed)).",
+                en: "Could not complete the update check for your current version (\(installed))."
             )
         }
     }

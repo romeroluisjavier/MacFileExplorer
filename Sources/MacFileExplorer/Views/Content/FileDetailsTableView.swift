@@ -9,7 +9,7 @@ public struct FileDetailsTableView: View {
     @Bindable private var columnPrefs: DetailsColumnPreferences = .shared
     @Bindable private var listIconPrefs: ListIconPreferences = .shared
 
-    @ViewState private var itemFrames: [FileItem.ID: CGRect] = [:]
+    @ViewState private var itemFrameStore = ItemFrameStore()
     @ViewState private var dragStartPoint: CGPoint? = nil
     @ViewState private var dragCurrentPoint: CGPoint? = nil
     @ViewState private var ignoredRubberBandStart: CGPoint? = nil
@@ -53,6 +53,9 @@ public struct FileDetailsTableView: View {
                                     FileDetailsRowView(
                                         item: item,
                                         viewModel: viewModel,
+                                        isSelected: viewModel.selectedItemIDs.contains(item.id),
+                                        isRenaming: viewModel.renamingItemID == item.id,
+                                        isCut: viewModel.clipboardManager.isCut(item),
                                         dateColumnWidth: dateColumnWidth,
                                         kindColumnWidth: kindColumnWidth,
                                         sizeColumnWidth: sizeColumnWidth,
@@ -76,11 +79,11 @@ public struct FileDetailsTableView: View {
                             RubberBandSelectionOverlay(rect: currentDragRect)
                         }
                         .background(
-                            NativeFileDragCanvas(viewModel: viewModel, itemFrames: itemFrames)
+                            LiveFileDragCanvas(viewModel: viewModel, frameStore: itemFrameStore)
                         )
                         .coordinateSpace(name: coordinateSpaceName)
                         .onPreferenceChange(ItemFramePreferenceKey.self) { frames in
-                            itemFrames = frames
+                            itemFrameStore.update(frames)
                         }
                         .gesture(rubberBandDragGesture)
                     }
@@ -230,7 +233,7 @@ public struct FileDetailsTableView: View {
                     if ignoredRubberBandStart == value.startLocation {
                         return
                     }
-                    if DragDropOperationHelper.isPoint(value.startLocation, insideAny: itemFrames) {
+                    if DragDropOperationHelper.isPoint(value.startLocation, insideAny: itemFrameStore.frames) {
                         ignoredRubberBandStart = value.startLocation
                         return
                     }
@@ -247,7 +250,7 @@ public struct FileDetailsTableView: View {
 
                 guard let rect = currentDragRect else { return }
                 var matchingIDs = initialSelectionBeforeDrag
-                for (id, frame) in itemFrames where rect.intersects(frame) {
+                for (id, frame) in itemFrameStore.frames where rect.intersects(frame) {
                     matchingIDs.insert(id)
                 }
                 viewModel.selectedItemIDs = matchingIDs
@@ -393,7 +396,10 @@ private struct ListRowThumbnailTaskKey: Equatable {
 
 private struct FileDetailsRowView: View {
     let item: FileItem
-    @Bindable var viewModel: ExplorerViewModel
+    let viewModel: ExplorerViewModel
+    let isSelected: Bool
+    let isRenaming: Bool
+    let isCut: Bool
     let dateColumnWidth: CGFloat
     let kindColumnWidth: CGFloat
     let sizeColumnWidth: CGFloat
@@ -404,18 +410,6 @@ private struct FileDetailsRowView: View {
     @ViewState private var loadedThumbnail: NSImage? = nil
 
     private var loc: LocalizationManager { LocalizationManager.shared }
-
-    private var isSelected: Bool {
-        viewModel.selectedItemIDs.contains(item.id)
-    }
-
-    private var isRenaming: Bool {
-        viewModel.renamingItemID == item.id
-    }
-
-    private var isCut: Bool {
-        viewModel.clipboardManager.isCut(item)
-    }
 
     private var effectiveThumbnail: NSImage? {
         guard listIconMode == .thumbnail else { return nil }

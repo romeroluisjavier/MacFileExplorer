@@ -84,7 +84,6 @@ public final class SidebarViewModel {
                 isExpandable: true
             )
         }
-        refreshQuickAccessNodes(includeHidden: false)
     }
 
     // MARK: - Carga Inicial, Volúmenes y Restauración del Árbol Expandido
@@ -121,16 +120,23 @@ public final class SidebarViewModel {
         await restoreExpandedSubdirectories(includeHidden: includeHidden)
     }
 
-    /// Recorre todos los `expandedNodeIDs` guardados (`"<section>::<path>"`) y precarga sus subdirectorios.
+    /// Recorre todos los `expandedNodeIDs` guardados (`"<section>::<path>"`) y precarga sus subdirectorios en paralelo.
     public func restoreExpandedSubdirectories(includeHidden: Bool = false) async {
         latestIncludeHidden = includeHidden
-        let currentExpanded = expandedNodeIDs
-        for nodeID in currentExpanded {
+        let urlsToRestore: [URL] = expandedNodeIDs.compactMap { nodeID in
             let parts = nodeID.components(separatedBy: "::")
-            guard parts.count >= 2 else { continue }
+            guard parts.count >= 2 else { return nil }
             let path = parts.dropFirst().joined(separator: "::")
-            let url = URL(fileURLWithPath: path).standardizedFileURL
-            await loadSubdirectories(for: url, includeHidden: includeHidden, forceReload: true)
+            return URL(fileURLWithPath: path).standardizedFileURL
+        }
+        guard !urlsToRestore.isEmpty else { return }
+
+        await withTaskGroup(of: Void.self) { group in
+            for url in urlsToRestore {
+                group.addTask {
+                    await self.loadSubdirectories(for: url, includeHidden: includeHidden, forceReload: true)
+                }
+            }
         }
     }
 

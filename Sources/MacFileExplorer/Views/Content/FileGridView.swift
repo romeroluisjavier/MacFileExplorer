@@ -6,7 +6,7 @@ import SwiftUI
 public struct FileGridView: View {
     @Bindable var viewModel: ExplorerViewModel
 
-    @ViewState private var itemFrames: [FileItem.ID: CGRect] = [:]
+    @ViewState private var itemFrameStore = ItemFrameStore()
     @ViewState private var dragStartPoint: CGPoint? = nil
     @ViewState private var dragCurrentPoint: CGPoint? = nil
     @ViewState private var ignoredRubberBandStart: CGPoint? = nil
@@ -45,7 +45,13 @@ public struct FileGridView: View {
 
                         LazyVGrid(columns: columns, alignment: .leading, spacing: 14) {
                             ForEach(viewModel.displayedItems) { item in
-                                FileGridTileView(item: item, viewModel: viewModel)
+                                FileGridTileView(
+                                    item: item,
+                                    viewModel: viewModel,
+                                    isSelected: viewModel.selectedItemIDs.contains(item.id),
+                                    isRenaming: viewModel.renamingItemID == item.id,
+                                    isCut: viewModel.clipboardManager.isCut(item)
+                                )
                                     .id(item.id)
                                     .background(
                                         GeometryReader { tileGeo in
@@ -63,11 +69,11 @@ public struct FileGridView: View {
                         RubberBandSelectionOverlay(rect: currentDragRect)
                     }
                     .background(
-                        NativeFileDragCanvas(viewModel: viewModel, itemFrames: itemFrames, isGridMode: true)
+                        LiveFileDragCanvas(viewModel: viewModel, frameStore: itemFrameStore, isGridMode: true)
                     )
                     .coordinateSpace(name: coordinateSpaceName)
                     .onPreferenceChange(ItemFramePreferenceKey.self) { frames in
-                        itemFrames = frames
+                        itemFrameStore.update(frames)
                     }
                     .gesture(rubberBandDragGesture)
                 }
@@ -113,7 +119,7 @@ public struct FileGridView: View {
                     if ignoredRubberBandStart == value.startLocation {
                         return
                     }
-                    if DragDropOperationHelper.isPoint(value.startLocation, insideAny: itemFrames) {
+                    if DragDropOperationHelper.isPoint(value.startLocation, insideAny: itemFrameStore.frames) {
                         ignoredRubberBandStart = value.startLocation
                         return
                     }
@@ -130,7 +136,7 @@ public struct FileGridView: View {
 
                 guard let rect = currentDragRect else { return }
                 var matchingIDs = initialSelectionBeforeDrag
-                for (id, frame) in itemFrames where rect.intersects(frame) {
+                for (id, frame) in itemFrameStore.frames where rect.intersects(frame) {
                     matchingIDs.insert(id)
                 }
                 viewModel.selectedItemIDs = matchingIDs
@@ -148,24 +154,15 @@ public struct FileGridView: View {
 
 private struct FileGridTileView: View {
     let item: FileItem
-    @Bindable var viewModel: ExplorerViewModel
+    let viewModel: ExplorerViewModel
+    let isSelected: Bool
+    let isRenaming: Bool
+    let isCut: Bool
     private var gridPrefs: GridIconPreferences { GridIconPreferences.shared }
 
     @ViewState private var isHovered: Bool = false
     @ViewState private var isDropTargeted: Bool = false
     @ViewState private var loadedThumbnail: NSImage? = nil
-
-    private var isSelected: Bool {
-        viewModel.selectedItemIDs.contains(item.id)
-    }
-
-    private var isRenaming: Bool {
-        viewModel.renamingItemID == item.id
-    }
-
-    private var isCut: Bool {
-        viewModel.clipboardManager.isCut(item)
-    }
 
     private var effectiveThumbnail: NSImage? {
         loadedThumbnail ?? ThumbnailCacheService.shared.memoryCachedThumbnail(for: item)

@@ -312,6 +312,22 @@ public struct AboutAppView: View {
 
             VStack(alignment: .trailing, spacing: 6) {
                 checkUpgradesControl
+
+                Button {
+                    AppOnboardingManager.shared.startWizardManually()
+                } label: {
+                    Label(
+                        loc.text(es: "Asistente inicial…", en: "Setup Wizard…"),
+                        systemImage: "wand.and.stars"
+                    )
+                    .font(.system(size: 11, weight: .medium))
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .help(loc.text(
+                    es: "Volver a ejecutar el asistente de configuración paso a paso",
+                    en: "Re-run the step-by-step Setup Wizard"
+                ))
             }
             .fixedSize()
         }

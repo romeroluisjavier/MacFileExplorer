@@ -397,8 +397,13 @@ public actor OCRIndexCacheService {
 
     private func evictOldestFoldersInMemoryIfNeeded() {
         while memoryAccessOrder.count > Self.maxLoadedFolders {
-            let oldest = memoryAccessOrder.removeFirst()
-            if !dirtyFolders.contains(oldest) {
+            if let cleanIndex = memoryAccessOrder.firstIndex(where: { !dirtyFolders.contains($0) }) {
+                let victim = memoryAccessOrder.remove(at: cleanIndex)
+                loadedArchives.removeValue(forKey: victim)
+            } else {
+                // Todos los elementos en memoria están pendientes de guardado: volcar el más antiguo a disco antes de expulsarlo
+                let oldest = memoryAccessOrder.removeFirst()
+                flushFolderArchive(for: oldest)
                 loadedArchives.removeValue(forKey: oldest)
             }
         }

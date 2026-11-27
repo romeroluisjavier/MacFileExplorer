@@ -15,6 +15,55 @@ public struct ItemFramePreferenceKey: PreferenceKey {
     }
 }
 
+/// Almacén de referencia no observado para los marcos de elementos visibles.
+/// Permite actualizar `itemFrames` en `onPreferenceChange` durante el scroll sin invalidar el `body` de SwiftUI
+/// y sincronizar directamente `DragCanvasNSView` en O(1).
+@MainActor
+public final class ItemFrameStore {
+    public var frames: [FileItem.ID: CGRect] = [:]
+    weak var canvasView: DragCanvasNSView?
+
+    public init() {}
+
+    public func update(_ newFrames: [FileItem.ID: CGRect]) {
+        frames = newFrames
+        canvasView?.itemFrames = newFrames
+    }
+}
+
+/// Wrapper de `DragCanvasNSView` respaldado por `ItemFrameStore` para evitar re-evaluar `updateNSView` en cada frame de scroll.
+public struct LiveFileDragCanvas: NSViewRepresentable {
+    public let viewModel: ExplorerViewModel
+    public let frameStore: ItemFrameStore
+    public let isGridMode: Bool
+
+    public init(viewModel: ExplorerViewModel, frameStore: ItemFrameStore, isGridMode: Bool = false) {
+        self.viewModel = viewModel
+        self.frameStore = frameStore
+        self.isGridMode = isGridMode
+    }
+
+    public func makeNSView(context: Context) -> DragCanvasNSView {
+        let view = DragCanvasNSView()
+        view.viewModel = viewModel
+        view.itemFrames = frameStore.frames
+        view.isGridMode = isGridMode
+        frameStore.canvasView = view
+        return view
+    }
+
+    public func updateNSView(_ nsView: DragCanvasNSView, context: Context) {
+        nsView.viewModel = viewModel
+        nsView.itemFrames = frameStore.frames
+        nsView.isGridMode = isGridMode
+        frameStore.canvasView = nsView
+    }
+
+    public static func dismantleNSView(_ nsView: DragCanvasNSView, coordinator: ()) {
+        nsView.uninstallMonitor()
+    }
+}
+
 /// Rectángulo visual translúcido de selección por arrastre (estilo Windows Explorer / Finder).
 public struct RubberBandSelectionOverlay: View {
     public let rect: CGRect?

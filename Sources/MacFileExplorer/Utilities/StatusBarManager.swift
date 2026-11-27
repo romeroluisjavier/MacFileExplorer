@@ -278,6 +278,15 @@ public final class StatusBarManager: NSObject, NSMenuDelegate {
         checkUpgradesItem.image = LocalizationManager.symbolImage(named: "arrow.down.circle")
         statusMenu.addItem(checkUpgradesItem)
 
+        let setupWizardItem = NSMenuItem(
+            title: loc.text(es: "Asistente de instalación inicial…", en: "Setup Wizard…"),
+            action: #selector(handleOpenSetupWizard(_:)),
+            keyEquivalent: ""
+        )
+        setupWizardItem.target = self
+        setupWizardItem.image = LocalizationManager.symbolImage(named: "wand.and.stars")
+        statusMenu.addItem(setupWizardItem)
+
         statusMenu.addItem(.separator())
 
         // 10. Cerrar / Salir de MacFileExplorer
@@ -692,6 +701,11 @@ public final class StatusBarManager: NSObject, NSMenuDelegate {
     @objc public func handleCheckUpgrades(_ sender: Any?) {
         NSApplication.shared.activate(ignoringOtherApps: true)
         UpdateWindowController.shared.showAndCheck()
+    }
+
+    @objc public func handleOpenSetupWizard(_ sender: Any?) {
+        NSApplication.shared.activate(ignoringOtherApps: true)
+        AppOnboardingManager.shared.startWizardManually()
     }
 
     @objc public func handleToggleTaskbar(_ sender: Any?) {

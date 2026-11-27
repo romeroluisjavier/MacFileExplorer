@@ -25,6 +25,7 @@ public final class SetupWizardWindowController: NSObject, NSWindowDelegate {
             existing.contentView = NSHostingView(rootView: SetupWizardView(onboarding: .shared))
             existing.center()
             existing.makeKeyAndOrderFront(nil)
+            existing.orderFrontRegardless()
             return
         }
 
@@ -45,6 +46,7 @@ public final class SetupWizardWindowController: NSObject, NSWindowDelegate {
         created.contentView = NSHostingView(rootView: SetupWizardView(onboarding: .shared))
         created.center()
         created.makeKeyAndOrderFront(nil)
+        created.orderFrontRegardless()
         self.window = created
     }
 
@@ -59,7 +61,7 @@ public final class SetupWizardWindowController: NSObject, NSWindowDelegate {
     public func windowWillClose(_ notification: Notification) {
         window?.contentView = nil
         if AppOnboardingManager.shared.isWizardPresented {
-            AppOnboardingManager.shared.dismissWizardWithoutApplying(markCompleted: true)
+            AppOnboardingManager.shared.dismissWizardWithoutApplying(markCompleted: false)
         }
     }
 
@@ -507,9 +509,10 @@ public struct SetupWizardView: View {
                             let isSelected = onboarding.draft.selectedAppIcon == option
                             Button {
                                 withAnimation(.spring(response: 0.24, dampingFraction: 0.78)) {
-                                    onboarding.draft.selectedAppIcon = option
-                                    if !isPreviewMode {
-                                        iconProvider.selectedAppIcon = option
+                                    if isPreviewMode {
+                                        onboarding.draft.selectedAppIcon = option
+                                    } else {
+                                        onboarding.previewAppIconInWizard(option)
                                     }
                                 }
                             } label: {
@@ -569,9 +572,10 @@ public struct SetupWizardView: View {
         let isSelected = onboarding.draft.languagePreference == option
         return Button {
             withAnimation(.easeInOut(duration: 0.16)) {
-                onboarding.draft.languagePreference = option
-                if !isPreviewMode {
-                    loc.preference = option
+                if isPreviewMode {
+                    onboarding.draft.languagePreference = option
+                } else {
+                    onboarding.previewLanguageInWizard(option)
                 }
             }
         } label: {

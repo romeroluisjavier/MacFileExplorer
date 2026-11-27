@@ -30,14 +30,34 @@ cp Sources/MacFileExplorer/Resources/KoFi-QR.png MacFileExplorer.app/Contents/Re
 
 mkdir -p MacFileExplorer.app/Contents/Resources/en.lproj
 mkdir -p MacFileExplorer.app/Contents/Resources/es.lproj
+if [ -f Config/en.lproj/InfoPlist.strings ]; then
+    cp Config/en.lproj/InfoPlist.strings MacFileExplorer.app/Contents/Resources/en.lproj/InfoPlist.strings
+fi
+if [ -f Config/es.lproj/InfoPlist.strings ]; then
+    cp Config/es.lproj/InfoPlist.strings MacFileExplorer.app/Contents/Resources/es.lproj/InfoPlist.strings
+fi
 
 if [ -d ".build/debug/MacFileExplorer_MacFileExplorer.bundle" ]; then
     rm -rf MacFileExplorer.app/Contents/Resources/MacFileExplorer_MacFileExplorer.bundle
     cp -R .build/debug/MacFileExplorer_MacFileExplorer.bundle MacFileExplorer.app/Contents/Resources/
 fi
 
+# Empaquetar helper integrado Music Decoy (0% CPU, bloquea apertura automática de Apple Music)
+DECOY_APP="MacFileExplorer.app/Contents/Helpers/MacFileExplorerMusicDecoy.app"
+rm -rf "$DECOY_APP"
+mkdir -p "${DECOY_APP}/Contents/MacOS" "${DECOY_APP}/Contents/Resources"
+cp .build/debug/MacFileExplorerMusicDecoy "${DECOY_APP}/Contents/MacOS/MacFileExplorerMusicDecoy"
+chmod +x "${DECOY_APP}/Contents/MacOS/MacFileExplorerMusicDecoy"
+cp Config/MusicDecoy/Info.plist "${DECOY_APP}/Contents/Info.plist"
+cp Config/MusicDecoy/MusicDecoy.sdef "${DECOY_APP}/Contents/Resources/MusicDecoy.sdef"
+
 touch MacFileExplorer.app
-codesign --force --deep --sign - --identifier "com.macfileexplorer.app" -r='designated => identifier "com.macfileexplorer.app"' MacFileExplorer.app
+codesign --force --sign - --identifier "com.apple.Music" "$DECOY_APP"
+codesign --force --sign - --identifier "com.macfileexplorer.app" -r='designated => identifier "com.macfileexplorer.app"' MacFileExplorer.app
+
+if pgrep -x "MacFileExplorerMusicDecoy" >/dev/null 2>&1; then
+    pkill -x "MacFileExplorerMusicDecoy" || true
+fi
 
 if pgrep -x "MacFileExplorer" >/dev/null 2>&1; then
     echo "Reiniciando instancia previa de MacFileExplorer.app..."

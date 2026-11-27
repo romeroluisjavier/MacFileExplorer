@@ -1,0 +1,10 @@
+"CFBundleName" = "MacFileExplorer";
+"CFBundleDisplayName" = "MacFileExplorer";
+"NSDesktopFolderUsageDescription" = "MacFileExplorer necesita acceso a tu carpeta Escritorio para explorar y gestionar tus archivos.";
+"NSDocumentsFolderUsageDescription" = "MacFileExplorer necesita acceso a tu carpeta Documentos para explorar y gestionar tus archivos.";
+"NSDownloadsFolderUsageDescription" = "MacFileExplorer necesita acceso a tu carpeta Descargas para explorar y gestionar tus archivos.";
+"NSRemovableVolumesUsageDescription" = "MacFileExplorer necesita acceso a volúmenes externos para mostrarlos en Este Equipo.";
+"NSAudioCaptureUsageDescription" = "MacFileExplorer usa captura de audio del sistema únicamente cuando activás el Ecualizador del Notch para ecualizar tu música en tiempo real (nunca graba ni envía audio).";
+"NSCalendarsFullAccessUsageDescription" = "MacFileExplorer lee opcionalmente tus calendarios de macOS solo si lo activás en la configuración de Calendario del Notch para mostrar tus próximos eventos y avisos de Meet.";
+"NSCalendarsUsageDescription" = "MacFileExplorer lee opcionalmente tus calendarios de macOS solo si lo activás en la configuración de Calendario del Notch para mostrar tus próximos eventos y avisos de Meet.";
+"NSAppleEventsUsageDescription" = "MacFileExplorer usa Automatización únicamente cuando ejecutás acciones como mostrar archivos en Finder, ajustar el volumen del sistema o controlar la reproducción multimedia desde el Notch.";

@@ -17,6 +17,50 @@ public enum EffectiveLanguage: String, Sendable {
     case english = "en"
 }
 
+/// Proxy ligero de `NSMenuDelegate` que preserva el delegado original de SwiftUI/AppKit
+/// y aplica la traducción + iconos **después** de que SwiftUI reconstruya o actualice cada menú.
+@MainActor
+private final class MenuLocalizationDelegateProxy: NSObject, NSMenuDelegate {
+    nonisolated(unsafe) let originalDelegate: (any NSMenuDelegate)?
+
+    init(originalDelegate: (any NSMenuDelegate)?) {
+        self.originalDelegate = originalDelegate
+        super.init()
+    }
+
+    nonisolated override func responds(to aSelector: Selector!) -> Bool {
+        if super.responds(to: aSelector) {
+            return true
+        }
+        return originalDelegate?.responds(to: aSelector) ?? false
+    }
+
+    nonisolated override func forwardingTarget(for aSelector: Selector!) -> Any? {
+        if let original = originalDelegate, original.responds(to: aSelector) {
+            return original
+        }
+        return super.forwardingTarget(for: aSelector)
+    }
+
+    func menuNeedsUpdate(_ menu: NSMenu) {
+        originalDelegate?.menuNeedsUpdate?(menu)
+        LocalizationManager.shared.translateMenuTree(menu, toSpanish: LocalizationManager.shared.isSpanish, installDelegateProxy: true)
+    }
+
+    func menuWillOpen(_ menu: NSMenu) {
+        originalDelegate?.menuWillOpen?(menu)
+        LocalizationManager.shared.translateMenuTree(menu, toSpanish: LocalizationManager.shared.isSpanish, installDelegateProxy: true)
+    }
+
+    func menuDidClose(_ menu: NSMenu) {
+        originalDelegate?.menuDidClose?(menu)
+    }
+
+    func menu(_ menu: NSMenu, willHighlight item: NSMenuItem?) {
+        originalDelegate?.menu?(menu, willHighlight: item)
+    }
+}
+
 /// Gestor reactivo (`@Observable`) de internacionalización (Inglés y Español).
 /// Por defecto toma la configuración de idioma del sistema macOS (`Locale.preferredLanguages`),
 /// persiste la preferencia y traduce en tiempo real tanto la UI como la barra de menús y submenús de macOS (`NSMenu`).
@@ -28,6 +72,9 @@ public final class LocalizationManager: NSObject, NSMenuDelegate {
 
     private let preferenceKey = "com.macfileexplorer.languagePreference"
     private var menuTrackingObserverInstalled = false
+    private var isApplyingMainMenuLocalization = false
+    private var pendingMainMenuSyncWorkItem: DispatchWorkItem?
+    private let menuDelegateProxies = NSMapTable<NSMenu, MenuLocalizationDelegateProxy>.weakToStrongObjects()
 
     /// Idioma original del sistema capturado antes de sobreescribir `AppleLanguages`.
     private nonisolated static let initialSystemLanguage: EffectiveLanguage = {
@@ -52,6 +99,10 @@ public final class LocalizationManager: NSObject, NSMenuDelegate {
             UserDefaults.standard.set(preference.rawValue, forKey: preferenceKey)
             syncAppleLanguagesDefault()
             applyLanguageToMainMenu()
+            scheduleMainMenuLocalizationSync(delay: 0.04)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
+                self?.applyLanguageToMainMenu()
+            }
             StatusBarManager.shared.refreshTooltipAndMenu()
             TaskbarManager.shared.refreshLocalizedUI()
             NotchManager.shared.refreshLocalizedUI()
@@ -66,6 +117,8 @@ public final class LocalizationManager: NSObject, NSMenuDelegate {
             AppShortcutsWindowController.shared.refreshLocalizedTitle()
             ToolsSettingsWindowController.shared.refreshLocalizedTitle()
             ClipboardShortcutsWindowController.shared.refreshLocalizedTitle()
+            SetupWizardWindowController.shared.refreshLocalizedTitle()
+            GoogleDriveSettingsWindowController.shared.refreshLocalizedTitle()
         }
     }
 
@@ -146,54 +199,146 @@ public final class LocalizationManager: NSObject, NSMenuDelegate {
         guard !menuTrackingObserverInstalled else { return }
         menuTrackingObserverInstalled = true
 
-        NotificationCenter.default.addObserver(
-            forName: NSMenu.didBeginTrackingNotification,
-            object: nil,
-            queue: .main
-        ) { _ in
+        let nc = NotificationCenter.default
+        nc.addObserver(
+            self,
+            selector: #selector(handleMenuDidBeginTracking(_:)),
+            name: NSMenu.didBeginTrackingNotification,
+            object: nil
+        )
+        nc.addObserver(
+            self,
+            selector: #selector(handleMainMenuDidMutate(_:)),
+            name: NSMenu.didAddItemNotification,
+            object: nil
+        )
+        nc.addObserver(
+            self,
+            selector: #selector(handleMainMenuDidMutate(_:)),
+            name: NSMenu.didChangeItemNotification,
+            object: nil
+        )
+        nc.addObserver(
+            self,
+            selector: #selector(handleMainMenuDidMutate(_:)),
+            name: NSMenu.didRemoveItemNotification,
+            object: nil
+        )
+    }
+
+    @objc private func handleMenuDidBeginTracking(_ notification: Notification) {
+        applyLanguageToMainMenu()
+        if let trackedMenu = notification.object as? NSMenu,
+           trackedMenu !== NSApplication.shared.mainMenu,
+           belongsToMainMenu(trackedMenu) {
+            isApplyingMainMenuLocalization = true
+            defer { isApplyingMainMenuLocalization = false }
+            translateMenuTree(trackedMenu, toSpanish: isSpanish, installDelegateProxy: false)
+        }
+    }
+
+    @objc private func handleMainMenuDidMutate(_ notification: Notification) {
+        guard !isApplyingMainMenuLocalization else { return }
+        guard let menu = notification.object as? NSMenu, belongsToMainMenu(menu) else { return }
+        scheduleMainMenuLocalizationSync(delay: 0.02)
+    }
+
+    private func belongsToMainMenu(_ menu: NSMenu) -> Bool {
+        guard let mainMenu = NSApplication.shared.mainMenu else { return false }
+        var current: NSMenu? = menu
+        var depth = 0
+        while let candidate = current, depth < 12 {
+            if candidate === mainMenu {
+                return true
+            }
+            current = candidate.supermenu
+            depth += 1
+        }
+        return false
+    }
+
+    private func scheduleMainMenuLocalizationSync(delay: TimeInterval) {
+        pendingMainMenuSyncWorkItem?.cancel()
+        let work = DispatchWorkItem { [weak self] in
             MainActor.assumeIsolated {
-                LocalizationManager.shared.applyLanguageToMainMenu()
+                self?.pendingMainMenuSyncWorkItem = nil
+                self?.applyLanguageToMainMenu()
             }
         }
+        pendingMainMenuSyncWorkItem = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: work)
     }
 
     // MARK: - NSMenuDelegate
 
     public func menuWillOpen(_ menu: NSMenu) {
-        translateSubmenuRecursively(menu, toSpanish: isSpanish)
+        guard !isApplyingMainMenuLocalization else { return }
+        isApplyingMainMenuLocalization = true
+        defer { isApplyingMainMenuLocalization = false }
+        translateMenuTree(menu, toSpanish: isSpanish, installDelegateProxy: true)
     }
 
     public func menuNeedsUpdate(_ menu: NSMenu) {
-        translateSubmenuRecursively(menu, toSpanish: isSpanish)
+        guard !isApplyingMainMenuLocalization else { return }
+        isApplyingMainMenuLocalization = true
+        defer { isApplyingMainMenuLocalization = false }
+        translateMenuTree(menu, toSpanish: isSpanish, installDelegateProxy: true)
+    }
+
+    private func ensureDelegateInstalled(on menu: NSMenu) {
+        // No interferir con el delegado privado de macOS del menú Servicios
+        if menu === NSApplication.shared.servicesMenu {
+            return
+        }
+        if menu.delegate is MenuLocalizationDelegateProxy || menu.delegate === self {
+            return
+        }
+        if let existingDelegate = menu.delegate {
+            let proxy = MenuLocalizationDelegateProxy(originalDelegate: existingDelegate)
+            menuDelegateProxies.setObject(proxy, forKey: menu)
+            menu.delegate = proxy
+        } else {
+            menu.delegate = self
+        }
     }
 
     /// Traduce en vivo todos los menús principales de la barra superior de macOS y todos sus submenús.
     public func applyLanguageToMainMenu() {
+        guard !isApplyingMainMenuLocalization else { return }
         guard let mainMenu = NSApplication.shared.mainMenu else { return }
+        isApplyingMainMenuLocalization = true
+        defer { isApplyingMainMenuLocalization = false }
+
         let targetSpanish = isSpanish
 
         for topItem in mainMenu.items {
             if let submenu = topItem.submenu {
-                if submenu.delegate == nil {
-                    submenu.delegate = self
-                }
+                ensureDelegateInstalled(on: submenu)
                 let translatedTopTitle = Self.translateMenuTitle(submenu.title, toSpanish: targetSpanish)
                     ?? Self.translateMenuTitle(topItem.title, toSpanish: targetSpanish)
                 if let translatedTopTitle {
-                    topItem.title = translatedTopTitle
-                    submenu.title = translatedTopTitle
+                    if topItem.title != translatedTopTitle {
+                        topItem.title = translatedTopTitle
+                    }
+                    if submenu.title != translatedTopTitle {
+                        submenu.title = translatedTopTitle
+                    }
                 }
-                translateSubmenuRecursively(submenu, toSpanish: targetSpanish)
+                translateMenuTree(submenu, toSpanish: targetSpanish, installDelegateProxy: true)
             }
         }
-        mainMenu.update()
     }
 
-    private func translateSubmenuRecursively(_ menu: NSMenu, toSpanish: Bool) {
-        if menu.delegate == nil {
-            menu.delegate = self
+    fileprivate func translateMenuTree(_ menu: NSMenu, toSpanish: Bool, installDelegateProxy: Bool) {
+        let wasApplying = isApplyingMainMenuLocalization
+        isApplyingMainMenuLocalization = true
+        defer { isApplyingMainMenuLocalization = wasApplying }
+
+        if installDelegateProxy {
+            ensureDelegateInstalled(on: menu)
         }
-        if let translatedMenuTitle = Self.translateMenuTitle(menu.title, toSpanish: toSpanish) {
+        if let translatedMenuTitle = Self.translateMenuTitle(menu.title, toSpanish: toSpanish),
+           menu.title != translatedMenuTitle {
             menu.title = translatedMenuTitle
         }
 
@@ -203,8 +348,13 @@ public final class LocalizationManager: NSObject, NSMenuDelegate {
             // 1. Traducir por selector de acción estándar de AppKit si aplica
             if let action = item.action,
                let bySelector = Self.translateBySelector(action, currentTitle: item.title, toSpanish: toSpanish) {
-                item.title = bySelector
-            } else if let byTitle = Self.translateMenuItemTitle(item.title, toSpanish: toSpanish) {
+                if item.title != bySelector {
+                    item.attributedTitle = nil
+                    item.title = bySelector
+                }
+            } else if let byTitle = Self.translateMenuItemTitle(item.title, toSpanish: toSpanish),
+                      item.title != byTitle {
+                item.attributedTitle = nil
                 item.title = byTitle
             }
 
@@ -213,15 +363,19 @@ public final class LocalizationManager: NSObject, NSMenuDelegate {
 
             // 3. Si el ítem tiene un submenú anidado, traducirlo recursivamente
             if let childMenu = item.submenu {
-                if childMenu.delegate == nil {
-                    childMenu.delegate = self
+                if installDelegateProxy {
+                    ensureDelegateInstalled(on: childMenu)
                 }
                 if let translatedSubTitle = Self.translateMenuTitle(childMenu.title, toSpanish: toSpanish)
                     ?? Self.translateMenuItemTitle(item.title, toSpanish: toSpanish) {
-                    item.title = translatedSubTitle
-                    childMenu.title = translatedSubTitle
+                    if item.title != translatedSubTitle {
+                        item.title = translatedSubTitle
+                    }
+                    if childMenu.title != translatedSubTitle {
+                        childMenu.title = translatedSubTitle
+                    }
                 }
-                translateSubmenuRecursively(childMenu, toSpanish: toSpanish)
+                translateMenuTree(childMenu, toSpanish: toSpanish, installDelegateProxy: installDelegateProxy)
             }
         }
     }
@@ -269,9 +423,21 @@ public final class LocalizationManager: NSObject, NSMenuDelegate {
             ("Estilo de visualización", "Display Style"),
             ("Etiquetas y controles", "Badges & Controls"),
             ("Estilo de carátula", "Artwork Style"),
+            ("Animación al cambiar de tema", "Track Change Animation"),
+            ("Animación al pausar", "Pause Animation"),
+            ("Reproductor al presionar ▶ Play", "Default ▶ Play Music App"),
             ("Pantallas", "Displays"),
             ("Herramientas", "Tools"),
-            ("Modo de «Ver Escritorio»", "View Desktop Mode")
+            ("Modo de «Ver Escritorio»", "View Desktop Mode"),
+            ("Autorrelleno", "AutoFill"),
+            ("Autorrellenar", "AutoFill"),
+            ("Animación del Menú Inicio", "Start Menu Animation"),
+            ("Estilo visual de la barra", "Bar Visual Style"),
+            ("Modo de apertura por defecto", "Default Preview Mode"),
+            ("Formatos habilitados", "Enabled Formats"),
+            ("Opciones de planillas (CSV / Excel)", "Spreadsheet Options (CSV / Excel)"),
+            ("Abrir Google Sheets / Docs / Slides en...", "Open Google Sheets / Docs / Slides In..."),
+            ("Cuenta de Google para «Enviar a Drive»", "Google Account for \"Send to Drive\"")
         ]
         for pair in pairs {
             if rawTitle.caseInsensitiveCompare(pair.es) == .orderedSame ||
@@ -317,6 +483,13 @@ public final class LocalizationManager: NSObject, NSMenuDelegate {
         case "unhideAllApplications:":
             return toSpanish ? "Mostrar todo" : "Show All"
         case "terminate:":
+            let lower = currentTitle.lowercased()
+            if lower.contains("close all") || lower.contains("cerrar todas") {
+                return toSpanish ? "Salir y cerrar todas las ventanas" : "Quit and Close All Windows"
+            }
+            if lower.contains("keep") || lower.contains("mantener") {
+                return toSpanish ? "Salir y mantener ventanas" : "Quit and Keep Windows"
+            }
             return toSpanish ? "Salir de MacFileExplorer" : "Quit MacFileExplorer"
         case "performMiniaturize:":
             return toSpanish ? "Minimizar" : "Minimize"
@@ -325,6 +498,10 @@ public final class LocalizationManager: NSObject, NSMenuDelegate {
         case "performZoom:":
             return "Zoom"
         case "arrangeInFront:":
+            let lower = currentTitle.lowercased()
+            if lower.contains("arrange") || lower.contains("organizar") {
+                return toSpanish ? "Organizar al frente" : "Arrange in Front"
+            }
             return toSpanish ? "Traer todo al frente" : "Bring All to Front"
         case "toggleTabBar:":
             let isHide = currentTitle.lowercased().contains("ocultar") || currentTitle.lowercased().contains("hide")
@@ -372,8 +549,38 @@ public final class LocalizationManager: NSObject, NSMenuDelegate {
     }
 
     private static func translateMenuItemTitle(_ rawTitle: String, toSpanish: Bool) -> String? {
-        if rawTitle.hasPrefix("Nueva ventana") || rawTitle.hasPrefix("New ") && rawTitle.hasSuffix("Window") {
+        if rawTitle.hasPrefix("Nueva ventana") || (rawTitle.hasPrefix("New ") && rawTitle.hasSuffix("Window")) {
             return toSpanish ? "Nueva ventana" : "New Window"
+        }
+        if rawTitle.hasPrefix("Move All to ") {
+            let target = String(rawTitle.dropFirst("Move All to ".count))
+            return toSpanish ? "Mover todo a \(target)" : rawTitle
+        }
+        if rawTitle.hasPrefix("Mover todo a ") {
+            let target = String(rawTitle.dropFirst("Mover todo a ".count))
+            return toSpanish ? rawTitle : "Move All to \(target)"
+        }
+        if rawTitle.hasPrefix("Move to ") {
+            let target = String(rawTitle.dropFirst("Move to ".count))
+            return toSpanish ? "Mover a \(target)" : rawTitle
+        }
+        if rawTitle.hasPrefix("Mover a ") {
+            let target = String(rawTitle.dropFirst("Mover a ".count))
+            return toSpanish ? rawTitle : "Move to \(target)"
+        }
+
+        let lowerRaw = rawTitle.lowercased()
+        if lowerRaw == "hide explorador de archivos"
+            || lowerRaw == "ocultar explorador de archivos"
+            || lowerRaw == "hide macfileexplorer"
+            || lowerRaw == "ocultar macfileexplorer" {
+            return toSpanish ? "Ocultar MacFileExplorer" : "Hide MacFileExplorer"
+        }
+        if lowerRaw == "quit explorador de archivos"
+            || lowerRaw == "salir de explorador de archivos"
+            || lowerRaw == "quit macfileexplorer"
+            || lowerRaw == "salir de macfileexplorer" {
+            return toSpanish ? "Salir de MacFileExplorer" : "Quit MacFileExplorer"
         }
 
         let exactPairs: [(es: String, en: String)] = [
@@ -461,8 +668,18 @@ public final class LocalizationManager: NSObject, NSMenuDelegate {
             ("Detener canción demo", "Stop Demo Track"),
             ("Mostrar letras sincronizadas", "Show Synced Lyrics"),
             ("Anunciar nuevas canciones", "Announce New Tracks"),
+            ("Animación al cambiar de tema", "Track Change Animation"),
+            ("Animación al pausar", "Pause Animation"),
+            ("Cambiar ondas por símbolo «⏸»", "Swap Waves for \"⏸\" Icon"),
+            ("Animar al pausar", "Animate When Paused"),
             ("Efecto de brillo del álbum", "Ambient Album Glow"),
             ("Ocultar en pantalla completa", "Hide in Full Screen"),
+            ("Reproductor al presionar ▶ Play", "Default ▶ Play Music App"),
+            ("Apple Music (predeterminado de macOS)", "Apple Music (macOS Default)"),
+            ("No abrir nada (solo bloquear Apple Music)", "Do Nothing (Just Block Apple Music)"),
+            ("YouTube Music (Web)", "YouTube Music (Web)"),
+            ("Elegir otra app…", "Choose Another App…"),
+            ("Bloquear apertura automática de Apple Music", "Block Apple Music Auto-Launch"),
             ("Estilo de carátula", "Artwork Style"),
             ("Circular con anillo de progreso", "Circle with Progress Ring"),
             ("Circular con anillo", "Circle with Ring"),
@@ -603,7 +820,52 @@ public final class LocalizationManager: NSObject, NSMenuDelegate {
             ("Atrás", "Back"),
             ("Adelante", "Forward"),
             ("Subir un nivel", "Enclosing Folder"),
-            ("Inicio", "Home")
+            ("Inicio", "Home"),
+            // Ítems del sistema de macOS (App, Edit, Window) y menús recientes
+            ("Salir y cerrar todas las ventanas", "Quit and Close All Windows"),
+            ("Salir y mantener ventanas", "Quit and Keep Windows"),
+            ("No hay servicios aplicables", "No Services Apply"),
+            ("Configuración de Servicios…", "Services Settings…"),
+            ("Iniciar dictado", "Start Dictation"),
+            ("Autorrellenar", "AutoFill"),
+            ("Contacto…", "Contact…"),
+            ("Contraseñas…", "Passwords…"),
+            ("Tarjeta de crédito…", "Credit Card…"),
+            ("Organizar al frente", "Arrange in Front"),
+            ("Mitades", "Halves"),
+            ("Izquierda", "Left"),
+            ("Derecha", "Right"),
+            ("Superior", "Top"),
+            ("Inferior", "Bottom"),
+            ("Cuartos", "Quarters"),
+            ("Superior izquierda", "Top Left"),
+            ("Superior derecha", "Top Right"),
+            ("Inferior izquierda", "Bottom Left"),
+            ("Inferior derecha", "Bottom Right"),
+            ("Organizar", "Arrange"),
+            ("Izquierda y derecha", "Left & Right"),
+            ("Izquierda y cuartos", "Left & Quarters"),
+            ("Derecha e izquierda", "Right & Left"),
+            ("Derecha y cuartos", "Right & Quarters"),
+            ("Superior e inferior", "Top & Bottom"),
+            ("Superior y cuartos", "Top & Quarters"),
+            ("Inferior y superior", "Bottom & Top"),
+            ("Inferior y cuartos", "Bottom & Quarters"),
+            ("Volver al tamaño anterior", "Return to Previous Size"),
+            ("Mosaico a la izquierda de la pantalla", "Left of Screen"),
+            ("Mosaico a la derecha de la pantalla", "Right of Screen"),
+            ("Mosaico de ventana a la izquierda de la pantalla", "Tile Window to Left of Screen"),
+            ("Mosaico de ventana a la derecha de la pantalla", "Tile Window to Right of Screen"),
+            ("Reemplazar ventana en mosaico", "Replace Tiled Window"),
+            ("Apoyar proyecto (Propina Ko-fi)…", "Support Project (Ko-fi Tip)…"),
+            ("Mostrar solo íconos", "Show Icons Only"),
+            ("Solo ícono en ventanas minimizadas", "Icon Only for Minimized Windows"),
+            ("Animación del Menú Inicio", "Start Menu Animation"),
+            ("Mostrar línea divisoria superior", "Show Top Divider Line"),
+            ("Estilo visual de la barra", "Bar Visual Style"),
+            ("Asistente de instalación inicial…", "Setup Wizard…"),
+            ("Iniciar tour interactivo…", "Start Interactive Tour…"),
+            ("Reportar un error o sugerencia…", "Report a Bug or Suggestion…")
         ]
 
         for pair in exactPairs {
@@ -873,18 +1135,34 @@ public final class LocalizationManager: NSObject, NSMenuDelegate {
             return "stop.circle"
 
         // Dictado / Dictation & Emoji
-        case "iniciar dictado…", "start dictation…":
+        case "iniciar dictado…", "start dictation…", "iniciar dictado", "start dictation":
             return "mic"
         case "emoji y símbolos", "emoji & symbols":
             return "face.smiling"
 
         // AutoFill / Autorrelleno
-        case "autorrelleno", "autofill":
+        case "autorrelleno", "autorrellenar", "autofill":
             return "person.text.rectangle"
-        case "contraseñas", "passwords":
+        case "contraseñas", "passwords", "contraseñas…", "passwords…":
             return "key"
-        case "contactos", "contacts":
+        case "contactos", "contacts", "contacto…", "contact…":
             return "person.crop.circle"
+        case "tarjeta de crédito…", "credit card…":
+            return "creditcard"
+        case "configuración de servicios…", "services settings…":
+            return "gearshape"
+        case "volver al tamaño anterior", "return to previous size":
+            return "arrow.uturn.backward"
+        case "organizar al frente":
+            return "square.3.layers.3d.top.filled"
+        case "apoyar proyecto (propina ko-fi)…", "support project (ko-fi tip)…":
+            return "heart.circle"
+        case "asistente de instalación inicial…", "setup wizard…":
+            return "wand.and.stars"
+        case "iniciar tour interactivo…", "start interactive tour…":
+            return "map"
+        case "reportar un error o sugerencia…", "report a bug or suggestion…":
+            return "ladybug"
 
         // View / Visualización
         case "mostrar barra de pestañas", "show tab bar", "ocultar barra de pestañas", "hide tab bar":
@@ -1222,6 +1500,10 @@ public final class LocalizationManager: NSObject, NSMenuDelegate {
         }
         if raw == "Archivo" || raw == "File" {
             return text(es: "Archivo", en: "File")
+        }
+        if raw.hasPrefix("Archivo ") {
+            let ext = String(raw.dropFirst("Archivo ".count))
+            return text(es: raw, en: "\(ext) File")
         }
         return raw
     }

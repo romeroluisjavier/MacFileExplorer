@@ -225,6 +225,10 @@ private enum NotchSourceIconCache {
         case .spotify:
             return workspace.urlForApplication(withBundleIdentifier: "com.spotify.client")
         case .appleMusic:
+            let systemMusicPath = "/System/Applications/Music.app"
+            if FileManager.default.fileExists(atPath: systemMusicPath) {
+                return URL(fileURLWithPath: systemMusicPath)
+            }
             return workspace.urlForApplication(withBundleIdentifier: "com.apple.Music")
         case .browser:
             for bid in ["com.google.Chrome", "com.apple.Safari", "com.brave.Browser", "company.thebrowser.Browser", "com.microsoft.edgemac"] {
@@ -703,6 +707,242 @@ public enum NotchLyricsFontSize: String, CaseIterable, Identifiable, Codable, Se
         case .large: return 11
         }
     }
+}
+
+/// Estilo de aviso visual del Notch cuando cambia la canción (5 modos configurables).
+public enum NotchTrackChangeStyle: String, CaseIterable, Identifiable, Codable, Sendable {
+    case dropDown
+    case expandSideways
+    case colorFlash
+    case skipIconSwap
+    case slideNudge
+
+    public var id: String { rawValue }
+
+    public var symbolName: String {
+        switch self {
+        case .dropDown: return "arrow.down.to.line.compact"
+        case .expandSideways: return "arrow.left.and.right"
+        case .colorFlash: return "sparkles"
+        case .skipIconSwap: return "forward.fill"
+        case .slideNudge: return "arrow.right.arrow.left"
+        }
+    }
+
+    @MainActor
+    public func localizedTitle(using loc: LocalizationManager = .shared) -> String {
+        switch self {
+        case .dropDown:
+            return loc.text(es: "Desplegar hacia abajo", en: "Drop Down")
+        case .expandSideways:
+            return loc.text(es: "Ensancharse lateralmente", en: "Expand Sideways")
+        case .colorFlash:
+            return loc.text(es: "Solo destello de color", en: "Color Pulse Only")
+        case .skipIconSwap:
+            return loc.text(es: "Cambiar ondas por «≫»", en: "Swap Waves to \"≫\"")
+        case .slideNudge:
+            return loc.text(es: "Impulso lateral suave", en: "Slide Nudge")
+        }
+    }
+
+    @MainActor
+    public func localizedDescription(using loc: LocalizationManager = .shared) -> String {
+        switch self {
+        case .dropDown:
+            return loc.text(
+                es: "Baja brevemente debajo del Notch mostrando el nuevo tema y artista, y vuelve arriba.",
+                en: "Briefly drops down showing the new song & artist, then glides back up."
+            )
+        case .expandSideways:
+            return loc.text(
+                es: "Se ensancha a los costados sin bajar ni tapar la pantalla, y luego vuelve a su ancho normal.",
+                en: "Widens horizontally without dropping down, then smoothly returns to normal width."
+            )
+        case .colorFlash:
+            return loc.text(
+                es: "Mantiene su tamaño exacto e ilumina el Notch con un pulso del color del nuevo tema.",
+                en: "Keeps its exact size and flashes a vivid accent glow for the new track."
+            )
+        case .skipIconSwap:
+            return loc.text(
+                es: "Sin mover el Notch, reemplaza las ondas musicales por el ícono «≫» por unos segundos.",
+                en: "Without moving the Notch, swaps the equalizer waves for a \"≫\" skip icon briefly."
+            )
+        case .slideNudge:
+            return loc.text(
+                es: "Hace un pequeño deslizamiento lateral elástico con brillo sutil y símbolo «≫».",
+                en: "Performs a snappy horizontal nudge with a subtle shimmer and \"≫\" badge."
+            )
+        }
+    }
+
+    /// Indica si este estilo requiere transición temporal a la fase `.peeking` (cambio de silueta).
+    public var usesPeekingSilhouette: Bool {
+        self == .dropDown || self == .expandSideways
+    }
+}
+
+/// Estilo de pequeña animación visual del Notch cuando se pausa la reproducción (5 modos configurables).
+public enum NotchPauseAnimationStyle: String, CaseIterable, Identifiable, Codable, Sendable {
+    case pauseIconPop
+    case dropDown
+    case expandSideways
+    case colorDimPulse
+    case gentleSqueeze
+
+    public var id: String { rawValue }
+
+    public var symbolName: String {
+        switch self {
+        case .pauseIconPop: return "pause.circle.fill"
+        case .dropDown: return "arrow.down.to.line.compact"
+        case .expandSideways: return "arrow.left.and.right"
+        case .colorDimPulse: return "moon.stars.fill"
+        case .gentleSqueeze: return "arrow.down.right.and.arrow.up.left"
+        }
+    }
+
+    @MainActor
+    public func localizedTitle(using loc: LocalizationManager = .shared) -> String {
+        switch self {
+        case .pauseIconPop:
+            return loc.text(es: "Pulso con símbolo «⏸»", en: "\"⏸\" Icon Pulse")
+        case .dropDown:
+            return loc.text(es: "Desplegar hacia abajo", en: "Drop Down")
+        case .expandSideways:
+            return loc.text(es: "Ensancharse lateralmente", en: "Expand Sideways")
+        case .colorDimPulse:
+            return loc.text(es: "Destello suave de pausa", en: "Soft Color Dim")
+        case .gentleSqueeze:
+            return loc.text(es: "Contracción suave", en: "Gentle Squeeze")
+        }
+    }
+
+    @MainActor
+    public func localizedDescription(using loc: LocalizationManager = .shared) -> String {
+        switch self {
+        case .pauseIconPop:
+            return loc.text(
+                es: "Sin cambiar el tamaño, hace un pulso limpio en el símbolo de pausa «⏸».",
+                en: "Keeps the same size and pops the \"⏸\" pause symbol with a soft ring."
+            )
+        case .dropDown:
+            return loc.text(
+                es: "Baja un poco mostrando el aviso «En pausa» con el símbolo «⏸» y vuelve arriba.",
+                en: "Briefly drops down showing \"Paused\" with the \"⏸\" symbol, then glides back up."
+            )
+        case .expandSideways:
+            return loc.text(
+                es: "Se ensancha brevemente a los costados mostrando «En pausa» sin bajar.",
+                en: "Briefly widens sideways showing \"Paused\" without dropping downward."
+            )
+        case .colorDimPulse:
+            return loc.text(
+                es: "Envía un halo suave por el contorno mientras las ondas pasan al símbolo de pausa.",
+                en: "Sends a soft rim pulse across the Notch as the waves switch to the pause icon."
+            )
+        case .gentleSqueeze:
+            return loc.text(
+                es: "Hace una contracción elástica breve y sutil al cambiar las ondas por «⏸».",
+                en: "Performs a subtle elastic squeeze as the waves morph into the \"⏸\" icon."
+            )
+        }
+    }
+
+    /// Indica si este estilo requiere transición temporal a la fase `.peeking` (cambio de silueta).
+    public var usesPeekingSilhouette: Bool {
+        self == .dropDown || self == .expandSideways
+    }
+}
+
+/// Evento visual transitorio activo en el Notch (cambio de canción o pausa).
+public enum NotchTransientFeedback: Equatable, Sendable {
+    case none
+    case trackChanged(NotchTrackChangeStyle, token: UUID)
+    case paused(NotchPauseAnimationStyle, token: UUID)
+
+    public var isActive: Bool {
+        if case .none = self { return false }
+        return true
+    }
+
+    public var isSidewaysPeeking: Bool {
+        switch self {
+        case .trackChanged(.expandSideways, _), .paused(.expandSideways, _):
+            return true
+        default:
+            return false
+        }
+    }
+
+    public var isPauseFeedback: Bool {
+        if case .paused = self { return true }
+        return false
+    }
+}
+
+// MARK: - Ecualizador de Sonido de 5 Bandas del Notch
+
+/// Presets curados de ecualización de 5 bandas (`60 Hz`, `250 Hz`, `1 kHz`, `4 kHz`, `12 kHz`).
+public enum NotchEQPreset: String, CaseIterable, Identifiable, Codable, Sendable {
+    case flat
+    case bassBoost
+    case vocalClarity
+    case rock
+    case pop
+    case electronic
+    case acoustic
+    case lateNight
+    case custom
+
+    public var id: String { rawValue }
+
+    /// Presets seleccionables directamente desde las píldoras del ecualizador (excluyendo `.custom`).
+    public static let selectablePresets: [NotchEQPreset] = [
+        .flat, .bassBoost, .vocalClarity, .rock, .pop, .electronic, .acoustic, .lateNight
+    ]
+
+    /// Frecuencias centrales (Hz) y etiquetas cortas de las 5 bandas del ecualizador.
+    public static let bandFrequencies: [Double] = [60, 250, 1000, 4000, 12000]
+    public static let bandLabels: [String] = ["60Hz", "250Hz", "1kHz", "4kHz", "12kHz"]
+
+    /// Ganancias en dB (`-12...12`) para cada preset.
+    public var defaultGains: [Double] {
+        switch self {
+        case .flat:         return [0.0, 0.0, 0.0, 0.0, 0.0]
+        case .bassBoost:    return [7.0, 4.0, 0.0, 1.0, 2.0]
+        case .vocalClarity: return [-2.0, 1.0, 5.0, 4.0, 1.5]
+        case .rock:         return [5.0, 2.0, -1.0, 3.0, 5.0]
+        case .pop:          return [2.0, 3.0, 1.0, 3.0, 4.0]
+        case .electronic:   return [6.5, 3.0, -0.5, 2.5, 5.0]
+        case .acoustic:     return [3.0, 2.0, 1.0, 2.5, 3.0]
+        case .lateNight:    return [4.0, 2.0, 2.5, -1.5, -2.5]
+        case .custom:       return [0.0, 0.0, 0.0, 0.0, 0.0]
+        }
+    }
+
+    @MainActor
+    public func localizedTitle(using loc: LocalizationManager = .shared) -> String {
+        switch self {
+        case .flat:         return loc.text(es: "Plano", en: "Flat")
+        case .bassBoost:    return loc.text(es: "Graves", en: "Bass")
+        case .vocalClarity: return loc.text(es: "Voces", en: "Vocal")
+        case .rock:         return "Rock"
+        case .pop:          return "Pop"
+        case .electronic:   return loc.text(es: "Electro", en: "Electro")
+        case .acoustic:     return loc.text(es: "Acústico", en: "Acoustic")
+        case .lateNight:    return loc.text(es: "Noche", en: "Night")
+        case .custom:       return loc.text(es: "Propio", en: "Custom")
+        }
+    }
+}
+
+/// Estado operativo en tiempo real del motor de ecualización CoreAudio.
+public enum NotchEqualizerEngineStatus: Equatable, Sendable {
+    case inactive
+    case activeSystemDSP
+    case permissionRequired
+    case unavailable(String)
 }
 
 // MARK: - Letras Sincronizadas

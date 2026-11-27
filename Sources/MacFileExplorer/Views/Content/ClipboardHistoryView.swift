@@ -32,7 +32,7 @@ public struct ClipboardHistoryMainView: View {
             } else {
                 HSplitView {
                     entriesListPane
-                        .frame(minWidth: 320, idealWidth: 400, maxWidth: 560, maxHeight: .infinity)
+                        .frame(minWidth: 380, idealWidth: 470, maxWidth: 660, maxHeight: .infinity)
 
                     inspectorDetailPane
                         .frame(minWidth: 340, maxWidth: .infinity, maxHeight: .infinity)
@@ -180,6 +180,87 @@ public struct ClipboardHistoryMainView: View {
                     .frame(height: 18)
                     .padding(.horizontal, 4)
 
+                // Ordenamiento de la lista (Fecha, Contenido, Tipo, Tamaño, Aplicación, Más usados)
+                Menu {
+                    Section(loc.text(es: "Ordenar por", en: "Sort by")) {
+                        ForEach(ClipboardSortField.allCases) { field in
+                            Button {
+                                historyManager.toggleSort(by: field)
+                            } label: {
+                                HStack {
+                                    Label(field.localizedTitle(using: loc), systemImage: field.systemImage)
+                                    if prefs.sortField == field {
+                                        Spacer()
+                                        Image(systemName: prefs.sortAscending ? "chevron.up" : "chevron.down")
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Divider()
+
+                    Section(loc.text(es: "Dirección", en: "Order")) {
+                        Button {
+                            prefs.sortAscending = false
+                        } label: {
+                            HStack {
+                                Text(prefs.sortField.localizedDirectionLabel(ascending: false, using: loc))
+                                if !prefs.sortAscending {
+                                    Spacer()
+                                    Image(systemName: "checkmark")
+                                }
+                            }
+                        }
+
+                        Button {
+                            prefs.sortAscending = true
+                        } label: {
+                            HStack {
+                                Text(prefs.sortField.localizedDirectionLabel(ascending: true, using: loc))
+                                if prefs.sortAscending {
+                                    Spacer()
+                                    Image(systemName: "checkmark")
+                                }
+                            }
+                        }
+                    }
+
+                    Divider()
+
+                    Toggle(
+                        loc.text(es: "Mantener fijados arriba", en: "Keep pinned on top"),
+                        isOn: $prefs.keepPinnedOnTop
+                    )
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.up.arrow.down")
+                            .font(.system(size: 10.5, weight: .semibold))
+                        Text(
+                            loc.text(
+                                es: "Ordenar: \(prefs.sortField.localizedTitle(using: loc))",
+                                en: "Sort: \(prefs.sortField.localizedTitle(using: loc))"
+                            )
+                        )
+                        .font(.system(size: 11, weight: .medium))
+                        Image(systemName: prefs.sortAscending ? "arrow.up" : "arrow.down")
+                            .font(.system(size: 9.5, weight: .semibold))
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(
+                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                            .fill(Color.primary.opacity(0.05))
+                    )
+                }
+                .menuStyle(.borderlessButton)
+                .fixedSize()
+                .help(loc.text(
+                    es: "Ordenar historial (\(prefs.sortField.localizedTitle(using: loc)) • \(prefs.sortField.localizedDirectionLabel(ascending: prefs.sortAscending, using: loc)))",
+                    en: "Sort history (\(prefs.sortField.localizedTitle(using: loc)) • \(prefs.sortField.localizedDirectionLabel(ascending: prefs.sortAscending, using: loc)))"
+                ))
+
                 // Configuración 1: Cantidad máxima a guardar
                 Menu {
                     Picker(
@@ -302,39 +383,126 @@ public struct ClipboardHistoryMainView: View {
 
     // MARK: - Lista Izquierda de Entradas
 
-    private var entriesListPane: some View {
-        ScrollViewReader { proxy in
-            ScrollView(.vertical) {
-                LazyVStack(spacing: 3) {
-                    ForEach(Array(historyManager.filteredItems.enumerated()), id: \.element.id) { index, entry in
-                        ClipboardHistoryRowView(
-                            entry: entry,
-                            shortcutNumber: index < 9 ? (index + 1) : (index == 9 ? 0 : nil),
-                            isSelected: historyManager.selectedEntry?.id == entry.id,
-                            isCopiedFeedbackVisible: historyManager.recentlyCopiedFeedbackEntryID == entry.id,
-                            onSelect: {
-                                historyManager.selectedEntryID = entry.id
-                            },
-                            onCopy: {
-                                historyManager.selectedEntryID = entry.id
-                                historyManager.copyEntryToPasteboard(entry)
-                            },
-                            onTogglePin: {
-                                historyManager.togglePin(entry.id)
-                            },
-                            onDelete: {
-                                historyManager.deleteEntry(entry.id)
-                            }
-                        )
-                        .id(entry.id)
+    private var entriesColumnHeaderBar: some View {
+        HStack(spacing: 10) {
+            Button {
+                historyManager.toggleSort(by: .name)
+            } label: {
+                HStack(spacing: 4) {
+                    Text(loc.text(es: "Elemento", en: "Item"))
+                        .font(.system(size: 11, weight: prefs.sortField == .name ? .semibold : .medium))
+                        .foregroundStyle(prefs.sortField == .name ? .primary : .secondary)
+
+                    if prefs.sortField == .name {
+                        Image(systemName: prefs.sortAscending ? "chevron.up" : "chevron.down")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(Color.accentColor)
                     }
                 }
-                .padding(8)
+                .contentShape(Rectangle())
             }
-            .onChange(of: historyManager.selectedEntryID) { _, newID in
-                if let newID {
-                    withAnimation(.easeInOut(duration: 0.12)) {
-                        proxy.scrollTo(newID, anchor: .center)
+            .buttonStyle(.plain)
+            .help(loc.text(es: "Ordenar por contenido (A–Z / Z–A)", en: "Sort by content (A–Z / Z–A)"))
+
+            if prefs.sortField != .date && prefs.sortField != .name {
+                Button {
+                    historyManager.toggleSort(by: prefs.sortField)
+                } label: {
+                    HStack(spacing: 3) {
+                        Image(systemName: prefs.sortField.systemImage)
+                            .font(.system(size: 9.5))
+                        Text(prefs.sortField.localizedTitle(using: loc))
+                            .font(.system(size: 10, weight: .semibold))
+                        Image(systemName: prefs.sortAscending ? "chevron.up" : "chevron.down")
+                            .font(.system(size: 8.5, weight: .bold))
+                    }
+                    .foregroundStyle(Color.accentColor)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(
+                        Capsule()
+                            .fill(Color.accentColor.opacity(0.12))
+                    )
+                }
+                .buttonStyle(.plain)
+            }
+
+            Spacer(minLength: 4)
+
+            Button {
+                historyManager.toggleSort(by: .date)
+            } label: {
+                HStack(spacing: 4) {
+                    Text(loc.text(es: "Fecha", en: "Date"))
+                        .font(.system(size: 11, weight: prefs.sortField == .date ? .semibold : .medium))
+                        .foregroundStyle(prefs.sortField == .date ? .primary : .secondary)
+
+                    if prefs.sortField == .date {
+                        Image(systemName: prefs.sortAscending ? "chevron.up" : "chevron.down")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(Color.accentColor)
+                    }
+                }
+                .frame(width: 82, alignment: .trailing)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .help(loc.text(
+                es: "Ordenar por fecha (más recientes / más antiguos)",
+                en: "Sort by date (newest / oldest)"
+            ))
+        }
+        .padding(.horizontal, 18)
+        .padding(.vertical, 6)
+        .background(Color.primary.opacity(0.025))
+    }
+
+    private var entriesListPane: some View {
+        let list = historyManager.filteredItems
+        let selectedID: UUID? = {
+            if let id = historyManager.selectedEntryID, list.contains(where: { $0.id == id }) {
+                return id
+            }
+            return list.first?.id
+        }()
+
+        return VStack(spacing: 0) {
+            entriesColumnHeaderBar
+            Divider()
+
+            ScrollViewReader { proxy in
+                ScrollView(.vertical) {
+                    LazyVStack(spacing: 3) {
+                        ForEach(Array(list.enumerated()), id: \.element.id) { index, entry in
+                            ClipboardHistoryRowView(
+                                entry: entry,
+                                shortcutNumber: index < 9 ? (index + 1) : (index == 9 ? 0 : nil),
+                                isSelected: selectedID == entry.id,
+                                isCopiedFeedbackVisible: historyManager.recentlyCopiedFeedbackEntryID == entry.id,
+                                onSelect: {
+                                    historyManager.selectedEntryID = entry.id
+                                },
+                                onCopy: {
+                                    historyManager.selectedEntryID = entry.id
+                                    historyManager.copyEntryToPasteboard(entry)
+                                },
+                                onTogglePin: {
+                                    historyManager.togglePin(entry.id)
+                                },
+                                onDelete: {
+                                    historyManager.deleteEntry(entry.id)
+                                }
+                            )
+                            .id(entry.id)
+                        }
+                    }
+                    .padding(8)
+                }
+                .onChange(of: historyManager.selectedEntryID) { _, newID in
+                    if let newID {
+                        withAnimation(.easeInOut(duration: 0.12)) {
+                            proxy.scrollTo(newID, anchor: .center)
+                        }
                     }
                 }
             }
@@ -847,6 +1015,22 @@ struct ClipboardHistoryRowView: View {
                             .fill(Color.primary.opacity(0.05))
                     )
             }
+
+            // Columna Fecha (alineada con el encabezado "Fecha" / "Date")
+            VStack(alignment: .trailing, spacing: 1) {
+                Text(entry.compactDateDayLabel(using: loc))
+                    .font(.system(size: 10.5, weight: .medium))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+
+                Text(entry.compactTimeLabel)
+                    .font(.system(size: 10, weight: .regular))
+                    .monospacedDigit()
+                    .foregroundStyle(.tertiary)
+                    .lineLimit(1)
+            }
+            .frame(width: 82, alignment: .trailing)
+            .help(entry.lastCopiedAt.formatted(date: .abbreviated, time: .standard))
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 7)

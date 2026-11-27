@@ -29,6 +29,82 @@ public enum ClipboardItemKind: String, Codable, CaseIterable, Sendable {
         case .link: return loc.text(es: "Enlace", en: "Link")
         }
     }
+
+    public var sortRank: Int {
+        switch self {
+        case .text: return 0
+        case .link: return 1
+        case .image: return 2
+        case .files: return 3
+        }
+    }
+}
+
+/// Criterio de ordenamiento para la lista del Historial del Portapapeles.
+public enum ClipboardSortField: String, Codable, CaseIterable, Identifiable, Sendable {
+    case date
+    case name
+    case kind
+    case size
+    case sourceApp
+    case copyCount
+
+    public var id: String { rawValue }
+
+    public var systemImage: String {
+        switch self {
+        case .date: return "calendar.badge.clock"
+        case .name: return "textformat"
+        case .kind: return "square.grid.2x2"
+        case .size: return "internaldrive"
+        case .sourceApp: return "app.badge"
+        case .copyCount: return "arrow.counterclockwise"
+        }
+    }
+
+    /// Dirección predeterminada natural al elegir este criterio (`false` = descendente, `true` = ascendente).
+    public var defaultAscending: Bool {
+        switch self {
+        case .date, .size, .copyCount:
+            return false
+        case .name, .kind, .sourceApp:
+            return true
+        }
+    }
+
+    @MainActor
+    public func localizedTitle(using loc: LocalizationManager = .shared) -> String {
+        switch self {
+        case .date: return loc.text(es: "Fecha", en: "Date")
+        case .name: return loc.text(es: "Contenido", en: "Content")
+        case .kind: return loc.text(es: "Tipo", en: "Type")
+        case .size: return loc.text(es: "Tamaño", en: "Size")
+        case .sourceApp: return loc.text(es: "Aplicación", en: "Source App")
+        case .copyCount: return loc.text(es: "Más usados", en: "Most Used")
+        }
+    }
+
+    @MainActor
+    public func localizedDirectionLabel(ascending: Bool, using loc: LocalizationManager = .shared) -> String {
+        switch self {
+        case .date:
+            return ascending
+                ? loc.text(es: "Más antiguos primero", en: "Oldest first")
+                : loc.text(es: "Más recientes primero", en: "Newest first")
+        case .size:
+            return ascending
+                ? loc.text(es: "Menor a mayor", en: "Smallest first")
+                : loc.text(es: "Mayor a menor", en: "Largest first")
+        case .copyCount:
+            return ascending
+                ? loc.text(es: "Menos usados primero", en: "Least used first")
+                : loc.text(es: "Más usados primero", en: "Most used first")
+        case .name, .kind, .sourceApp:
+            return ascending
+                ? loc.text(es: "Ascendente (A → Z)", en: "Ascending (A → Z)")
+                : loc.text(es: "Descendente (Z → A)", en: "Descending (Z → A)")
+        }
+    }
 }
 
 /// Filtro por categoría dentro del buscador del Historial del Portapapeles.
@@ -660,6 +736,28 @@ public struct ClipboardHistoryEntry: Identifiable, Codable, Equatable, Sendable 
         }
         let idx = collapsed.index(collapsed.startIndex, offsetBy: maxLength)
         return String(collapsed[..<idx]) + "…"
+    }
+
+    /// Etiqueta corta de fecha para la columna Fecha en la lista del portapapeles (`Hoy`, `Ayer` o `27 nov`).
+    @MainActor
+    public func compactDateDayLabel(using loc: LocalizationManager = .shared) -> String {
+        let cal = Calendar.current
+        if cal.isDateInToday(lastCopiedAt) {
+            return loc.text(es: "Hoy", en: "Today")
+        }
+        if cal.isDateInYesterday(lastCopiedAt) {
+            return loc.text(es: "Ayer", en: "Yesterday")
+        }
+        let sameYear = cal.component(.year, from: lastCopiedAt) == cal.component(.year, from: Date())
+        if sameYear {
+            return lastCopiedAt.formatted(.dateTime.day().month(.abbreviated))
+        }
+        return lastCopiedAt.formatted(.dateTime.day().month(.abbreviated).year(.twoDigits))
+    }
+
+    /// Hora corta de última copia para la columna Fecha (ej. `14:08`).
+    public var compactTimeLabel: String {
+        lastCopiedAt.formatted(date: .omitted, time: .shortened)
     }
 
     /// Calcula un hash SHA-256 determinístico para deduplicar entradas idénticas.

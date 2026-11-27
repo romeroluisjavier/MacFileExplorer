@@ -184,7 +184,10 @@ public enum XLSDocumentEngine {
         if bytes.count >= 512 && Array(bytes[0..<8]) == ole2Signature {
             let reader = try OLE2CompoundFileReader(bytes: bytes)
             guard let stream = reader.extractWorkbookStream() else {
-                throw xlsError("No se encontró el flujo 'Workbook' dentro del archivo .xls.")
+                throw xlsError(
+                    es: "No se encontró el flujo 'Workbook' dentro del archivo .xls.",
+                    en: "Could not find the 'Workbook' stream inside the .xls file."
+                )
             }
             let sheets = try BIFFWorkbookParser(bytes: stream).parse()
             return XLSXWorkbookModel(sourceURL: url, sheets: sheets)
@@ -230,7 +233,10 @@ public enum XLSDocumentEngine {
             return XLSXWorkbookModel(sourceURL: url, sheets: [sheet])
         }
 
-        throw xlsError("Formato .xls no reconocido o archivo vacío.")
+        throw xlsError(
+            es: "Formato .xls no reconocido o archivo vacío.",
+            en: "Unrecognized .xls format or empty file."
+        )
     }
 
     /// Guarda un `XLSXWorkbookModel` en disco:
@@ -244,6 +250,11 @@ public enum XLSDocumentEngine {
         let biffStream = BIFF8WorkbookWriter.buildWorkbookStream(from: workbook)
         let ole2Data = OLE2CompoundFileWriter.pack(workbookStream: biffStream)
         try ole2Data.write(to: destinationURL, options: .atomic)
+    }
+
+    fileprivate static func xlsError(es: String, en: String) -> NSError {
+        let message = LocalizationManager.currentLanguageIsSpanish() ? es : en
+        return xlsError(message)
     }
 
     fileprivate static func xlsError(_ message: String) -> NSError {
@@ -534,14 +545,20 @@ private struct OLE2CompoundFileReader {
 
     init(bytes: [UInt8]) throws {
         guard bytes.count >= 512 else {
-            throw XLSDocumentEngine.xlsError("Archivo OLE2 demasiado corto.")
+            throw XLSDocumentEngine.xlsError(
+                es: "Archivo OLE2 demasiado corto.",
+                en: "OLE2 file is too short."
+            )
         }
         self.bytes = bytes
 
         let sectorShift = Int(XLSDocumentEngine.readUInt16LE(bytes, at: 30))
         let miniSectorShift = Int(XLSDocumentEngine.readUInt16LE(bytes, at: 32))
         guard sectorShift >= 7 && sectorShift <= 16 else {
-            throw XLSDocumentEngine.xlsError("Tamaño de sector OLE2 inválido (\(sectorShift)).")
+            throw XLSDocumentEngine.xlsError(
+                es: "Tamaño de sector OLE2 inválido (\(sectorShift)).",
+                en: "Invalid OLE2 sector size (\(sectorShift))."
+            )
         }
         self.sectorSize = 1 << sectorShift
         self.miniSectorSize = 1 << min(max(miniSectorShift, 4), 12)
@@ -832,7 +849,10 @@ private final class BIFFWorkbookParser {
                 }
 
             case 0x002F: // FILEPASS (archivo cifrado con contraseña)
-                throw XLSDocumentEngine.xlsError("Este archivo .xls está protegido con contraseña y no se puede descifrar directamente.")
+                throw XLSDocumentEngine.xlsError(
+                    es: "Este archivo .xls está protegido con contraseña y no se puede descifrar directamente.",
+                    en: "This .xls file is password-protected and cannot be decrypted directly."
+                )
 
             case 0x0042: // CODEPAGE
                 if recLen >= 2 {

@@ -6,6 +6,8 @@ import AppKit
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Capturar el estado real de UserDefaults ANTES de que cualquier módulo o ventana escriba claves iniciales
+        AppOnboardingManager.shared.captureStartupDefaultsSnapshot()
         NSApplication.shared.setActivationPolicy(.regular)
         NSWindow.allowsAutomaticWindowTabbing = true
         if let icon = FileIconProvider.shared.currentAppIcon {
@@ -60,7 +62,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         !(TrayIconPreferences.shared.isTrayIconEnabled
             || TaskbarPreferences.shared.isEnabled
             || AltTabPreferences.shared.isEnabled
-            || NotchPreferences.shared.isEnabled)
+            || NotchPreferences.shared.isEnabled
+            || NotchPreferences.shared.blockAppleMusicAutoLaunch)
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
@@ -136,6 +139,15 @@ struct MacFileExplorerApp: App {
                 }
 
                 Button {
+                    AppOnboardingManager.shared.startWizardManually()
+                } label: {
+                    Label(
+                        loc.text(es: "Asistente de instalación inicial…", en: "Setup Wizard…"),
+                        systemImage: "wand.and.stars"
+                    )
+                }
+
+                Button {
                     MonthlySupportCheckManager.shared.presentPopup(triggerUpdateCheck: true)
                 } label: {
                     Label(loc.text(es: "Apoyar proyecto (Propina Ko-fi)…", en: "Support Project (Ko-fi Tip)…"), systemImage: "heart.circle")
@@ -175,6 +187,77 @@ struct MacFileExplorerApp: App {
                     languageSelectionPicker
                 } label: {
                     Label(loc.text(es: "Idioma", en: "Language"), systemImage: "globe")
+                }
+            }
+
+            CommandGroup(replacing: .appVisibility) {
+                Button {
+                    NSApp.hide(nil)
+                } label: {
+                    Label(loc.text(es: "Ocultar MacFileExplorer", en: "Hide MacFileExplorer"), systemImage: "eye.slash")
+                }
+                .keyboardShortcut("h", modifiers: [.command])
+
+                Button {
+                    NSApp.hideOtherApplications(nil)
+                } label: {
+                    Label(loc.text(es: "Ocultar otros", en: "Hide Others"), systemImage: "circle.slash")
+                }
+                .keyboardShortcut("h", modifiers: [.command, .option])
+
+                Button {
+                    NSApp.unhideAllApplications(nil)
+                } label: {
+                    Label(loc.text(es: "Mostrar todo", en: "Show All"), systemImage: "eye")
+                }
+            }
+
+            CommandGroup(replacing: .appTermination) {
+                Button {
+                    NSApp.terminate(nil)
+                } label: {
+                    Label(loc.text(es: "Salir de MacFileExplorer", en: "Quit MacFileExplorer"), systemImage: "power")
+                }
+                .keyboardShortcut("q", modifiers: [.command])
+            }
+
+            CommandGroup(replacing: .newItem) {
+                Button {
+                    GoogleAccountsManager.shared.openStandaloneFileExplorerWindow()
+                } label: {
+                    Label(loc.text(es: "Nueva ventana", en: "New Window"), systemImage: "macwindow.badge.plus")
+                }
+                .keyboardShortcut("n", modifiers: [.command])
+            }
+
+            CommandGroup(replacing: .saveItem) {
+                Button {
+                    NSApp.sendAction(#selector(NSWindow.performClose(_:)), to: nil, from: nil)
+                } label: {
+                    Label(loc.text(es: "Cerrar ventana", en: "Close Window"), systemImage: "xmark.rectangle")
+                }
+                .keyboardShortcut("w", modifiers: [.command])
+
+                Button {
+                    NSApp.sendAction(Selector(("closeAll:")), to: nil, from: nil)
+                } label: {
+                    Label(loc.text(es: "Cerrar todo", en: "Close All"), systemImage: "rectangle.badge.xmark")
+                }
+                .keyboardShortcut("w", modifiers: [.command, .option])
+            }
+
+            CommandGroup(replacing: .windowSize) {
+                Button {
+                    NSApp.sendAction(#selector(NSWindow.performMiniaturize(_:)), to: nil, from: nil)
+                } label: {
+                    Label(loc.text(es: "Minimizar", en: "Minimize"), systemImage: "minus.circle")
+                }
+                .keyboardShortcut("m", modifiers: [.command])
+
+                Button {
+                    NSApp.sendAction(#selector(NSWindow.performZoom(_:)), to: nil, from: nil)
+                } label: {
+                    Label("Zoom", systemImage: "arrow.up.left.and.arrow.down.right")
                 }
             }
 
@@ -1436,6 +1519,60 @@ struct MacFileExplorerApp: App {
                     )
                 }
 
+                Menu {
+                    Picker(
+                        loc.text(es: "Estilo al cambiar de tema", en: "Track Change Style"),
+                        selection: $notchPrefs.trackChangeStyle
+                    ) {
+                        ForEach(NotchTrackChangeStyle.allCases) { style in
+                            Label(style.localizedTitle(using: loc), systemImage: style.symbolName)
+                                .tag(style)
+                        }
+                    }
+                    .pickerStyle(.inline)
+                } label: {
+                    Label(
+                        loc.text(es: "Animación al cambiar de tema", en: "Track Change Animation"),
+                        systemImage: "forward.fill"
+                    )
+                }
+                .disabled(!notchPrefs.announceNewTracks)
+
+                Menu {
+                    Toggle(isOn: $notchPrefs.showPauseIconWhenPaused) {
+                        Label(
+                            loc.text(es: "Cambiar ondas por símbolo «⏸»", en: "Swap Waves for \"⏸\" Icon"),
+                            systemImage: "pause.fill"
+                        )
+                    }
+
+                    Toggle(isOn: $notchPrefs.animateOnPause) {
+                        Label(
+                            loc.text(es: "Animar al pausar", en: "Animate When Paused"),
+                            systemImage: "pause.circle"
+                        )
+                    }
+
+                    Divider()
+
+                    Picker(
+                        loc.text(es: "Estilo al pausar", en: "Pause Animation Style"),
+                        selection: $notchPrefs.pauseAnimationStyle
+                    ) {
+                        ForEach(NotchPauseAnimationStyle.allCases) { style in
+                            Label(style.localizedTitle(using: loc), systemImage: style.symbolName)
+                                .tag(style)
+                        }
+                    }
+                    .pickerStyle(.inline)
+                    .disabled(!notchPrefs.animateOnPause)
+                } label: {
+                    Label(
+                        loc.text(es: "Animación al pausar", en: "Pause Animation"),
+                        systemImage: "pause.circle"
+                    )
+                }
+
                 Toggle(isOn: $notchPrefs.showAmbientArtworkGlow) {
                     Label(
                         loc.text(es: "Efecto de brillo del álbum", en: "Ambient Album Glow"),
@@ -1447,6 +1584,44 @@ struct MacFileExplorerApp: App {
                     Label(
                         loc.text(es: "Ocultar en pantalla completa", en: "Hide in Full Screen"),
                         systemImage: "rectangle.dashed"
+                    )
+                }
+
+                Menu {
+                    Picker(
+                        loc.text(es: "Al presionar ▶ Play sin música", en: "On ▶ Play When Idle"),
+                        selection: Binding<String>(
+                            get: { NotchMusicDecoyService.shared.currentPlayKeySelectionTag },
+                            set: { NotchMusicDecoyService.shared.applyPlayKeyTargetSelection($0) }
+                        )
+                    ) {
+                        Text(loc.text(es: "Apple Music (predeterminado de macOS)", en: "Apple Music (macOS Default)"))
+                            .tag(NotchMusicDecoyService.systemAppleMusicSelectionTag)
+                        Text(loc.text(es: "No abrir nada (solo bloquear Apple Music)", en: "Do Nothing (Just Block Apple Music)"))
+                            .tag("")
+                        Divider()
+                        ForEach(NotchMusicDecoyService.shared.availableRedirectApps()) { option in
+                            Text(option.name).tag(option.path)
+                        }
+                    }
+                    .pickerStyle(.inline)
+
+                    Divider()
+
+                    Button {
+                        if let chosen = NotchMusicDecoyService.shared.chooseCustomRedirectApp() {
+                            NotchMusicDecoyService.shared.applyPlayKeyTargetSelection(chosen)
+                        }
+                    } label: {
+                        Label(
+                            loc.text(es: "Elegir otra app…", en: "Choose Another App…"),
+                            systemImage: "folder"
+                        )
+                    }
+                } label: {
+                    Label(
+                        loc.text(es: "Reproductor al presionar ▶ Play", en: "Default ▶ Play Music App"),
+                        systemImage: "hand.raised.slash"
                     )
                 }
 

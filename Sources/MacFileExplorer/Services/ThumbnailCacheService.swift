@@ -38,8 +38,10 @@ actor ThumbnailDiskCoordinator {
     /// Nombre del archivo oculto guardado en la misma carpeta (estilo `Thumbs.db` / `.DS_Store`).
     static let hiddenCacheFileName = ".macfileexplorer_thumbs.cache"
 
-    /// Archivos de caché cargados en memoria por URL de carpeta estandarizada.
+    /// Archivos de caché cargados en memoria por URL de carpeta estandarizada (acotado con LRU).
     private var loadedArchives: [URL: FolderThumbnailArchive] = [:]
+    private var archiveLRUOrder: [URL] = []
+    private let maxLoadedArchives: Int = 24
 
     /// Carpetas que tienen cambios pendientes de persistir en disco.
     private var dirtyFolders: Set<URL> = []
@@ -52,12 +54,27 @@ actor ThumbnailDiskCoordinator {
     private var generationWaiters: [CheckedContinuation<Void, Never>] = []
     private let maxConcurrentGenerations: Int = max(2, min(ProcessInfo.processInfo.activeProcessorCount / 2, 6))
 
+    private func touchArchiveLRU(_ dir: URL) {
+        if let idx = archiveLRUOrder.firstIndex(of: dir) {
+            archiveLRUOrder.remove(at: idx)
+        }
+        archiveLRUOrder.append(dir)
+        while archiveLRUOrder.count > maxLoadedArchives {
+            let evicted = archiveLRUOrder.removeFirst()
+            if dirtyFolders.contains(evicted) {
+                flushFolderArchive(for: evicted)
+            }
+            loadedArchives.removeValue(forKey: evicted)
+        }
+    }
+
     // MARK: - Carga de Caché de Carpeta
 
     /// Carga en memoria el archivo `.macfileexplorer_thumbs.cache` de la carpeta indicada si aún no está cargado.
     func ensureFolderArchiveLoaded(for folderURL: URL) -> FolderThumbnailArchive {
         let dir = folderURL.standardizedFileURL
         if let existing = loadedArchives[dir] {
+            touchArchiveLRU(dir)
             return existing
         }
 
@@ -68,17 +85,20 @@ actor ThumbnailDiskCoordinator {
         if let data = try? Data(contentsOf: localCacheURL, options: [.mappedIfSafe]),
            let archive = try? decoder.decode(FolderThumbnailArchive.self, from: data) {
             loadedArchives[dir] = archive
+            touchArchiveLRU(dir)
             return archive
         }
 
         if let data = try? Data(contentsOf: fallbackURL, options: [.mappedIfSafe]),
            let archive = try? decoder.decode(FolderThumbnailArchive.self, from: data) {
             loadedArchives[dir] = archive
+            touchArchiveLRU(dir)
             return archive
         }
 
         let empty = FolderThumbnailArchive()
         loadedArchives[dir] = empty
+        touchArchiveLRU(dir)
         return empty
     }
 
@@ -96,6 +116,25 @@ actor ThumbnailDiskCoordinator {
         return entry.pngOrJpegData
     }
 
+    /// Devuelve en un solo salto de actor todas las miniaturas ya cacheadas para un lote de archivos de la misma carpeta.
+    func cachedThumbnailsBatch(for items: [FileItem], in directoryURL: URL) -> [(item: FileItem, data: Data)] {
+        let dir = directoryURL.standardizedFileURL
+        let archive = ensureFolderArchiveLoaded(for: dir)
+        guard !archive.entries.isEmpty else { return [] }
+
+        var results: [(item: FileItem, data: Data)] = []
+        results.reserveCapacity(items.count)
+        for item in items {
+            guard let entry = archive.entries[item.name] else { continue }
+            let itemSize = item.size ?? 0
+            let modDiff = abs(entry.modificationTimestamp - item.modificationDate.timeIntervalSince1970)
+            if entry.fileSize == itemSize && modDiff < 1.0 {
+                results.append((item, entry.pngOrJpegData))
+            }
+        }
+        return results
+    }
+
     /// Genera la miniatura en segundo plano y actualiza el archivo oculto `.macfileexplorer_thumbs.cache` de la carpeta.
     func generateAndStoreThumbnailData(for item: FileItem, maxPixelSize: Int) async -> Data? {
         if let existing = cachedThumbnailData(for: item) {
@@ -107,19 +146,21 @@ actor ThumbnailDiskCoordinator {
 
         if Task.isCancelled { return nil }
 
-        // Intentar primero extracción ultra-rápida con ImageIO (submuestreo directo sin cargar los 15MB en RAM)
-        var cgImage = Self.createFastImageIOThumbnail(at: item.url, maxPixelSize: maxPixelSize)
+        // Ejecutar decodificación ImageIO/QuickLook y codificación JPEG/PNG fuera del actor para no serializar lecturas ni generación paralela.
+        let itemURL = item.url
+        let encodedData: Data? = await Task.detached(priority: .utility) {
+            if Task.isCancelled { return nil }
+            var cgImage = Self.createFastImageIOThumbnail(at: itemURL, maxPixelSize: maxPixelSize)
+            if cgImage == nil {
+                cgImage = await Self.createQuickLookThumbnail(at: itemURL, maxPixelSize: CGFloat(maxPixelSize))
+            }
+            guard !Task.isCancelled, let validCGImage = cgImage else {
+                return nil
+            }
+            return Self.encodeThumbnail(cgImage: validCGImage, hasAlpha: Self.imageHasAlpha(validCGImage))
+        }.value
 
-        // Si no es imagen directa (ej. PDF o video), usar QuickLookThumbnailing
-        if cgImage == nil {
-            cgImage = await Self.createQuickLookThumbnail(at: item.url, maxPixelSize: CGFloat(maxPixelSize))
-        }
-
-        guard let validCGImage = cgImage else {
-            return nil
-        }
-
-        guard let encodedData = Self.encodeThumbnail(cgImage: validCGImage, hasAlpha: Self.imageHasAlpha(validCGImage)) else {
+        guard let encodedData, !Task.isCancelled else {
             return nil
         }
 
@@ -132,6 +173,7 @@ actor ThumbnailDiskCoordinator {
             pngOrJpegData: encodedData
         )
         loadedArchives[dir] = archive
+        touchArchiveLRU(dir)
         scheduleSave(for: dir)
 
         return encodedData
@@ -213,6 +255,7 @@ actor ThumbnailDiskCoordinator {
         saveTasks.removeAll()
         dirtyFolders.removeAll()
         loadedArchives.removeAll()
+        archiveLRUOrder.removeAll()
     }
 
     private func acquireGenerationSlot() async {
@@ -236,7 +279,7 @@ actor ThumbnailDiskCoordinator {
 
     // MARK: - Generación Rápida con ImageIO y QuickLook
 
-    private static func createFastImageIOThumbnail(at url: URL, maxPixelSize: Int) -> CGImage? {
+    private nonisolated static func createFastImageIOThumbnail(at url: URL, maxPixelSize: Int) -> CGImage? {
         let sourceOptions: [CFString: Any] = [
             kCGImageSourceShouldCache: false
         ]
@@ -254,7 +297,7 @@ actor ThumbnailDiskCoordinator {
         return CGImageSourceCreateThumbnailAtIndex(source, 0, thumbOptions as CFDictionary)
     }
 
-    private static func createQuickLookThumbnail(at url: URL, maxPixelSize: CGFloat) async -> CGImage? {
+    private nonisolated static func createQuickLookThumbnail(at url: URL, maxPixelSize: CGFloat) async -> CGImage? {
         let request = QLThumbnailGenerator.Request(
             fileAt: url,
             size: CGSize(width: maxPixelSize, height: maxPixelSize),
@@ -268,7 +311,7 @@ actor ThumbnailDiskCoordinator {
         }
     }
 
-    private static func imageHasAlpha(_ cgImage: CGImage) -> Bool {
+    private nonisolated static func imageHasAlpha(_ cgImage: CGImage) -> Bool {
         switch cgImage.alphaInfo {
         case .first, .last, .premultipliedFirst, .premultipliedLast:
             return true
@@ -277,7 +320,7 @@ actor ThumbnailDiskCoordinator {
         }
     }
 
-    private static func encodeThumbnail(cgImage: CGImage, hasAlpha: Bool) -> Data? {
+    private nonisolated static func encodeThumbnail(cgImage: CGImage, hasAlpha: Bool) -> Data? {
         let bitmapRep = NSBitmapImageRep(cgImage: cgImage)
         if hasAlpha {
             return bitmapRep.representation(using: .png, properties: [:])
@@ -290,6 +333,27 @@ actor ThumbnailDiskCoordinator {
     }
 }
 
+/// Wrapper `Sendable` sobre `NSCache` (thread-safe por contrato de Foundation) para poblar miniaturas decodificadas fuera de `@MainActor`.
+private final class SendableThumbnailMemoryCache: @unchecked Sendable {
+    let cache = NSCache<NSString, NSImage>()
+
+    init(countLimit: Int) {
+        cache.countLimit = countLimit
+    }
+
+    func object(forKey key: String) -> NSImage? {
+        cache.object(forKey: key as NSString)
+    }
+
+    func setObject(_ image: NSImage, forKey key: String) {
+        cache.setObject(image, forKey: key as NSString)
+    }
+
+    func removeAllObjects() {
+        cache.removeAllObjects()
+    }
+}
+
 // MARK: - Servicio Principal de Miniaturas para SwiftUI (`@MainActor`)
 
 @MainActor
@@ -299,7 +363,7 @@ public final class ThumbnailCacheService {
     /// Nombre del archivo oculto de caché por carpeta para que `FileSystemService` lo ignore en el listado.
     public static let cacheFileName = ThumbnailDiskCoordinator.hiddenCacheFileName
 
-    private let memoryCache = NSCache<NSString, NSImage>()
+    private let memoryCache = SendableThumbnailMemoryCache(countLimit: 1500)
 
     private static let supportedImageExtensions: Set<String> = [
         "jpg", "jpeg", "png", "gif", "webp", "heic", "heif", "tiff", "tif",
@@ -310,9 +374,7 @@ public final class ThumbnailCacheService {
         "pdf", "mp4", "mov", "m4v"
     ]
 
-    private init() {
-        memoryCache.countLimit = 1500
-    }
+    private init() {}
 
     /// Determina si un `FileItem` debe mostrar miniatura visual en la vista de Iconos Grandes.
     public func supportsThumbnail(for item: FileItem) -> Bool {
@@ -329,33 +391,41 @@ public final class ThumbnailCacheService {
 
     /// Devuelve la miniatura desde la RAM de forma síncrona si ya fue cargada (0ms de latencia).
     public func memoryCachedThumbnail(for item: FileItem) -> NSImage? {
-        let key = memoryKey(for: item)
-        return memoryCache.object(forKey: key as NSString)
+        memoryCache.object(forKey: Self.memoryKey(for: item))
     }
 
     /// Precarga en segundo plano el archivo `.macfileexplorer_thumbs.cache` de una carpeta y calienta
-    /// los primeros elementos visibles en RAM sin bloquear la apertura del directorio.
+    /// los primeros elementos visibles en RAM decodificando `NSImage` fuera de `@MainActor`.
     public func preloadFolderThumbnails(for directoryURL: URL, items: [FileItem]) async {
         let candidates = items.filter { supportsThumbnail(for: $0) }
         guard !candidates.isEmpty else { return }
 
-        _ = await ThumbnailDiskCoordinator.shared.ensureFolderArchiveLoaded(for: directoryURL)
-
         let preloadLimit = min(candidates.count, 120)
+        var uncachedCandidates: [FileItem] = []
+        uncachedCandidates.reserveCapacity(preloadLimit)
         for index in 0..<preloadLimit {
-            if Task.isCancelled { break }
             let item = candidates[index]
-            if memoryCachedThumbnail(for: item) != nil { continue }
-
-            if let data = await ThumbnailDiskCoordinator.shared.cachedThumbnailData(for: item),
-               let image = NSImage(data: data) {
-                memoryCache.setObject(image, forKey: memoryKey(for: item) as NSString)
-            }
-
-            if index > 0 && index % 20 == 0 {
-                await Task.yield()
+            if memoryCachedThumbnail(for: item) == nil {
+                uncachedCandidates.append(item)
             }
         }
+        guard !uncachedCandidates.isEmpty else { return }
+
+        let cachedBatch = await ThumbnailDiskCoordinator.shared.cachedThumbnailsBatch(
+            for: uncachedCandidates,
+            in: directoryURL
+        )
+        guard !Task.isCancelled, !cachedBatch.isEmpty else { return }
+
+        let cacheBox = self.memoryCache
+        await Task.detached(priority: .utility) {
+            for (item, data) in cachedBatch {
+                if Task.isCancelled { break }
+                if let image = NSImage(data: data) {
+                    cacheBox.setObject(image, forKey: Self.memoryKey(for: item))
+                }
+            }
+        }.value
     }
 
     /// Obtiene o genera asíncronamente la miniatura de un archivo, guardándola en `.macfileexplorer_thumbs.cache`.
@@ -367,7 +437,7 @@ public final class ThumbnailCacheService {
         // 1. Verificar primero si está en el archivo oculto `.macfileexplorer_thumbs.cache` de la carpeta
         if let cachedData = await ThumbnailDiskCoordinator.shared.cachedThumbnailData(for: item),
            let image = NSImage(data: cachedData) {
-            memoryCache.setObject(image, forKey: memoryKey(for: item) as NSString)
+            memoryCache.setObject(image, forKey: Self.memoryKey(for: item))
             return image
         }
 
@@ -379,7 +449,7 @@ public final class ThumbnailCacheService {
             return nil
         }
 
-        memoryCache.setObject(image, forKey: memoryKey(for: item) as NSString)
+        memoryCache.setObject(image, forKey: Self.memoryKey(for: item))
         return image
     }
 
@@ -390,7 +460,7 @@ public final class ThumbnailCacheService {
         }
     }
 
-    private func memoryKey(for item: FileItem) -> String {
+    private nonisolated static func memoryKey(for item: FileItem) -> String {
         "\(item.url.path(percentEncoded: false))::\(Int(item.modificationDate.timeIntervalSince1970))::\(item.size ?? 0)"
     }
 }

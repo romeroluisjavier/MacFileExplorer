@@ -84,6 +84,10 @@ public struct QuickActionVideoConvertOptions: Sendable {
 
 public enum QuickActionsService {
 
+    private static func localizedText(es: String, en: String) -> String {
+        LocalizationManager.currentLanguageIsSpanish() ? es : en
+    }
+
     public static let supportedImageExtensions: Set<String> = [
         "jpg", "jpeg", "png", "heic", "heif", "webp", "tiff", "tif", "bmp", "gif", "avif"
     ]
@@ -123,7 +127,10 @@ public enum QuickActionsService {
         guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
               let originalCGImage = CGImageSourceCreateImageAtIndex(source, 0, nil) else {
             throw NSError(domain: "QuickActionsService", code: 1, userInfo: [
-                NSLocalizedDescriptionKey: "No se pudo leer la imagen \(url.lastPathComponent)."
+                NSLocalizedDescriptionKey: localizedText(
+                    es: "No se pudo leer la imagen \(url.lastPathComponent).",
+                    en: "Could not read image \(url.lastPathComponent)."
+                )
             ])
         }
 
@@ -223,7 +230,10 @@ public enum QuickActionsService {
         let data = NSMutableData()
         guard let dest = CGImageDestinationCreateWithData(data, format.utType.identifier as CFString, 1, nil) else {
             throw NSError(domain: "QuickActionsService", code: 2, userInfo: [
-                NSLocalizedDescriptionKey: "No se pudo crear el destino de imagen."
+                NSLocalizedDescriptionKey: localizedText(
+                    es: "No se pudo crear el destino de imagen.",
+                    en: "Could not create image destination."
+                )
             ])
         }
 
@@ -239,7 +249,10 @@ public enum QuickActionsService {
         CGImageDestinationAddImage(dest, image, props as CFDictionary)
         guard CGImageDestinationFinalize(dest) else {
             throw NSError(domain: "QuickActionsService", code: 3, userInfo: [
-                NSLocalizedDescriptionKey: "No se pudo codificar la imagen."
+                NSLocalizedDescriptionKey: localizedText(
+                    es: "No se pudo codificar la imagen.",
+                    en: "Could not encode image."
+                )
             ])
         }
         return data as Data
@@ -286,7 +299,10 @@ public enum QuickActionsService {
         guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
               let cgImage = CGImageSourceCreateImageAtIndex(source, 0, nil) else {
             throw NSError(domain: "QuickActionsService", code: 4, userInfo: [
-                NSLocalizedDescriptionKey: "No se pudo leer la imagen \(url.lastPathComponent)."
+                NSLocalizedDescriptionKey: localizedText(
+                    es: "No se pudo leer la imagen \(url.lastPathComponent).",
+                    en: "Could not read image \(url.lastPathComponent)."
+                )
             ])
         }
 
@@ -306,7 +322,10 @@ public enum QuickActionsService {
             bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
         ) else {
             throw NSError(domain: "QuickActionsService", code: 5, userInfo: [
-                NSLocalizedDescriptionKey: "No se pudo rotar la imagen."
+                NSLocalizedDescriptionKey: localizedText(
+                    es: "No se pudo rotar la imagen.",
+                    en: "Could not rotate image."
+                )
             ])
         }
 
@@ -323,7 +342,10 @@ public enum QuickActionsService {
 
         guard let rotatedImage = ctx.makeImage() else {
             throw NSError(domain: "QuickActionsService", code: 6, userInfo: [
-                NSLocalizedDescriptionKey: "Error al generar la imagen rotada."
+                NSLocalizedDescriptionKey: localizedText(
+                    es: "Error al generar la imagen rotada.",
+                    en: "Failed to generate rotated image."
+                )
             ])
         }
 
@@ -363,7 +385,10 @@ public enum QuickActionsService {
         guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
               let originalCGImage = CGImageSourceCreateImageAtIndex(source, 0, nil) else {
             throw NSError(domain: "QuickActionsService", code: 30, userInfo: [
-                NSLocalizedDescriptionKey: "No se pudo leer la imagen \(url.lastPathComponent)."
+                NSLocalizedDescriptionKey: localizedText(
+                    es: "No se pudo leer la imagen \(url.lastPathComponent).",
+                    en: "Could not read image \(url.lastPathComponent)."
+                )
             ])
         }
 
@@ -384,7 +409,10 @@ public enum QuickActionsService {
         guard let observation = request.results?.first,
               !observation.allInstances.isEmpty else {
             throw NSError(domain: "QuickActionsService", code: 31, userInfo: [
-                NSLocalizedDescriptionKey: "No se detectó un objeto o persona principal para separar del fondo en \(url.lastPathComponent)."
+                NSLocalizedDescriptionKey: localizedText(
+                    es: "No se detectó un objeto o persona principal para separar del fondo en \(url.lastPathComponent).",
+                    en: "No main subject or person was detected to separate from the background in \(url.lastPathComponent)."
+                )
             ])
         }
 
@@ -410,7 +438,10 @@ public enum QuickActionsService {
             colorSpace: targetColorSpace
         ) else {
             throw NSError(domain: "QuickActionsService", code: 32, userInfo: [
-                NSLocalizedDescriptionKey: "No se pudo generar el PNG con transparencia para \(url.lastPathComponent)."
+                NSLocalizedDescriptionKey: localizedText(
+                    es: "No se pudo generar el PNG con transparencia para \(url.lastPathComponent).",
+                    en: "Could not generate transparent PNG for \(url.lastPathComponent)."
+                )
             ])
         }
 
@@ -440,7 +471,10 @@ public enum QuickActionsService {
             )
             guard let session = AVAssetExportSession(asset: asset, presetName: options.quality.avPreset) else {
                 throw NSError(domain: "QuickActionsService", code: 10, userInfo: [
-                    NSLocalizedDescriptionKey: "No se pudo inicializar la exportación de video para \(url.lastPathComponent)."
+                    NSLocalizedDescriptionKey: localizedText(
+                        es: "No se pudo inicializar la exportación de video para \(url.lastPathComponent).",
+                        en: "Could not initialize video export for \(url.lastPathComponent)."
+                    )
                 ])
             }
             session.outputURL = destURL
@@ -473,7 +507,10 @@ public enum QuickActionsService {
 
         guard let session = AVAssetExportSession(asset: asset, presetName: AVAssetExportPresetHighestQuality) else {
             throw NSError(domain: "QuickActionsService", code: 11, userInfo: [
-                NSLocalizedDescriptionKey: "No se pudo inicializar el recorte de video."
+                NSLocalizedDescriptionKey: localizedText(
+                    es: "No se pudo inicializar el recorte de video.",
+                    en: "Could not initialize video trim."
+                )
             ])
         }
         let start = CMTime(seconds: max(0, startSeconds), preferredTimescale: 1000)
@@ -542,7 +579,10 @@ public enum QuickActionsService {
                       preferredTrackID: kCMPersistentTrackID_Invalid
                   ) else {
                 throw NSError(domain: "QuickActionsService", code: 12, userInfo: [
-                    NSLocalizedDescriptionKey: "El archivo \(url.lastPathComponent) no contiene pista de video."
+                    NSLocalizedDescriptionKey: localizedText(
+                        es: "El archivo \(url.lastPathComponent) no contiene pista de video.",
+                        en: "The file \(url.lastPathComponent) does not contain a video track."
+                    )
                 ])
             }
             let duration = try await asset.load(.duration)
@@ -564,7 +604,10 @@ public enum QuickActionsService {
 
             guard let session = AVAssetExportSession(asset: composition, presetName: AVAssetExportPresetHighestQuality) else {
                 throw NSError(domain: "QuickActionsService", code: 13, userInfo: [
-                    NSLocalizedDescriptionKey: "No se pudo exportar el video sin audio."
+                    NSLocalizedDescriptionKey: localizedText(
+                        es: "No se pudo exportar el video sin audio.",
+                        en: "Could not export video without audio."
+                    )
                 ])
             }
             session.outputURL = destURL
@@ -583,7 +626,10 @@ public enum QuickActionsService {
         }
         if session.status != .completed {
             throw NSError(domain: "QuickActionsService", code: 14, userInfo: [
-                NSLocalizedDescriptionKey: "La exportación de video no se completó correctamente."
+                NSLocalizedDescriptionKey: localizedText(
+                    es: "La exportación de video no se completó correctamente.",
+                    en: "Video export did not complete successfully."
+                )
             ])
         }
     }
@@ -637,7 +683,10 @@ public enum QuickActionsService {
         guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
               let originalImage = CGImageSourceCreateImageAtIndex(source, 0, nil) else {
             throw NSError(domain: "QuickActionsService", code: 20, userInfo: [
-                NSLocalizedDescriptionKey: "No se pudo leer la imagen \(url.lastPathComponent)."
+                NSLocalizedDescriptionKey: localizedText(
+                    es: "No se pudo leer la imagen \(url.lastPathComponent).",
+                    en: "Could not read image \(url.lastPathComponent)."
+                )
             ])
         }
 
@@ -683,7 +732,10 @@ public enum QuickActionsService {
 
         guard let finalDestination = destination else {
             throw NSError(domain: "QuickActionsService", code: 21, userInfo: [
-                NSLocalizedDescriptionKey: "No se pudo crear la imagen limpia para \(url.lastPathComponent)."
+                NSLocalizedDescriptionKey: localizedText(
+                    es: "No se pudo crear la imagen limpia para \(url.lastPathComponent).",
+                    en: "Could not create clean image for \(url.lastPathComponent)."
+                )
             ])
         }
 
@@ -697,7 +749,10 @@ public enum QuickActionsService {
         CGImageDestinationAddImage(finalDestination, uprightImage, cleanProperties as CFDictionary)
         guard CGImageDestinationFinalize(finalDestination) else {
             throw NSError(domain: "QuickActionsService", code: 22, userInfo: [
-                NSLocalizedDescriptionKey: "No se pudo guardar la imagen sin metadatos."
+                NSLocalizedDescriptionKey: localizedText(
+                    es: "No se pudo guardar la imagen sin metadatos.",
+                    en: "Could not save metadata-free image."
+                )
             ])
         }
         return chosenURL
@@ -733,7 +788,10 @@ public enum QuickActionsService {
 
         guard insertedAnyTrack else {
             throw NSError(domain: "QuickActionsService", code: 23, userInfo: [
-                NSLocalizedDescriptionKey: "No se encontraron pistas multimedia en \(url.lastPathComponent)."
+                NSLocalizedDescriptionKey: localizedText(
+                    es: "No se encontraron pistas multimedia en \(url.lastPathComponent).",
+                    en: "No media tracks found in \(url.lastPathComponent)."
+                )
             ])
         }
 
@@ -759,7 +817,10 @@ public enum QuickActionsService {
 
         guard let session = AVAssetExportSession(asset: composition, presetName: chosenPreset) ?? AVAssetExportSession(asset: composition, presetName: AVAssetExportPresetHighestQuality) else {
             throw NSError(domain: "QuickActionsService", code: 24, userInfo: [
-                NSLocalizedDescriptionKey: "No se pudo inicializar el limpiador de video."
+                NSLocalizedDescriptionKey: localizedText(
+                    es: "No se pudo inicializar el limpiador de video.",
+                    en: "Could not initialize video metadata stripper."
+                )
             ])
         }
 
@@ -775,12 +836,18 @@ public enum QuickActionsService {
     private static func stripPDFMetadata(at url: URL) throws -> URL {
         guard let sourceDoc = PDFDocument(url: url) else {
             throw NSError(domain: "QuickActionsService", code: 25, userInfo: [
-                NSLocalizedDescriptionKey: "No se pudo abrir el PDF \(url.lastPathComponent)."
+                NSLocalizedDescriptionKey: localizedText(
+                    es: "No se pudo abrir el PDF \(url.lastPathComponent).",
+                    en: "Could not open PDF \(url.lastPathComponent)."
+                )
             ])
         }
         if sourceDoc.isEncrypted && sourceDoc.isLocked {
             throw NSError(domain: "QuickActionsService", code: 26, userInfo: [
-                NSLocalizedDescriptionKey: "El PDF está protegido con contraseña y no se pueden limpiar sus metadatos."
+                NSLocalizedDescriptionKey: localizedText(
+                    es: "El PDF está protegido con contraseña y no se pueden limpiar sus metadatos.",
+                    en: "The PDF is password-protected and its metadata cannot be stripped."
+                )
             ])
         }
 
@@ -806,7 +873,10 @@ public enum QuickActionsService {
         )
         guard cleanDoc.write(to: destURL) else {
             throw NSError(domain: "QuickActionsService", code: 27, userInfo: [
-                NSLocalizedDescriptionKey: "No se pudo guardar el PDF sin metadatos."
+                NSLocalizedDescriptionKey: localizedText(
+                    es: "No se pudo guardar el PDF sin metadatos.",
+                    en: "Could not save metadata-free PDF."
+                )
             ])
         }
         return destURL

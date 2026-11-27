@@ -81,10 +81,14 @@ public struct RichCodePreviewView: View {
             do {
                 let data = try Data(contentsOf: targetURL)
                 let decoded: String?
+                let isES = LocalizationManager.currentLanguageIsSpanish()
                 if data.count > 2_500_000 {
                     let prefixData = data.prefix(2_500_000)
+                    let truncatedSuffix = isES
+                        ? "\n\n… (archivo truncado para vista rápida)"
+                        : "\n\n… (file truncated for quick preview)"
                     decoded = (String(data: prefixData, encoding: .utf8) ?? String(data: prefixData, encoding: .isoLatin1))
-                        .map { $0 + "\n\n… (archivo truncado para vista rápida)" }
+                        .map { $0 + truncatedSuffix }
                 } else {
                     decoded = String(data: data, encoding: .utf8) ?? String(data: data, encoding: .isoLatin1)
                 }
@@ -94,7 +98,11 @@ public struct RichCodePreviewView: View {
                 return .failure(NSError(
                     domain: "MacFileExplorer.QuickLook",
                     code: 1,
-                    userInfo: [NSLocalizedDescriptionKey: "Could not decode text file."]
+                    userInfo: [
+                        NSLocalizedDescriptionKey: isES
+                            ? "No se pudo decodificar el archivo de texto."
+                            : "Could not decode text file."
+                    ]
                 ))
             } catch {
                 return .failure(error)

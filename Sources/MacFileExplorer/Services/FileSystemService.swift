@@ -341,7 +341,12 @@ public final class FileSystemService: Sendable {
             )
             let created = fm.createFile(atPath: targetURL.path(percentEncoded: false), contents: Data())
             guard created else {
-                throw FileSystemError.operationFailed("No se pudo crear el archivo '\(targetURL.lastPathComponent)'.")
+                let isES = LocalizationManager.currentLanguageIsSpanish()
+                throw FileSystemError.operationFailed(
+                    isES
+                        ? "No se pudo crear el archivo '\(targetURL.lastPathComponent)'."
+                        : "Could not create the file '\(targetURL.lastPathComponent)'."
+                )
             }
             return targetURL.standardizedFileURL
         }
@@ -464,12 +469,19 @@ public final class FileSystemService: Sendable {
         let sourceArchive = archiveURL.standardizedFileURL
         let parentDir = sourceArchive.deletingLastPathComponent().standardizedFileURL
         let rawStem = sourceArchive.deletingPathExtension().lastPathComponent
-        let baseFolderName = rawStem.isEmpty ? "Archivo descomprimido" : rawStem
+        let isES = LocalizationManager.currentLanguageIsSpanish()
+        let baseFolderName = rawStem.isEmpty
+            ? (isES ? "Archivo descomprimido" : "Extracted Archive")
+            : rawStem
 
         return try await performAsyncIO {
             let fm = FileManager.default
             guard fm.fileExists(atPath: sourceArchive.path(percentEncoded: false)) else {
-                throw FileSystemError.operationFailed("El archivo '\(sourceArchive.lastPathComponent)' no existe.")
+                throw FileSystemError.operationFailed(
+                    isES
+                        ? "El archivo '\(sourceArchive.lastPathComponent)' no existe."
+                        : "The file '\(sourceArchive.lastPathComponent)' does not exist."
+                )
             }
 
             let tempStagingDir = fm.temporaryDirectory
@@ -513,8 +525,12 @@ public final class FileSystemService: Sendable {
                 guard unzipProcess.terminationStatus == 0 else {
                     let errData = stderrPipe.fileHandleForReading.readDataToEndOfFile()
                     let errText = String(data: errData, encoding: .utf8)?
-                        .trimmingCharacters(in: .whitespacesAndNewlines) ?? "Error al descomprimir el archivo .zip"
-                    throw FileSystemError.operationFailed(errText.isEmpty ? "No se pudo desarchivar '\(sourceArchive.lastPathComponent)'." : errText)
+                        .trimmingCharacters(in: .whitespacesAndNewlines)
+                        ?? (isES ? "Error al descomprimir el archivo .zip" : "Error extracting the .zip archive")
+                    let fallback = isES
+                        ? "No se pudo desarchivar '\(sourceArchive.lastPathComponent)'."
+                        : "Could not extract '\(sourceArchive.lastPathComponent)'."
+                    throw FileSystemError.operationFailed(errText.isEmpty ? fallback : errText)
                 }
             }
 

@@ -26,10 +26,12 @@ public final class AppOnboardingManager {
         public static let hasCompletedOnboarding = "com.macfileexplorer.onboarding.hasCompletedOnboarding"
         public static let lastLaunchedVersion = "com.macfileexplorer.onboarding.lastLaunchedVersion"
         public static let hasCompletedTour = "com.macfileexplorer.onboarding.hasCompletedTour"
+        public static let isFreshInstallWizardInProgress = "com.macfileexplorer.onboarding.isFreshInstallWizardInProgress"
     }
 
-    /// Claves legadas escritas por versiones anteriores de `MacFileExplorer` tras uso real
-    /// (se excluyen claves que el arranque inicial de la ventana podría escribir en primer plano).
+    /// Claves legadas escritas por versiones anteriores de `MacFileExplorer` tras uso real.
+    /// IMPORTANTE: Nunca incluir claves que SwiftUI o el primer arranque escriben automáticamente
+    /// (como `windowFrame` o `savedSessionSnapshot`), ya que provocarían omitir el Wizard en instalaciones desde 0.
     public static let legacyInstallationUserDefaultsKeys: [String] = [
         "com.macfileexplorer.monthlySupport.firstLaunchAt",
         "com.macfileexplorer.languagePreference",
@@ -38,8 +40,6 @@ public final class AppOnboardingManager {
         "com.macfileexplorer.taskbar.hasCompletedSetup",
         "com.macfileexplorer.alttab.startEnabledByDefault",
         "com.macfileexplorer.notch.startEnabledByDefault",
-        "com.macfileexplorer.state.savedSessionSnapshot",
-        "com.macfileexplorer.state.windowFrame",
         "com.macfileexplorer.state.hasMigratedTrashToQuickAccess.v1",
         "com.macfileexplorer.state.visibleQuickAccessFolders",
         "com.macfileexplorer.state.showTrayIcon",
@@ -106,8 +106,22 @@ public final class AppOnboardingManager {
     private let currentVersionProvider: () -> String
     private let launchArgumentsProvider: () -> [String]
     private var hasHandledApplicationLaunch = false
+    private var capturedLegacySignalsAtStartup: Bool?
     private var scheduledLaunchTask: Task<Void, Never>?
     private var scheduledTourTask: Task<Void, Never>?
+    private var wizardPreviewBaseline: (
+        language: AppLanguagePreference,
+        icon: MacFileExplorerAppIcon,
+        hadSavedLanguage: Bool,
+        hadSavedIcon: Bool
+    )?
+
+    /// Captura el estado real de `UserDefaults` al instante inicial del arranque,
+    /// antes de que otros módulos o ventanas escriban cualquier preferencia inicial.
+    public func captureStartupDefaultsSnapshot() {
+        guard capturedLegacySignalsAtStartup == nil else { return }
+        capturedLegacySignalsAtStartup = computeLegacyInstallationSignalsNow()
+    }
 
     public init(
         defaults: UserDefaults = .standard,
@@ -144,7 +158,23 @@ public final class AppOnboardingManager {
         let currentVersion = AppVersionComparator.displayVersion(currentVersionProvider())
         let args = launchArgumentsProvider()
 
-        // 0. Argumentos de lanzamiento dedicados para QA / previsualización instantánea
+        // 0a. Argumento explícito `--wizard` / `--setup-wizard` (usado por el instalador doble clic del DMG o Terminal)
+        if args.contains("--wizard") || args.contains("--setup-wizard") {
+            if hasCompletedOnboarding || hasLegacyInstallationSignals() {
+                draft = captureCurrentLivePreferencesIntoDraft()
+            } else {
+                if commitState {
+                    defaults.set(true, forKey: DefaultsKeys.isFreshInstallWizardInProgress)
+                }
+                var freshDraft = SetupWizardDraft.recommendedDefaults()
+                freshDraft.languagePreference = LocalizationManager.shared.preference
+                draft = freshDraft
+            }
+            currentWizardStep = .welcome
+            return .showFirstInstallWizard
+        }
+
+        // 0b. Argumentos de lanzamiento dedicados para QA / previsualización instantánea
         if let previewAction = parsePreviewLaunchArguments(args, currentVersion: currentVersion) {
             if case let .showUpgradeNotes(prev, curr) = previewAction {
                 pendingUpgradeComparison = (previous: prev, current: curr)
@@ -185,6 +215,9 @@ public final class AppOnboardingManager {
 
         // Caso 1: Instalación completamente nueva (sin onboarding previo ni claves legadas)
         if !hasCompletedOnboarding {
+            if commitState {
+                defaults.set(true, forKey: DefaultsKeys.isFreshInstallWizardInProgress)
+            }
             var initialDraft = SetupWizardDraft.recommendedDefaults()
             initialDraft.languagePreference = LocalizationManager.shared.preference
             draft = initialDraft
@@ -201,6 +234,18 @@ public final class AppOnboardingManager {
 
     /// Devuelve `true` si `UserDefaults` contiene señales claras de que el usuario ya había usado una versión previa.
     public func hasLegacyInstallationSignals() -> Bool {
+        if let snapshot = capturedLegacySignalsAtStartup {
+            return snapshot
+        }
+        return computeLegacyInstallationSignalsNow()
+    }
+
+    private func computeLegacyInstallationSignalsNow() -> Bool {
+        // Si un asistente de instalación nueva quedó inconcluso (ej. el usuario previsualizó idioma/ícono
+        // y cerró con ⌘Q o la cruz roja), no debe reclasificarse como actualización legada.
+        if defaults.bool(forKey: DefaultsKeys.isFreshInstallWizardInProgress) && !hasCompletedOnboarding {
+            return false
+        }
         for key in Self.legacyInstallationUserDefaultsKeys {
             if defaults.object(forKey: key) != nil {
                 return true
@@ -357,9 +402,42 @@ public final class AppOnboardingManager {
         }
     }
 
+    /// Captura el estado previo de idioma e ícono antes de cualquier vista previa en vivo en el Paso 1,
+    /// para poder revertirlo limpiamente si el usuario cierra el asistente sin finalizar.
+    private func captureWizardPreviewBaselineIfNeeded() {
+        guard wizardPreviewBaseline == nil else { return }
+        wizardPreviewBaseline = (
+            language: LocalizationManager.shared.preference,
+            icon: FileIconProvider.shared.selectedAppIcon,
+            hadSavedLanguage: UserDefaults.standard.object(forKey: "com.macfileexplorer.languagePreference") != nil,
+            hadSavedIcon: UserDefaults.standard.object(forKey: "com.macfileexplorer.selectedAppIcon") != nil
+        )
+    }
+
+    /// Aplica una vista previa inmediata del idioma dentro del Asistente, manteniendo seguro el estado de instalación nueva.
+    public func previewLanguageInWizard(_ option: AppLanguagePreference) {
+        captureWizardPreviewBaselineIfNeeded()
+        if !hasCompletedOnboarding {
+            defaults.set(true, forKey: DefaultsKeys.isFreshInstallWizardInProgress)
+        }
+        draft.languagePreference = option
+        LocalizationManager.shared.preference = option
+    }
+
+    /// Aplica una vista previa inmediata del ícono dentro del Asistente, manteniendo seguro el estado de instalación nueva.
+    public func previewAppIconInWizard(_ option: MacFileExplorerAppIcon) {
+        captureWizardPreviewBaselineIfNeeded()
+        if !hasCompletedOnboarding {
+            defaults.set(true, forKey: DefaultsKeys.isFreshInstallWizardInProgress)
+        }
+        draft.selectedAppIcon = option
+        FileIconProvider.shared.selectedAppIcon = option
+    }
+
     /// Aplica limpiamente cada módulo seleccionado en `draft`, marca el onboarding como completado,
     /// cierra la ventana del asistente e inicia el Tour interactivo si corresponde.
     public func completeWizardApplyingDraft(startTour: Bool? = nil) {
+        wizardPreviewBaseline = nil
         applyDraftToLivePreferences(draft)
 
         let currentVersion = AppVersionComparator.displayVersion(currentVersionProvider())
@@ -389,8 +467,26 @@ public final class AppOnboardingManager {
         completeWizardApplyingDraft(startTour: true)
     }
 
-    /// Cierra el asistente sin sobreescribir ajustes (ej. si el usuario cierra la ventana con la cruz roja).
-    public func dismissWizardWithoutApplying(markCompleted: Bool = true) {
+    /// Cierra el asistente sin aplicar cambios (revierte vistas previas de idioma/ícono de Paso 1).
+    /// Por defecto NO marca el onboarding como completado para que una instalación nueva vuelva a mostrar
+    /// el asistente en el siguiente arranque hasta que se complete.
+    public func dismissWizardWithoutApplying(markCompleted: Bool = false) {
+        if let baseline = wizardPreviewBaseline {
+            if LocalizationManager.shared.preference != baseline.language {
+                LocalizationManager.shared.preference = baseline.language
+            }
+            if !baseline.hadSavedLanguage {
+                UserDefaults.standard.removeObject(forKey: "com.macfileexplorer.languagePreference")
+            }
+            if FileIconProvider.shared.selectedAppIcon != baseline.icon {
+                FileIconProvider.shared.selectedAppIcon = baseline.icon
+            }
+            if !baseline.hadSavedIcon {
+                UserDefaults.standard.removeObject(forKey: "com.macfileexplorer.selectedAppIcon")
+            }
+            wizardPreviewBaseline = nil
+        }
+
         isWizardPresented = false
         if markCompleted && !hasCompletedOnboarding {
             setHasCompletedOnboarding(true)
@@ -496,6 +592,9 @@ public final class AppOnboardingManager {
     private func setHasCompletedOnboarding(_ completed: Bool) {
         hasCompletedOnboarding = completed
         defaults.set(completed, forKey: DefaultsKeys.hasCompletedOnboarding)
+        if completed {
+            defaults.removeObject(forKey: DefaultsKeys.isFreshInstallWizardInProgress)
+        }
     }
 
     private func setLastLaunchedVersion(_ version: String) {

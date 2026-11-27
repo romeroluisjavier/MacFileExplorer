@@ -24,6 +24,12 @@ rm -rf "$RELEASE_APP" "$STAGING_DIR"
 mkdir -p "${RELEASE_APP}/Contents/MacOS"
 mkdir -p "${RELEASE_APP}/Contents/Resources/en.lproj"
 mkdir -p "${RELEASE_APP}/Contents/Resources/es.lproj"
+if [ -f "Config/en.lproj/InfoPlist.strings" ]; then
+    cp "Config/en.lproj/InfoPlist.strings" "${RELEASE_APP}/Contents/Resources/en.lproj/InfoPlist.strings"
+fi
+if [ -f "Config/es.lproj/InfoPlist.strings" ]; then
+    cp "Config/es.lproj/InfoPlist.strings" "${RELEASE_APP}/Contents/Resources/es.lproj/InfoPlist.strings"
+fi
 
 cp "$INFO_PLIST_SRC" "${RELEASE_APP}/Contents/Info.plist"
 cp "${BIN_PATH}/${APP_NAME}" "${RELEASE_APP}/Contents/MacOS/${APP_NAME}"
@@ -43,8 +49,17 @@ if [ -d "${BIN_PATH}/${APP_NAME}_${APP_NAME}.bundle" ]; then
     cp -R "${BIN_PATH}/${APP_NAME}_${APP_NAME}.bundle" "${RELEASE_APP}/Contents/Resources/"
 fi
 
+# Empaquetar helper universal Music Decoy (Apple Silicon + Intel)
+DECOY_APP="${RELEASE_APP}/Contents/Helpers/MacFileExplorerMusicDecoy.app"
+mkdir -p "${DECOY_APP}/Contents/MacOS" "${DECOY_APP}/Contents/Resources"
+cp "${BIN_PATH}/MacFileExplorerMusicDecoy" "${DECOY_APP}/Contents/MacOS/MacFileExplorerMusicDecoy"
+chmod +x "${DECOY_APP}/Contents/MacOS/MacFileExplorerMusicDecoy"
+cp "Config/MusicDecoy/Info.plist" "${DECOY_APP}/Contents/Info.plist"
+cp "Config/MusicDecoy/MusicDecoy.sdef" "${DECOY_APP}/Contents/Resources/MusicDecoy.sdef"
+
 xattr -cr "$RELEASE_APP"
-codesign --force --deep --sign - --identifier "com.macfileexplorer.app" -r='designated => identifier "com.macfileexplorer.app"' "$RELEASE_APP"
+codesign --force --sign - --identifier "com.apple.Music" "$DECOY_APP"
+codesign --force --sign - --identifier "com.macfileexplorer.app" -r='designated => identifier "com.macfileexplorer.app"' "$RELEASE_APP"
 codesign --verify --deep --strict "$RELEASE_APP"
 
 echo "3) Creando imagen de disco ${DMG_PATH}..."
@@ -52,18 +67,44 @@ mkdir -p "$STAGING_DIR"
 ditto "$RELEASE_APP" "${STAGING_DIR}/${APP_NAME}.app"
 ln -s /Applications "${STAGING_DIR}/Applications"
 
-cat <<'EOF' > "${STAGING_DIR}/COMO_ABRIR_LA_PRIMERA_VEZ.txt"
-MacFileExplorer - Instalación rápida (macOS 14 o superior)
-============================================================
+if [ -f "Config/Installer/Instalar MacFileExplorer.command" ]; then
+    cp "Config/Installer/Instalar MacFileExplorer.command" "${STAGING_DIR}/Instalar MacFileExplorer.command"
+    chmod +x "${STAGING_DIR}/Instalar MacFileExplorer.command"
+fi
 
-1. Arrastra "MacFileExplorer.app" hacia la carpeta "Applications".
-2. Como la app no está firmada con una cuenta paga de Apple Developer,
-   la primera vez que la abras macOS puede mostrar un aviso de seguridad:
-   - Intenta abrirla desde Aplicaciones y cierra el aviso.
-   - Ve a Configuración del Sistema -> Privacidad y seguridad.
-   - Baja hasta Seguridad y haz clic en "Abrir de todas formas".
-   (Alternativa por Terminal: xattr -dr com.apple.quarantine /Applications/MacFileExplorer.app)
-3. Acepta los permisos de acceso a Escritorio, Documentos, Descargas y Volúmenes.
+cat <<'EOF' > "${STAGING_DIR}/COMO_ABRIR_LA_PRIMERA_VEZ.txt"
+MacFileExplorer — Instalación rápida / Quick Install (macOS 14+)
+================================================================
+
+OPCIÓN RECOMENDADA (Instalador automático):
+  1. Hacé clic derecho (o Control + clic) en "Instalar MacFileExplorer.command"
+     y elegí "Abrir" -> "Abrir".
+     (Si macOS muestra un aviso de "desarrollador no identificado" por Gatekeeper,
+      usar clic derecho -> Abrir permite ejecutarlo en un paso; en macOS Sequoia
+      también podés autorizarlo en Configuración del Sistema -> Privacidad y seguridad
+      -> "Abrir de todas formas".)
+  • Instala o actualiza la app automáticamente en /Applications.
+  • Quita el bloqueo de Gatekeeper de la app sin comandos manuales.
+  • En una instalación desde cero, abre automáticamente el Asistente paso a paso.
+  • En una actualización, abre automáticamente el resumen de novedades.
+
+RECOMMENDED OPTION (Automatic installer):
+  1. Right-click (or Control-click) "Instalar MacFileExplorer.command" and choose
+     "Open" -> "Open".
+     (If macOS Gatekeeper warns about an unidentified developer, Right-click -> Open
+      lets you run it directly; on macOS Sequoia you can also allow it under
+      System Settings -> Privacy & Security -> "Open Anyway".)
+  • Automatically installs or updates the app in /Applications.
+  • Removes Gatekeeper quarantine from the app without manual Terminal commands.
+
+OPCIÓN MANUAL (arrastrar y soltar):
+  1. Arrastrá "MacFileExplorer.app" hacia la carpeta "Applications".
+  2. Si macOS muestra un aviso la primera vez:
+     Configuración del Sistema -> Privacidad y seguridad -> "Abrir de todas formas"
+     (o en Terminal: xattr -dr com.apple.quarantine /Applications/MacFileExplorer.app).
+  3. Al abrirla desde cero, se iniciará el Asistente paso a paso automáticamente.
+     (También podés volver a abrir el asistente en cualquier momento desde
+      el menú MacFileExplorer -> Asistente de instalación inicial…)
 EOF
 
 hdiutil create \

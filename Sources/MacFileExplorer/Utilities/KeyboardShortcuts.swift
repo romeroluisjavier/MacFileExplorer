@@ -224,6 +224,8 @@ public struct ExplorerKeyEventMonitorModifier: ViewModifier {
         let isQuickLookKey = (eventWindow ?? NSApp.keyWindow) is QuickLookPreviewPanel
         let isInteractiveOfficeQuickLook = viewModel.isQuickLookPresented
             && (viewModel.quickLookItem.map { OfficePreviewSupport.supportsOfficePreview(for: $0.url) } ?? false)
+        let isInteractivePDFQuickLook = viewModel.isQuickLookPresented
+            && (viewModel.quickLookItem.map { QuickActionsService.isPDFURL($0.url) } ?? false)
         let isEditingText: Bool = {
             guard let firstResponder = keyOrActiveWindow.firstResponder else { return false }
             return firstResponder is NSTextView || firstResponder is NSText
@@ -299,9 +301,9 @@ public struct ExplorerKeyEventMonitorModifier: ViewModifier {
             }
         }
 
-        // Si el foco está dentro de un editor interactivo de Quick Look (CSV, Excel, Word o PowerPoint),
-        // NO interceptar flechas, Delete, Enter, Cmd+Z ni atajos de edición del explorador de fondo.
-        if isQuickLookKey && isInteractiveOfficeQuickLook {
+        // Si el foco está dentro de un editor/visor interactivo de Quick Look (CSV, Excel, Word, PowerPoint o PDF),
+        // NO interceptar flechas, Delete, Enter, Cmd+C/V/A/F/S/Z ni atajos de edición del explorador de fondo.
+        if isQuickLookKey && (isInteractiveOfficeQuickLook || isInteractivePDFQuickLook) {
             return false
         }
 

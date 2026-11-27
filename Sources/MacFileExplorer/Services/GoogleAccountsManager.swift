@@ -1697,6 +1697,19 @@ public final class GoogleAccountsManager: NSObject {
             }
         }
 
+        let pollIntervalId = null;
+        let fastPollTicks = 0;
+
+        function stopFastPolling(enableSlowBackoff) {
+            if (pollIntervalId !== null) {
+                clearInterval(pollIntervalId);
+                pollIntervalId = null;
+            }
+            if (enableSlowBackoff && window === window.top) {
+                pollIntervalId = setInterval(scanForGoogleProfile, 30000);
+            }
+        }
+
         async function scanForGoogleProfile() {
             if (scanInFlight) return;
             scanInFlight = true;
@@ -1707,7 +1720,12 @@ public final class GoogleAccountsManager: NSObject {
                 const avatarKey = avatarURL || '';
 
                 if (!effectiveEmail && !avatarURL) return;
-                if (effectiveEmail === lastSentEmail && avatarKey === lastSentAvatarKey) return;
+                if (effectiveEmail === lastSentEmail && avatarKey === lastSentAvatarKey) {
+                    if (lastSentEmail && lastSentAvatarKey) {
+                        stopFastPolling(false);
+                    }
+                    return;
+                }
 
                 let avatarDataURL = null;
                 if (avatarURL && avatarKey !== lastSentAvatarKey) {
@@ -1722,13 +1740,25 @@ public final class GoogleAccountsManager: NSObject {
                 if (avatarURL) payload.avatarURL = avatarURL;
                 if (avatarDataURL) payload.avatarDataURL = avatarDataURL;
                 window.webkit.messageHandlers.googleAccountDetector.postMessage(payload);
+
+                if (lastSentEmail && lastSentAvatarKey) {
+                    stopFastPolling(false);
+                }
             } catch (_) {} finally {
                 scanInFlight = false;
             }
         }
 
         scanForGoogleProfile();
-        setInterval(scanForGoogleProfile, 1500);
+        pollIntervalId = setInterval(() => {
+            fastPollTicks += 1;
+            scanForGoogleProfile();
+            if (lastSentEmail && lastSentAvatarKey) {
+                stopFastPolling(false);
+            } else if (fastPollTicks >= 12) {
+                stopFastPolling(true);
+            }
+        }, 1500);
         document.addEventListener('change', scanForGoogleProfile, true);
         document.addEventListener('blur', scanForGoogleProfile, true);
     })();

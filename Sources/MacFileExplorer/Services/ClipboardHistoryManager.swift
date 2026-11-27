@@ -49,6 +49,9 @@ public final class ClipboardHistoryPreferences {
         static let autoPasteOnSelect = "com.macfileexplorer.clipboardHistory.autoPasteOnSelect"
         static let shortcutPreset = "com.macfileexplorer.clipboardHistory.shortcutPreset.v2"
         static let isSidebarSectionExpanded = "com.macfileexplorer.clipboardHistory.isSidebarSectionExpanded"
+        static let sortField = "com.macfileexplorer.clipboardHistory.sortField"
+        static let sortAscending = "com.macfileexplorer.clipboardHistory.sortAscending"
+        static let keepPinnedOnTop = "com.macfileexplorer.clipboardHistory.keepPinnedOnTop"
 
         static let quickPasteDropdownShortcut = "com.macfileexplorer.clipboardHistory.shortcut.quickPasteDropdown"
         static let fullHistorySearchShortcut = "com.macfileexplorer.clipboardHistory.shortcut.fullHistorySearch"
@@ -179,6 +182,30 @@ public final class ClipboardHistoryPreferences {
         }
     }
 
+    /// Criterio de ordenamiento activo en la vista del Historial del Portapapeles.
+    public var sortField: ClipboardSortField {
+        didSet {
+            guard sortField != oldValue else { return }
+            defaults.set(sortField.rawValue, forKey: Keys.sortField)
+        }
+    }
+
+    /// Dirección de ordenamiento (`false` = descendente / más recientes primero, `true` = ascendente).
+    public var sortAscending: Bool {
+        didSet {
+            guard sortAscending != oldValue else { return }
+            defaults.set(sortAscending, forKey: Keys.sortAscending)
+        }
+    }
+
+    /// Si está activo, los elementos fijados se mantienen siempre al principio independientemente del orden.
+    public var keepPinnedOnTop: Bool {
+        didSet {
+            guard keepPinnedOnTop != oldValue else { return }
+            defaults.set(keepPinnedOnTop, forKey: Keys.keepPinnedOnTop)
+        }
+    }
+
     private init() {
         if defaults.object(forKey: Keys.isEnabled) == nil {
             self.isEnabled = true
@@ -217,6 +244,25 @@ public final class ClipboardHistoryPreferences {
             self.isSidebarSectionExpanded = true
         } else {
             self.isSidebarSectionExpanded = defaults.bool(forKey: Keys.isSidebarSectionExpanded)
+        }
+
+        if let rawSortField = defaults.string(forKey: Keys.sortField),
+           let parsedSortField = ClipboardSortField(rawValue: rawSortField) {
+            self.sortField = parsedSortField
+        } else {
+            self.sortField = .date
+        }
+
+        if defaults.object(forKey: Keys.sortAscending) == nil {
+            self.sortAscending = false
+        } else {
+            self.sortAscending = defaults.bool(forKey: Keys.sortAscending)
+        }
+
+        if defaults.object(forKey: Keys.keepPinnedOnTop) == nil {
+            self.keepPinnedOnTop = true
+        } else {
+            self.keepPinnedOnTop = defaults.bool(forKey: Keys.keepPinnedOnTop)
         }
 
         self.quickPasteDropdownShortcut = Self.loadShortcut(
@@ -309,6 +355,8 @@ public final class ClipboardHistoryManager {
     private let imagesDirectoryURL: URL
     private let historyFileURL: URL
     private let imageCache = NSCache<NSString, NSImage>()
+    private let persistenceQueue = DispatchQueue(label: "com.macfileexplorer.clipboardHistory.persistence", qos: .utility)
+    private var pendingSaveWorkItem: DispatchWorkItem?
 
     private var pollTimer: Timer?
     private var lastObservedChangeCount: Int = -1
@@ -359,11 +407,86 @@ public final class ClipboardHistoryManager {
         }
     }
 
-    // MARK: - Consultas Filtradas
+    // MARK: - Consultas Filtradas y Ordenadas
 
-    /// Entradas que coinciden con `searchQuery` y `selectedFilter` manteniendo primero los elementos fijados.
+    /// Alterna el ordenamiento por un criterio específico (si ya estaba activo invierte la dirección; si no, aplica su dirección natural).
+    public func toggleSort(by field: ClipboardSortField) {
+        let prefs = ClipboardHistoryPreferences.shared
+        if prefs.sortField == field {
+            prefs.sortAscending.toggle()
+        } else {
+            prefs.sortField = field
+            prefs.sortAscending = field.defaultAscending
+        }
+    }
+
+    /// Entradas que coinciden con `searchQuery` y `selectedFilter`, ordenadas según las preferencias activas.
     public var filteredItems: [ClipboardHistoryEntry] {
-        items.filter { $0.matches(query: searchQuery, filter: selectedFilter) }
+        let prefs = ClipboardHistoryPreferences.shared
+        let sortField = prefs.sortField
+        let ascending = prefs.sortAscending
+        let keepPinnedOnTop = prefs.keepPinnedOnTop
+        let loc = LocalizationManager.shared
+
+        let matching = items.filter { $0.matches(query: searchQuery, filter: selectedFilter) }
+        return matching.sorted { lhs, rhs in
+            if keepPinnedOnTop && lhs.isPinned != rhs.isPinned {
+                return lhs.isPinned
+            }
+
+            let comparison: ComparisonResult
+            switch sortField {
+            case .date:
+                if lhs.lastCopiedAt == rhs.lastCopiedAt {
+                    comparison = .orderedSame
+                } else {
+                    comparison = lhs.lastCopiedAt < rhs.lastCopiedAt ? .orderedAscending : .orderedDescending
+                }
+
+            case .name:
+                comparison = lhs.displayTitle(using: loc)
+                    .localizedStandardCompare(rhs.displayTitle(using: loc))
+
+            case .kind:
+                if lhs.kind.sortRank == rhs.kind.sortRank {
+                    comparison = .orderedSame
+                } else {
+                    comparison = lhs.kind.sortRank < rhs.kind.sortRank ? .orderedAscending : .orderedDescending
+                }
+
+            case .size:
+                if lhs.byteSize == rhs.byteSize {
+                    comparison = .orderedSame
+                } else {
+                    comparison = lhs.byteSize < rhs.byteSize ? .orderedAscending : .orderedDescending
+                }
+
+            case .sourceApp:
+                let lhsApp = lhs.sourceAppName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                let rhsApp = rhs.sourceAppName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                if lhsApp.isEmpty != rhsApp.isEmpty {
+                    // Elementos sin app de origen siempre al final
+                    return !lhsApp.isEmpty
+                }
+                comparison = lhsApp.localizedStandardCompare(rhsApp)
+
+            case .copyCount:
+                if lhs.copyCount == rhs.copyCount {
+                    comparison = .orderedSame
+                } else {
+                    comparison = lhs.copyCount < rhs.copyCount ? .orderedAscending : .orderedDescending
+                }
+            }
+
+            if comparison != .orderedSame {
+                return ascending ? (comparison == .orderedAscending) : (comparison == .orderedDescending)
+            }
+
+            if lhs.lastCopiedAt != rhs.lastCopiedAt {
+                return lhs.lastCopiedAt > rhs.lastCopiedAt
+            }
+            return lhs.id.uuidString < rhs.id.uuidString
+        }
     }
 
     /// Devuelve los elementos para el menú desplegable rápido (`⌃⌘V`):
@@ -715,7 +838,6 @@ public final class ClipboardHistoryManager {
             insertSorted(updated)
             selectedEntryID = updated.id
             enforceRetentionPolicy(now: now)
-            saveToDisk()
             return updated
         }
 
@@ -787,7 +909,6 @@ public final class ClipboardHistoryManager {
             insertSorted(updated)
             selectedEntryID = updated.id
             enforceRetentionPolicy(now: now)
-            saveToDisk()
             return updated
         }
 
@@ -862,11 +983,21 @@ public final class ClipboardHistoryManager {
         case .image:
             if plainTextOnly, let text = entry.textContent, !text.isEmpty {
                 targetPasteboard.setString(text, forType: .string)
+            } else if let fileURL = imageFileURL(for: entry),
+                      let pngData = try? Data(contentsOf: fileURL) {
+                targetPasteboard.setData(pngData, forType: .png)
+                if let img = image(for: entry), let tiff = img.tiffRepresentation {
+                    targetPasteboard.setData(tiff, forType: .tiff)
+                }
             } else if let img = image(for: entry) {
                 if let pngData = Self.normalizedPNGAndDimensions(from: img)?.pngData {
                     targetPasteboard.setData(pngData, forType: .png)
                 }
-                targetPasteboard.writeObjects([img])
+                if let tiff = img.tiffRepresentation {
+                    targetPasteboard.setData(tiff, forType: .tiff)
+                } else {
+                    targetPasteboard.writeObjects([img])
+                }
             } else if let text = entry.textContent {
                 targetPasteboard.setString(text, forType: .string)
             }
@@ -1091,14 +1222,12 @@ public final class ClipboardHistoryManager {
             insertSorted(updated)
             selectedEntryID = updated.id
             enforceRetentionPolicy(now: now)
-            saveToDisk()
             return updated
         }
 
         insertSorted(newEntry)
         selectedEntryID = newEntry.id
         enforceRetentionPolicy(now: now)
-        saveToDisk()
         return newEntry
     }
 
@@ -1168,11 +1297,37 @@ public final class ClipboardHistoryManager {
     }
 
     private func saveToDisk() {
-        ensureDirectoriesExist()
-        let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .iso8601
-        guard let data = try? encoder.encode(items) else { return }
-        try? data.write(to: historyFileURL, options: .atomic)
+        let snapshot = items
+        let storageDir = storageDirectoryURL
+        let imagesDir = imagesDirectoryURL
+        let fileURL = historyFileURL
+
+        pendingSaveWorkItem?.cancel()
+        let workItem = Self.makeSaveWorkItem(
+            snapshot: snapshot,
+            storageDir: storageDir,
+            imagesDir: imagesDir,
+            fileURL: fileURL
+        )
+        pendingSaveWorkItem = workItem
+        persistenceQueue.asyncAfter(deadline: .now() + 0.15, execute: workItem)
+    }
+
+    private nonisolated static func makeSaveWorkItem(
+        snapshot: [ClipboardHistoryEntry],
+        storageDir: URL,
+        imagesDir: URL,
+        fileURL: URL
+    ) -> DispatchWorkItem {
+        DispatchWorkItem {
+            let fm = FileManager.default
+            try? fm.createDirectory(at: storageDir, withIntermediateDirectories: true)
+            try? fm.createDirectory(at: imagesDir, withIntermediateDirectories: true)
+            let encoder = JSONEncoder()
+            encoder.dateEncodingStrategy = .iso8601
+            guard let data = try? encoder.encode(snapshot) else { return }
+            try? data.write(to: fileURL, options: .atomic)
+        }
     }
 
     private func loadFromDisk() {

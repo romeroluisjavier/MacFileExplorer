@@ -163,16 +163,78 @@ public final class FileIconProvider {
         }
     }
 
+    /// Rutas de carpetas especiales del sistema que tienen emblemas propios en macOS y deben resolverse por ruta.
+    private static let specialFolderPaths: Set<String> = {
+        let fm = FileManager.default
+        var paths: Set<String> = [
+            "/",
+            "/Applications",
+            "/System",
+            "/Library",
+            "/Users",
+            "/Volumes",
+            fm.homeDirectoryForCurrentUser.standardizedFileURL.path(percentEncoded: false)
+        ]
+        let domains: [FileManager.SearchPathDirectory] = [
+            .desktopDirectory,
+            .downloadsDirectory,
+            .documentDirectory,
+            .picturesDirectory,
+            .moviesDirectory,
+            .musicDirectory,
+            .libraryDirectory,
+            .applicationDirectory,
+            .trashDirectory
+        ]
+        for domain in domains {
+            if let dirURL = fm.urls(for: domain, in: .userDomainMask).first?.standardizedFileURL {
+                paths.insert(dirURL.path(percentEncoded: false))
+            }
+        }
+        let home = fm.homeDirectoryForCurrentUser.standardizedFileURL
+        paths.insert(home.appendingPathComponent("Public").path(percentEncoded: false))
+        paths.insert(home.appendingPathComponent("Sites").path(percentEncoded: false))
+        return paths
+    }()
+
+    /// Devuelve el ícono genérico de carpeta de macOS cacheado por tamaño (0 llamadas por ruta a `NSWorkspace`).
+    private func genericFolderIcon(size: CGFloat) -> NSImage {
+        let key = "genericFolder::\(Int(size))" as NSString
+        if let cached = cache.object(forKey: key) {
+            return cached
+        }
+        let rawIcon = NSWorkspace.shared.icon(for: .folder)
+        let sizedIcon = (rawIcon.copy() as? NSImage) ?? rawIcon
+        sizedIcon.size = NSSize(width: size, height: size)
+        cache.setObject(sizedIcon, forKey: key)
+        return sizedIcon
+    }
+
     /// Obtiene el icono estándar (básico) para un `FileItem` con el tamaño en puntos solicitado.
     public func icon(for item: FileItem, size: CGFloat = 20) -> NSImage {
         if !item.isNavigableFolder && !item.isPackage && item.fileExtension.lowercased() == "pdf" {
             return pdfFileIcon(size: size)
         }
 
-        let key: String
         if item.isNavigableFolder {
-            key = "folder::\(item.url.path(percentEncoded: false))::\(Int(size))"
-        } else if !item.fileExtension.isEmpty && !item.isPackage {
+            let path = item.url.standardizedFileURL.path(percentEncoded: false)
+            let isVolumeRoot = item.url.standardizedFileURL.deletingLastPathComponent().path(percentEncoded: false) == "/Volumes"
+            if !Self.specialFolderPaths.contains(path) && !isVolumeRoot {
+                return genericFolderIcon(size: size)
+            }
+            let key = "folder::\(path)::\(Int(size))" as NSString
+            if let cached = cache.object(forKey: key) {
+                return cached
+            }
+            let rawIcon = NSWorkspace.shared.icon(forFile: path)
+            let sizedIcon = (rawIcon.copy() as? NSImage) ?? rawIcon
+            sizedIcon.size = NSSize(width: size, height: size)
+            cache.setObject(sizedIcon, forKey: key)
+            return sizedIcon
+        }
+
+        let key: String
+        if !item.fileExtension.isEmpty && !item.isPackage {
             key = "ext::\(item.fileExtension)::\(Int(size))"
         } else {
             key = "path::\(item.url.path(percentEncoded: false))::\(Int(size))"
@@ -189,19 +251,27 @@ public final class FileIconProvider {
         return sizedIcon
     }
 
-    /// Obtiene el icono para una ruta de archivo arbitraria (mostrando el ícono rojo de PDF para archivos `.pdf`).
+    /// Obtiene el icono para una ruta de archivo arbitraria (cacheado en memoria, mostrando el ícono rojo de PDF para archivos `.pdf`).
     public func icon(forFilePath path: String, size: CGFloat = 20) -> NSImage {
+        let cacheKey = "filePath::\(path)::\(Int(size))" as NSString
+        if let cached = cache.object(forKey: cacheKey) {
+            return cached
+        }
+
         let url = URL(fileURLWithPath: path)
         if url.pathExtension.lowercased() == "pdf" {
             var isDir: ObjCBool = false
             let exists = FileManager.default.fileExists(atPath: path, isDirectory: &isDir)
             if !exists || !isDir.boolValue {
-                return pdfFileIcon(size: size)
+                let pdfIcon = pdfFileIcon(size: size)
+                cache.setObject(pdfIcon, forKey: cacheKey)
+                return pdfIcon
             }
         }
         let rawIcon = NSWorkspace.shared.icon(forFile: path)
         let sizedIcon = (rawIcon.copy() as? NSImage) ?? rawIcon
         sizedIcon.size = NSSize(width: size, height: size)
+        cache.setObject(sizedIcon, forKey: cacheKey)
         return sizedIcon
     }
 

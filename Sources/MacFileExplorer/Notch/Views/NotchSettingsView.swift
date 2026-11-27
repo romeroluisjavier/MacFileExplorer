@@ -8,6 +8,7 @@ public enum NotchSettingsTab: String, CaseIterable, Identifiable, Sendable {
     case appearance
     case displays
     case sources
+    case calendar
 
     public var id: String { rawValue }
 
@@ -17,6 +18,7 @@ public enum NotchSettingsTab: String, CaseIterable, Identifiable, Sendable {
         case .appearance: return "sparkles"
         case .displays: return "macbook.gen2"
         case .sources: return "music.note.house"
+        case .calendar: return "calendar.badge.clock"
         }
     }
 
@@ -27,6 +29,7 @@ public enum NotchSettingsTab: String, CaseIterable, Identifiable, Sendable {
         case .appearance: return loc.text(es: "Apariencia y Animaciones", en: "Appearance & Animations")
         case .displays: return loc.text(es: "Pantallas y Visibilidad", en: "Displays & Visibility")
         case .sources: return loc.text(es: "Fuentes y YouTube Music", en: "Sources & YouTube Music")
+        case .calendar: return loc.text(es: "Calendario y Meet", en: "Calendar & Meet")
         }
     }
 }
@@ -93,10 +96,17 @@ public struct NotchSettingsView: View {
     @Bindable private var media = NotchMediaService.shared
     @Bindable private var manager = NotchManager.shared
     @Bindable private var lyricsAudio = NotchLyricsAndAudioService.shared
+    @Bindable private var musicDecoy = NotchMusicDecoyService.shared
+    @Bindable private var calService = NotchCalendarService.shared
+    @Bindable private var googleAccounts = GoogleAccountsManager.shared
     @Bindable private var loc = LocalizationManager.shared
 
     @ViewState private var selectedTab: NotchSettingsTab
     @ViewState private var previewMode: NotchSettingsPreviewMode = .expanded
+    @ViewState private var previewFeedback: NotchTransientFeedback = .none
+    @ViewState private var previewSqueeze: Bool = false
+    @ViewState private var previewNudgeX: CGFloat = 0
+    @ViewState private var previewFeedbackTask: Task<Void, Never>?
     @ViewState private var portInputText: String = ""
 
     public init(initialTab: NotchSettingsTab = .general) {
@@ -123,6 +133,8 @@ public struct NotchSettingsView: View {
                         displaysTabContent
                     case .sources:
                         sourcesTabContent
+                    case .calendar:
+                        calendarTabContent
                     }
                 }
                 .padding(22)
@@ -134,6 +146,7 @@ public struct NotchSettingsView: View {
             portInputText = String(prefs.youtubeMusicAPIPort)
             manager.refreshDisplayGeometries()
             lyricsAudio.refreshOutputDevices()
+            musicDecoy.refreshStatus()
         }
     }
 
@@ -265,6 +278,9 @@ public struct NotchSettingsView: View {
             // Tarjeta de Vista Previa Interactiva en Vivo
             NotchSettingsInteractivePreviewCard(
                 previewMode: $previewMode,
+                previewFeedback: previewFeedback,
+                previewSqueeze: previewSqueeze,
+                previewNudgeX: previewNudgeX,
                 prefs: prefs,
                 media: media,
                 loc: loc
@@ -308,6 +324,8 @@ public struct NotchSettingsView: View {
                     }
                 }
             }
+
+            musicDecoySettingsCard
 
             settingsCard(title: loc.text(es: "Interacción y Gestos", en: "Interaction & Gestures")) {
                 HStack {
@@ -409,6 +427,9 @@ public struct NotchSettingsView: View {
             // Vista previa interactiva en vivo para ver cada cambio al instante
             NotchSettingsInteractivePreviewCard(
                 previewMode: $previewMode,
+                previewFeedback: previewFeedback,
+                previewSqueeze: previewSqueeze,
+                previewNudgeX: previewNudgeX,
                 prefs: prefs,
                 media: media,
                 loc: loc
@@ -592,6 +613,180 @@ public struct NotchSettingsView: View {
                 }
             }
 
+            // Tarjeta 2B: Avisos y Animaciones al Cambiar de Tema y al Pausar (5 formas cada uno)
+            settingsCard(title: loc.text(es: "Cambio de Tema y Pausa", en: "Track Change & Pause Animations")) {
+                HStack(alignment: .center, spacing: 10) {
+                    Toggle(isOn: $prefs.announceNewTracks) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(loc.text(es: "Animar el Notch cuando cambia de canción", en: "Animate Notch When Track Changes"))
+                                .font(.system(size: 13, weight: .semibold))
+                            Text(loc.text(
+                                es: "Actívalo o desactívalo cuando quieras y elige entre 5 formas visuales distintas.",
+                                en: "Turn this on or off anytime and pick from 5 distinct visual notification styles."
+                            ))
+                            .font(.system(size: 11.2))
+                            .foregroundStyle(.secondary)
+                        }
+                    }
+
+                    if prefs.announceNewTracks {
+                        Button {
+                            triggerSettingsTrackChangePreview(style: prefs.trackChangeStyle)
+                        } label: {
+                            Label(loc.text(es: "Probar", en: "Preview"), systemImage: "play.circle")
+                                .font(.system(size: 11.5, weight: .semibold))
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                    }
+                }
+
+                if prefs.announceNewTracks {
+                    VStack(spacing: 6) {
+                        ForEach(NotchTrackChangeStyle.allCases) { style in
+                            let selected = prefs.trackChangeStyle == style
+                            Button {
+                                prefs.trackChangeStyle = style
+                                triggerSettingsTrackChangePreview(style: style)
+                            } label: {
+                                HStack(spacing: 10) {
+                                    ZStack {
+                                        RoundedRectangle(cornerRadius: 7, style: .continuous)
+                                            .fill(selected ? Color.accentColor.opacity(0.20) : Color.primary.opacity(0.06))
+                                        Image(systemName: style.symbolName)
+                                            .font(.system(size: 12, weight: .semibold))
+                                            .foregroundStyle(selected ? Color.accentColor : Color.secondary)
+                                    }
+                                    .frame(width: 28, height: 28)
+
+                                    VStack(alignment: .leading, spacing: 1.5) {
+                                        Text(style.localizedTitle(using: loc))
+                                            .font(.system(size: 12.2, weight: selected ? .semibold : .medium))
+                                            .foregroundStyle(.primary)
+                                        Text(style.localizedDescription(using: loc))
+                                            .font(.system(size: 10.8))
+                                            .foregroundStyle(.secondary)
+                                            .fixedSize(horizontal: false, vertical: true)
+                                    }
+
+                                    Spacer(minLength: 6)
+
+                                    Image(systemName: selected ? "checkmark.circle.fill" : "circle")
+                                        .font(.system(size: 14))
+                                        .foregroundStyle(selected ? Color.accentColor : Color.secondary.opacity(0.4))
+                                }
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 7)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 9, style: .continuous)
+                                        .fill(selected ? Color.accentColor.opacity(0.11) : Color.primary.opacity(0.03))
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 9, style: .continuous)
+                                                .stroke(selected ? Color.accentColor.opacity(0.85) : Color.primary.opacity(0.08), lineWidth: selected ? 1.3 : 0.7)
+                                        )
+                                )
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+
+                Divider()
+
+                Toggle(isOn: $prefs.showPauseIconWhenPaused) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(loc.text(es: "Cambiar ondas por símbolo de pausa («⏸») al pausar", en: "Swap Waves for Pause Symbol (\"⏸\") When Paused"))
+                            .font(.system(size: 13, weight: .semibold))
+                        Text(loc.text(
+                            es: "Cuando la música se detiene, reemplaza las ondas musicales por el ícono de pausa hasta que vuelvas a reproducir.",
+                            en: "Replaces the equalizer waves with a crisp pause icon while music is paused."
+                        ))
+                        .font(.system(size: 11.2))
+                        .foregroundStyle(.secondary)
+                    }
+                }
+
+                Divider()
+
+                HStack(alignment: .center, spacing: 10) {
+                    Toggle(isOn: $prefs.animateOnPause) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(loc.text(es: "Animar el Notch al pausar la música", en: "Animate Notch When Pausing"))
+                                .font(.system(size: 13, weight: .semibold))
+                            Text(loc.text(
+                                es: "Muestra una pequeña animación seleccionable en el Notch al poner pausa.",
+                                en: "Plays a subtle selectable animation on the Notch whenever playback is paused."
+                            ))
+                            .font(.system(size: 11.2))
+                            .foregroundStyle(.secondary)
+                        }
+                    }
+
+                    if prefs.animateOnPause {
+                        Button {
+                            triggerSettingsPausePreview(style: prefs.pauseAnimationStyle)
+                        } label: {
+                            Label(loc.text(es: "Probar", en: "Preview"), systemImage: "pause.circle")
+                                .font(.system(size: 11.5, weight: .semibold))
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                    }
+                }
+
+                if prefs.animateOnPause {
+                    VStack(spacing: 6) {
+                        ForEach(NotchPauseAnimationStyle.allCases) { style in
+                            let selected = prefs.pauseAnimationStyle == style
+                            Button {
+                                prefs.pauseAnimationStyle = style
+                                triggerSettingsPausePreview(style: style)
+                            } label: {
+                                HStack(spacing: 10) {
+                                    ZStack {
+                                        RoundedRectangle(cornerRadius: 7, style: .continuous)
+                                            .fill(selected ? Color.accentColor.opacity(0.20) : Color.primary.opacity(0.06))
+                                        Image(systemName: style.symbolName)
+                                            .font(.system(size: 12, weight: .semibold))
+                                            .foregroundStyle(selected ? Color.accentColor : Color.secondary)
+                                    }
+                                    .frame(width: 28, height: 28)
+
+                                    VStack(alignment: .leading, spacing: 1.5) {
+                                        Text(style.localizedTitle(using: loc))
+                                            .font(.system(size: 12.2, weight: selected ? .semibold : .medium))
+                                            .foregroundStyle(.primary)
+                                        Text(style.localizedDescription(using: loc))
+                                            .font(.system(size: 10.8))
+                                            .foregroundStyle(.secondary)
+                                            .fixedSize(horizontal: false, vertical: true)
+                                    }
+
+                                    Spacer(minLength: 6)
+
+                                    Image(systemName: selected ? "checkmark.circle.fill" : "circle")
+                                        .font(.system(size: 14))
+                                        .foregroundStyle(selected ? Color.accentColor : Color.secondary.opacity(0.4))
+                                }
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 7)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 9, style: .continuous)
+                                        .fill(selected ? Color.accentColor.opacity(0.11) : Color.primary.opacity(0.03))
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 9, style: .continuous)
+                                                .stroke(selected ? Color.accentColor.opacity(0.85) : Color.primary.opacity(0.08), lineWidth: selected ? 1.3 : 0.7)
+                                        )
+                                )
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+            }
+
             // Tarjeta 3: Carátula, Álbum y Tamaño (#4 Ver tapa de álbum, #5 Ver nombre de álbum, #9 Insignia app)
             settingsCard(title: loc.text(es: "Tapa del Álbum, Metadatos y Tamaño", en: "Album Cover, Metadata & Size")) {
                 Toggle(isOn: $prefs.showAlbumArtwork) {
@@ -712,8 +907,6 @@ public struct NotchSettingsView: View {
                 Toggle(loc.text(es: "Mostrar título en la píldora colapsada", en: "Show Track Title in Collapsed Pill"), isOn: $prefs.showTrackTitleInCollapsedPill)
                 Divider()
                 Toggle(loc.text(es: "Desplazamiento suave (Marquee) en títulos largos", en: "Smooth Marquee Scrolling for Long Titles"), isOn: $prefs.enableMarqueeTitle)
-                Divider()
-                Toggle(loc.text(es: "Anunciar nuevas canciones automáticamente", en: "Announce New Tracks Automatically"), isOn: $prefs.announceNewTracks)
                 Divider()
                 Toggle(loc.text(es: "Habilitar letras sincronizadas en vivo (LRCLIB)", en: "Enable Live Synced Lyrics (LRCLIB)"), isOn: $prefs.showSyncedLyrics)
 
@@ -953,7 +1146,9 @@ public struct NotchSettingsView: View {
                         title: "Apple Music",
                         detail: status.isAppleMusicRunning
                             ? loc.text(es: "Apple Music abierto (scrubber y controles completos)", en: "Apple Music running (scrubber & full controls)")
-                            : loc.text(es: "Cerrado (no se abrirá automáticamente)", en: "Not running (will never be auto-launched)"),
+                            : (prefs.blockAppleMusicAutoLaunch && musicDecoy.isDecoyRunning
+                                ? loc.text(es: "Bloqueado con Music Decoy (0% CPU · no se abrirá al presionar ▶ Play)", en: "Blocked via Music Decoy (0% CPU · won't auto-launch on ▶ Play)")
+                                : loc.text(es: "Cerrado (no se abrirá automáticamente)", en: "Not running (will never be auto-launched)")),
                         isOnline: status.isAppleMusicRunning
                     )
 
@@ -1016,6 +1211,679 @@ public struct NotchSettingsView: View {
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                 }
+            }
+
+            musicDecoySettingsCard
+        }
+    }
+
+    // MARK: - Pestaña 5: Calendario (Google Calendar) y Alertas de Meet (10+ Configuraciones)
+
+    private var calendarTabContent: some View {
+        let authAccounts = googleAccounts.accounts.filter { $0.isAuthenticated }
+
+        return VStack(alignment: .leading, spacing: 16) {
+            sectionHeader(
+                title: loc.text(es: "Google Calendar y Alertas de Meet", en: "Google Calendar & Meet Alerts"),
+                subtitle: loc.text(
+                    es: "Mostrá tu agenda con formato Google Calendar (diario o semanal), abrí eventos en Chrome y recibí avisos con botón directo «Unirse a Meet» incluso mientras suena música.",
+                    en: "Display your schedule in Google Calendar style (daily or weekly), open events in Chrome, and get live Meet alerts with a 1-click \"Join Meet\" button even while music plays."
+                )
+            )
+
+            // Tarjeta 1: Activación, Fuente, Cuenta, Diario/Semanal, Formato y Navegador (Configs 1–5)
+            settingsCard(title: loc.text(es: "Calendario, Formato y Apertura", en: "Calendar, Format & Opening")) {
+                // Config 1: Activar Calendario en el Notch
+                Toggle(isOn: $prefs.calendarEnabled) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(loc.text(es: "Mostrar Calendario y avisos de Meet en el Notch", en: "Show Calendar & Meet Alerts in Notch"))
+                            .font(.system(size: 13, weight: .semibold))
+                        Text(loc.text(
+                            es: "Agrega el botón de Google Calendar en la barra del Notch y activa alertas antes de tus reuniones.",
+                            en: "Adds the Google Calendar control to the Notch top bar and enables pre-meeting alerts."
+                        ))
+                        .font(.system(size: 11.3))
+                        .foregroundStyle(.secondary)
+                    }
+                }
+
+                if prefs.calendarEnabled {
+                    Divider()
+
+                    // Config 2: Elegir fuente de calendario (Google Calendar / macOS / Ambos)
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(loc.text(es: "Calendario a mostrar", en: "Calendar Source"))
+                                .font(.system(size: 12.5, weight: .medium))
+                            Text(loc.text(
+                                es: "Usa tu cuenta de Gmail ya logueada en MacFileExplorer o el Calendario de macOS.",
+                                en: "Uses your Gmail account signed into MacFileExplorer or native macOS Calendar."
+                            ))
+                            .font(.system(size: 11))
+                            .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Picker("", selection: $prefs.calendarSource) {
+                            ForEach(NotchCalendarSourceMode.allCases) { mode in
+                                Text(mode.localizedTitle(using: loc)).tag(mode)
+                            }
+                        }
+                        .labelsHidden()
+                        .frame(width: 220)
+                    }
+
+                    if prefs.calendarSource == .googleCalendar || prefs.calendarSource == .both {
+                        HStack {
+                            Text(loc.text(es: "Cuenta de Google Calendar", en: "Google Calendar Account"))
+                                .font(.system(size: 12.5, weight: .medium))
+                            Spacer()
+                            if authAccounts.isEmpty {
+                                Button(loc.text(es: "Conectar cuenta Gmail…", en: "Sign in to Gmail…")) {
+                                    googleAccounts.startAddGoogleAccount()
+                                }
+                                .buttonStyle(.borderedProminent)
+                                .controlSize(.small)
+                            } else {
+                                Picker("", selection: $prefs.calendarSelectedGoogleAccountID) {
+                                    Text(loc.text(es: "Todas las cuentas (\(authAccounts.count))", en: "All Accounts (\(authAccounts.count))")).tag("")
+                                    ForEach(authAccounts) { acc in
+                                        Text(acc.displayLabel).tag(acc.id.uuidString)
+                                    }
+                                }
+                                .labelsHidden()
+                                .frame(width: 220)
+                            }
+                        }
+                    }
+
+                    if (prefs.calendarSource == .macOSCalendar || prefs.calendarSource == .both) && !calService.eventKitAuthorized {
+                        HStack {
+                            Text(loc.text(es: "Permiso de Calendario de macOS requerido", en: "macOS Calendar permission required"))
+                                .font(.system(size: 11.5))
+                                .foregroundStyle(.orange)
+                            Spacer()
+                            Button(loc.text(es: "Permitir acceso", en: "Grant Access")) {
+                                calService.requestMacOSCalendarPermission()
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.small)
+                        }
+                    }
+
+                    Divider()
+
+                    // Config 3: Vista Diario o Semanal
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(loc.text(es: "Rango de agenda", en: "Schedule Range"))
+                                .font(.system(size: 12.5, weight: .medium))
+                            Text(loc.text(es: "Elegí si querés ver solo hoy (diario) o los próximos 7 días (semanal).", en: "Choose today only (daily) or the next 7 days (weekly)."))
+                                .font(.system(size: 11))
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Picker("", selection: $prefs.calendarRangeMode) {
+                            ForEach(NotchCalendarRangeMode.allCases) { mode in
+                                Text(mode.localizedTitle(using: loc)).tag(mode)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        .frame(width: 220)
+                    }
+
+                    Divider()
+
+                    // Config 4: Formato visual estilo Google Calendar
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(loc.text(es: "Formato visual estilo Google Calendar", en: "Google Calendar Display Format"))
+                                .font(.system(size: 12.5, weight: .medium))
+                            Text(loc.text(es: "Tarjetas con barra de color, línea de tiempo por hora o lista compacta.", en: "Color-striped agenda cards, hourly timeline, or compact list."))
+                                .font(.system(size: 11))
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Picker("", selection: $prefs.calendarDisplayFormat) {
+                            ForEach(NotchCalendarDisplayFormat.allCases) { fmt in
+                                Text(fmt.localizedTitle(using: loc)).tag(fmt)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        .frame(width: 270)
+                    }
+
+                    Divider()
+
+                    // Config 5: Dónde abrir al hacer clic (Google Chrome por defecto)
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(loc.text(es: "Al hacer clic en Google Calendar o Meet", en: "When Clicking Google Calendar or Meet"))
+                                .font(.system(size: 12.5, weight: .medium))
+                            Text(loc.text(es: "Por defecto abre Google Calendar y los links de Meet directamente en Google Chrome.", en: "Opens Google Calendar and Meet links directly in Google Chrome by default."))
+                                .font(.system(size: 11))
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Picker("", selection: $prefs.calendarOpenTarget) {
+                            ForEach(NotchCalendarOpenTarget.allCases) { target in
+                                Text(target.localizedTitle(using: loc)).tag(target)
+                            }
+                        }
+                        .labelsHidden()
+                        .frame(width: 220)
+                    }
+                }
+            }
+
+            if prefs.calendarEnabled {
+                // Tarjeta 2: Ícono del Calendario en el Notch (5 configs de estilo/tamaño/posición) + Colores de eventos y Meets
+                settingsCard(title: loc.text(es: "Ícono en la Barra del Notch y Colores de Eventos", en: "Notch Bar Calendar Icon & Event Colors")) {
+                    // Config 11: Estilo del ícono en el Notch (incluye Cápsula igual a "YouTube Music")
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(loc.text(es: "Estilo del botón de Calendario", en: "Calendar Button Style"))
+                                .font(.system(size: 12.5, weight: .medium))
+                            Text(loc.text(
+                                es: "Elegí entre botón circular, cápsula igual a «YouTube Music», mosaico con fecha o cápsula con próxima hora.",
+                                en: "Choose circle icon, pill matching \"YouTube Music\", date badge tile, or pill with next event time."
+                            ))
+                            .font(.system(size: 11))
+                            .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Picker("", selection: $prefs.calendarIconStyle) {
+                            ForEach(NotchCalendarIconStyle.allCases) { style in
+                                Text(style.localizedTitle(using: loc)).tag(style)
+                            }
+                        }
+                        .labelsHidden()
+                        .frame(width: 240)
+                    }
+
+                    Divider()
+
+                    // Config 12: Posición del botón en la barra superior del Notch
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(loc.text(es: "Posición en la barra del Notch", en: "Position in Notch Top Bar"))
+                                .font(.system(size: 12.5, weight: .medium))
+                            Text(loc.text(
+                                es: "Ubicalo junto a «YouTube Music», en el centro, antes del ecualizador o junto al botón cerrar.",
+                                en: "Place it beside \"YouTube Music\", centered, before Equalizer, or next to Close."
+                            ))
+                            .font(.system(size: 11))
+                            .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Picker("", selection: $prefs.calendarIconPosition) {
+                            ForEach(NotchCalendarIconPosition.allCases) { pos in
+                                Text(pos.localizedTitle(using: loc)).tag(pos)
+                            }
+                        }
+                        .labelsHidden()
+                        .frame(width: 240)
+                    }
+
+                    Divider()
+
+                    // Config 13: Tamaño del botón / cápsula
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(loc.text(es: "Tamaño del ícono / cápsula", en: "Icon / Pill Size"))
+                                .font(.system(size: 12.5, weight: .medium))
+                            Text(loc.text(
+                                es: "Mediano coincide exactamente con el tamaño de la cápsula de «YouTube Music».",
+                                en: "Medium matches the exact height and proportions of the \"YouTube Music\" pill."
+                            ))
+                            .font(.system(size: 11))
+                            .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Picker("", selection: $prefs.calendarIconSize) {
+                            ForEach(NotchCalendarIconSize.allCases) { sz in
+                                Text(sz.localizedTitle(using: loc)).tag(sz)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        .frame(width: 240)
+                    }
+
+                    Divider()
+
+                    // Config 14: Mostrar insignia / contador de eventos pendientes
+                    Toggle(isOn: $prefs.calendarIconShowEventBadge) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(loc.text(es: "Mostrar contador de eventos de hoy en el ícono", en: "Show Today's Event Counter Badge on Icon"))
+                                .font(.system(size: 12.5, weight: .medium))
+                            Text(loc.text(
+                                es: "Agrega una mini insignia con la cantidad de eventos restantes del día (o punto activo si hay una Meet).",
+                                en: "Adds a small badge showing remaining events today (or an active dot when a Meet is starting)."
+                            ))
+                            .font(.system(size: 11))
+                            .foregroundStyle(.secondary)
+                        }
+                    }
+
+                    Divider()
+
+                    // Config 15: Mostrar número del día actual en el ícono
+                    Toggle(isOn: $prefs.calendarIconShowDayNumber) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(loc.text(es: "Mostrar número del día actual en el ícono", en: "Show Current Day Number Inside Icon"))
+                                .font(.system(size: 12.5, weight: .medium))
+                            Text(loc.text(
+                                es: "Muestra el número de hoy (ej. \(Calendar.current.component(.day, from: Date()))) en lugar del ícono genérico de calendario.",
+                                en: "Displays today's day number (e.g. \(Calendar.current.component(.day, from: Date()))) instead of the generic calendar symbol."
+                            ))
+                            .font(.system(size: 11))
+                            .foregroundStyle(.secondary)
+                        }
+                    }
+
+                    Divider()
+
+                    // Config 16: Usar los mismos colores de eventos y Meets configurados en Google Calendar / macOS
+                    Toggle(isOn: $prefs.calendarUseNativeEventColors) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(loc.text(es: "Usar los mismos colores de eventos y Meets de tu calendario", en: "Use Native Event & Meet Colors From Your Calendar"))
+                                .font(.system(size: 12.5, weight: .semibold))
+                            Text(loc.text(
+                                es: "Aplica en tarjetas, avisos y botones «Unirse a Meet» el color real que configuraste en Google Calendar / macOS (si lo desactivás, usa azul estándar y verde Meet).",
+                                en: "Applies your actual Google Calendar / macOS event colors to cards, Meet alerts, and Join buttons (when off, uses uniform blue and Meet green)."
+                            ))
+                            .font(.system(size: 11))
+                            .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+
+                // Tarjeta 3: Notificaciones de Meet (Configs 6–9)
+                settingsCard(title: loc.text(es: "Notificaciones y Alertas de Meet", en: "Meet Notifications & Alerts")) {
+                    // Config 6: Anticipación del aviso
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(loc.text(es: "Avisar antes de iniciar la reunión", en: "Alert Before Meeting Starts"))
+                                .font(.system(size: 12.5, weight: .medium))
+                            Text(loc.text(es: "Cuándo mostrar la alerta de Meet en la parte superior del Notch.", en: "How early to alert you in the Notch before a meeting starts."))
+                                .font(.system(size: 11))
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Picker("", selection: $prefs.calendarAlertLeadMinutes) {
+                            Text(loc.text(es: "1 min antes", en: "1 min before")).tag(1)
+                            Text(loc.text(es: "2 min antes", en: "2 min before")).tag(2)
+                            Text(loc.text(es: "5 min antes", en: "5 min before")).tag(5)
+                            Text(loc.text(es: "10 min antes", en: "10 min before")).tag(10)
+                            Text(loc.text(es: "15 min antes", en: "15 min before")).tag(15)
+                        }
+                        .labelsHidden()
+                        .frame(width: 160)
+                    }
+
+                    Divider()
+
+                    // Config 7: Sonido de notificación ON/OFF + selector de sonido
+                    HStack {
+                        Toggle(loc.text(es: "Reproducir sonido al avisar una Meet", en: "Play Sound on Meet Alert"), isOn: $prefs.calendarAlertSoundEnabled)
+                            .font(.system(size: 12.5, weight: .medium))
+
+                        Spacer()
+
+                        if prefs.calendarAlertSoundEnabled {
+                            Picker("", selection: $prefs.calendarAlertSound) {
+                                ForEach(NotchCalendarAlertSound.allCases) { s in
+                                    Text(s.displayName).tag(s)
+                                }
+                            }
+                            .labelsHidden()
+                            .frame(width: 120)
+
+                            Button {
+                                calService.playAlertSound(prefs.calendarAlertSound)
+                            } label: {
+                                Image(systemName: "speaker.wave.2.fill")
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.small)
+                            .help(loc.text(es: "Escuchar sonido", en: "Preview sound"))
+                        }
+                    }
+
+                    Divider()
+
+                    // Config 8: Animación superior en el Notch al avisar Meet
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(loc.text(es: "Animación superior en el Notch", en: "Top Notch Alert Animation"))
+                                .font(.system(size: 12.5, weight: .medium))
+                            Text(loc.text(es: "Cómo se anima la muesca cuando está por comenzar una videollamada.", en: "How the top notch animates when a video call is about to start."))
+                                .font(.system(size: 11))
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Picker("", selection: $prefs.calendarAlertAnimationStyle) {
+                            ForEach(NotchCalendarAlertAnimationStyle.allCases) { style in
+                                Text(style.localizedTitle(using: loc)).tag(style)
+                            }
+                        }
+                        .labelsHidden()
+                        .frame(width: 220)
+                    }
+
+                    Divider()
+
+                    // Config 9: Link directo a «Unirse a Meet» en el Notch + botón de prueba en vivo
+                    HStack {
+                        Toggle(isOn: $prefs.calendarShowDirectJoinMeetButton) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(loc.text(es: "Botón directo «Unirse a Meet» en el Notch", en: "Direct \"Join Meet\" Button in Notch"))
+                                    .font(.system(size: 12.5, weight: .medium))
+                                Text(loc.text(es: "Muestra el botón verde de 1 clic para entrar a Google Meet o Zoom sin buscar el enlace.", en: "Shows a 1-click green button to join Google Meet or Zoom directly."))
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+
+                        Button {
+                            if !prefs.isEnabled { manager.setEnabled(true) }
+                            calService.triggerTestMeetingAlert()
+                        } label: {
+                            Label(loc.text(es: "Probar alerta Meet", en: "Test Meet Alert"), systemImage: "video.badge.waveform")
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(.green)
+                        .controlSize(.small)
+                    }
+                }
+
+                // Tarjeta 3: Convivencia con Música y Filtros (Configs 10–12)
+                settingsCard(title: loc.text(es: "Convivencia con Música y Filtros", en: "Music Coexistence & Filters")) {
+                    // Config 10: Prioridad cuando hay música reproduciendo
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(loc.text(es: "Cuando hay música reproduciéndose", en: "When Music Is Playing"))
+                                .font(.system(size: 12.5, weight: .medium))
+                            Text(loc.text(es: "Define cómo convive el aviso de Meet con tu reproductor musical.", en: "Controls how Meet alerts appear alongside your music player."))
+                                .font(.system(size: 11))
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Picker("", selection: $prefs.calendarMusicCoexistenceMode) {
+                            ForEach(NotchCalendarMusicCoexistenceMode.allCases) { mode in
+                                Text(mode.localizedTitle(using: loc)).tag(mode)
+                            }
+                        }
+                        .labelsHidden()
+                        .frame(width: 250)
+                    }
+
+                    Divider()
+
+                    Toggle(loc.text(es: "Mostrar Calendario automáticamente cuando no suena música", en: "Show Calendar Automatically When No Music Is Playing"), isOn: $prefs.calendarShowWhenMusicIdle)
+                        .font(.system(size: 12.5))
+
+                    Divider()
+
+                    Toggle(loc.text(es: "Ocultar eventos de todo el día (feriados / recordatorios)", en: "Hide All-Day Events (Holidays / Reminders)"), isOn: $prefs.calendarHideAllDayEvents)
+                        .font(.system(size: 12.5))
+
+                    Divider()
+
+                    HStack {
+                        Text(
+                            loc.text(
+                                es: "Eventos cargados: \(calService.visibleEvents.count)",
+                                en: "Loaded events: \(calService.visibleEvents.count)"
+                            )
+                        )
+                        .font(.system(size: 11.5))
+                        .foregroundStyle(.secondary)
+                        Spacer()
+                        Button {
+                            calService.refreshNow()
+                        } label: {
+                            Label(loc.text(es: "Sincronizar ahora", en: "Sync Now"), systemImage: "arrow.clockwise")
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Tarjeta Tecla ▶ Play y Bloqueador de Apple Music (Music Decoy · 0% CPU)
+
+    private var musicDecoySettingsCard: some View {
+        let detectedApps = musicDecoy.availableRedirectApps()
+        let playKeySelection = Binding<String>(
+            get: { musicDecoy.currentPlayKeySelectionTag },
+            set: { newTag in
+                musicDecoy.applyPlayKeyTargetSelection(newTag)
+            }
+        )
+
+        return settingsCard(
+            title: loc.text(
+                es: "Tecla ▶ Play y Reproductor por Defecto (Bloquear Apple Music)",
+                en: "▶ Play Key & Default Music Player (Block Apple Music)"
+            )
+        ) {
+            // 1. Selector principal siempre visible: qué hacer cuando presionás ▶ Play sin nada abierto
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(alignment: .top, spacing: 10) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(
+                            loc.text(
+                                es: "Al presionar ▶ Play sin ningún reproductor abierto",
+                                en: "When pressing ▶ Play with nothing open"
+                            )
+                        )
+                        .font(.system(size: 13, weight: .semibold))
+                        Text(
+                            loc.text(
+                                es: "Elegí tu reproductor favorito (por ejemplo YouTube Music) o bloqueá la apertura automática de Apple Music sin consumir CPU.",
+                                en: "Pick your preferred music player (such as YouTube Music) or block Apple Music from opening automatically at 0% CPU."
+                            )
+                        )
+                        .font(.system(size: 11.5))
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    Spacer(minLength: 8)
+
+                    if prefs.blockAppleMusicAutoLaunch {
+                        HStack(spacing: 5) {
+                            Circle()
+                                .fill(musicDecoy.isDecoyRunning ? Color.green : Color.orange)
+                                .frame(width: 7, height: 7)
+                            Text(
+                                musicDecoy.isDecoyRunning
+                                    ? loc.text(es: "Activo · 0% CPU", en: "Active · 0% CPU")
+                                    : loc.text(es: "Iniciando…", en: "Starting…")
+                            )
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(musicDecoy.isDecoyRunning ? Color.green : Color.orange)
+                        }
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3.5)
+                        .background(
+                            Capsule()
+                                .fill((musicDecoy.isDecoyRunning ? Color.green : Color.orange).opacity(0.13))
+                        )
+                        .fixedSize()
+                    }
+                }
+
+                HStack(spacing: 8) {
+                    Picker("", selection: playKeySelection) {
+                        Text(loc.text(es: "Apple Music (comportamiento de macOS)", en: "Apple Music (macOS Default)"))
+                            .tag(NotchMusicDecoyService.systemAppleMusicSelectionTag)
+                        Text(loc.text(es: "No abrir nada (solo bloquear Apple Music)", en: "Do nothing (just block Apple Music)"))
+                            .tag("")
+                        Divider()
+                        ForEach(detectedApps) { option in
+                            Text(option.name).tag(option.path)
+                        }
+                    }
+                    .labelsHidden()
+                    .frame(maxWidth: 280)
+
+                    Button(loc.text(es: "Elegir otra app…", en: "Choose App…")) {
+                        if let chosen = musicDecoy.chooseCustomRedirectApp() {
+                            musicDecoy.applyPlayKeyTargetSelection(chosen)
+                        }
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+
+                    if prefs.blockAppleMusicAutoLaunch && !prefs.musicDecoyRedirectAppPath.isEmpty {
+                        Button {
+                            musicDecoy.testConfiguredRedirectApp()
+                        } label: {
+                            Label(loc.text(es: "Probar", en: "Test"), systemImage: "play.fill")
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                        .help(loc.text(es: "Abrir ahora el reproductor elegido para verificar", en: "Launch the selected player now to verify"))
+                    }
+                }
+            }
+
+            Divider()
+
+            // 2. Interruptor directo de bloqueo (sincronizado con el selector de arriba)
+            Toggle(isOn: $prefs.blockAppleMusicAutoLaunch) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(
+                        loc.text(
+                            es: "Evitar que macOS abra Apple Music automáticamente",
+                            en: "Prevent macOS from Auto-Launching Apple Music"
+                        )
+                    )
+                    .font(.system(size: 12.5, weight: .medium))
+                    Text(
+                        loc.text(
+                            es: "Funciona tanto con la tecla ▶ Play del teclado como al conectar auriculares Bluetooth (estilo Music Decoy).",
+                            en: "Works both for the keyboard ▶ Play key and when connecting Bluetooth headphones (Music Decoy style)."
+                        )
+                    )
+                    .font(.system(size: 11.2))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+
+            if prefs.blockAppleMusicAutoLaunch && musicDecoy.isRealAppleMusicRunning {
+                Divider()
+                HStack(spacing: 10) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.orange)
+                    Text(
+                        loc.text(
+                            es: "Apple Music está abierto en este momento. Cerralo para que el bloqueador tome el control de la tecla ▶ Play.",
+                            en: "Apple Music is currently open. Quit it so the blocker takes over the ▶ Play key."
+                        )
+                    )
+                    .font(.system(size: 11.5))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    Spacer()
+                    Button(loc.text(es: "Cerrar Apple Music", en: "Quit Apple Music")) {
+                        musicDecoy.quitRealAppleMusicAndActivateDecoy()
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.orange)
+                    .controlSize(.small)
+                }
+            }
+
+            if let errorMsg = musicDecoy.lastErrorMessage, !errorMsg.isEmpty {
+                Text(errorMsg)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.red)
+            }
+
+            if prefs.blockAppleMusicAutoLaunch {
+                Divider()
+
+                HStack(spacing: 10) {
+                    Image(systemName: "info.circle")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                    Text(
+                        loc.text(
+                            es: "Mientras el bloqueo esté activo, macOS tampoco abrirá Apple Music manualmente. Si algún día querés usarlo, desactivá la opción o hacé clic aquí.",
+                            en: "While active, macOS won't launch Apple Music even manually. Whenever you want to use it, turn this off or click here."
+                        )
+                    )
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    Spacer()
+                    Button(loc.text(es: "Abrir Apple Music", en: "Open Apple Music")) {
+                        musicDecoy.openAppleMusicTemporarily()
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                }
+            }
+        }
+    }
+
+    private func triggerSettingsTrackChangePreview(style: NotchTrackChangeStyle) {
+        previewMode = .collapsed
+        previewFeedbackTask?.cancel()
+        previewSqueeze = false
+        previewNudgeX = 0
+        let token = UUID()
+        previewFeedback = .trackChanged(style, token: token)
+
+        if style == .slideNudge && prefs.enableAnimations {
+            previewNudgeX = 11
+            Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 170_000_000)
+                previewNudgeX = 0
+            }
+        }
+
+        // También disparar la vista previa en el Notch real si está activo
+        manager.previewTrackChangeFeedback(style: style)
+
+        previewFeedbackTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 2_100_000_000)
+            guard !Task.isCancelled else { return }
+            if case .trackChanged(_, let currentToken) = previewFeedback, currentToken == token {
+                previewFeedback = .none
+            }
+        }
+    }
+
+    private func triggerSettingsPausePreview(style: NotchPauseAnimationStyle) {
+        previewMode = .collapsed
+        previewFeedbackTask?.cancel()
+        previewNudgeX = 0
+        previewSqueeze = false
+        let token = UUID()
+        previewFeedback = .paused(style, token: token)
+
+        if style == .gentleSqueeze && prefs.enableAnimations {
+            previewSqueeze = true
+            Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 240_000_000)
+                previewSqueeze = false
+            }
+        }
+
+        // También disparar la vista previa en el Notch real si está activo
+        manager.previewPauseFeedback(style: style)
+
+        previewFeedbackTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 1_900_000_000)
+            guard !Task.isCancelled else { return }
+            if case .paused(_, let currentToken) = previewFeedback, currentToken == token {
+                previewFeedback = .none
             }
         }
     }
@@ -1117,6 +1985,9 @@ private enum NotchSettingsPreviewMode: String, CaseIterable, Identifiable {
 
 private struct NotchSettingsInteractivePreviewCard: View {
     @Binding var previewMode: NotchSettingsPreviewMode
+    var previewFeedback: NotchTransientFeedback = .none
+    var previewSqueeze: Bool = false
+    var previewNudgeX: CGFloat = 0
     @Bindable var prefs: NotchPreferences
     @Bindable var media: NotchMediaService
     @Bindable var loc: LocalizationManager
@@ -1134,6 +2005,49 @@ private struct NotchSettingsInteractivePreviewCard: View {
             return track.displaySubtitle(includeAlbum: prefs.showAlbumName)
         }
         return prefs.showAlbumName ? "Neon Horizon · Afterglow" : "Neon Horizon"
+    }
+
+    private var isPreviewDropDown: Bool {
+        guard previewMode == .collapsed else { return false }
+        switch previewFeedback {
+        case .trackChanged(.dropDown, _), .paused(.dropDown, _):
+            return true
+        default:
+            return false
+        }
+    }
+
+    private var isPreviewSideways: Bool {
+        guard previewMode == .collapsed else { return false }
+        return previewFeedback.isSidewaysPeeking
+    }
+
+    private var isPreviewColorFlash: Bool {
+        guard previewMode == .collapsed else { return false }
+        if case .trackChanged(.colorFlash, _) = previewFeedback { return true }
+        return false
+    }
+
+    private var isPreviewColorDim: Bool {
+        guard previewMode == .collapsed else { return false }
+        if case .paused(.colorDimPulse, _) = previewFeedback { return true }
+        return false
+    }
+
+    private var isPreviewSkipSwap: Bool {
+        guard previewMode == .collapsed else { return false }
+        switch previewFeedback {
+        case .trackChanged(.skipIconSwap, _), .trackChanged(.slideNudge, _):
+            return true
+        default:
+            return false
+        }
+    }
+
+    private var isPreviewPausePop: Bool {
+        guard previewMode == .collapsed else { return false }
+        if case .paused(.pauseIconPop, _) = previewFeedback { return true }
+        return false
     }
 
     var body: some View {
@@ -1184,9 +2098,27 @@ private struct NotchSettingsInteractivePreviewCard: View {
 
                 // Silueta orgánica animada del Notch
                 previewNotchSilhouette
+                    .scaleEffect(
+                        x: previewSqueeze ? 0.93 : 1.0,
+                        y: previewSqueeze ? 0.90 : 1.0,
+                        anchor: .top
+                    )
+                    .offset(x: previewNudgeX)
                     .animation(
                         prefs.resolvedAnimation(baseResponse: 0.38),
                         value: previewMode
+                    )
+                    .animation(
+                        prefs.resolvedAnimation(baseResponse: 0.34),
+                        value: previewFeedback
+                    )
+                    .animation(
+                        prefs.enableAnimations ? .spring(response: 0.24, dampingFraction: 0.58) : nil,
+                        value: previewSqueeze
+                    )
+                    .animation(
+                        prefs.enableAnimations ? .spring(response: 0.26, dampingFraction: 0.60) : nil,
+                        value: previewNudgeX
                     )
                     .animation(
                         prefs.resolvedAnimation(baseResponse: 0.34),
@@ -1197,7 +2129,7 @@ private struct NotchSettingsInteractivePreviewCard: View {
                         value: prefs.showAlbumArtwork
                     )
             }
-            .frame(height: previewMode == .collapsed ? 116 : 212)
+            .frame(height: previewMode == .collapsed ? (isPreviewDropDown ? 132 : 116) : 212)
             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
@@ -1214,90 +2146,163 @@ private struct NotchSettingsInteractivePreviewCard: View {
     private var previewNotchSilhouette: some View {
         let width: CGFloat = {
             switch previewMode {
-            case .collapsed: return prefs.showTrackTitleInCollapsedPill ? 276 : 206
+            case .collapsed:
+                if isPreviewSideways {
+                    return 378
+                }
+                if isPreviewDropDown {
+                    return previewFeedback.isPauseFeedback ? 304 : 338
+                }
+                return prefs.showTrackTitleInCollapsedPill ? 276 : 206
             case .expanded: return 382
             case .lyrics: return 486
             }
         }()
         let height: CGFloat = {
             switch previewMode {
-            case .collapsed: return 34
+            case .collapsed:
+                if isPreviewDropDown {
+                    return previewFeedback.isPauseFeedback ? 64 : 70
+                }
+                return 34
             case .expanded: return 164
             case .lyrics: return 178
             }
         }()
-        let topFlare: CGFloat = previewMode == .collapsed ? 11 : 16
-        let botRadius: CGFloat = previewMode == .collapsed ? 13 : 22
+        let topFlare: CGFloat = previewMode == .collapsed ? (isPreviewDropDown ? 14 : (isPreviewSideways ? 13 : 11)) : 16
+        let botRadius: CGFloat = previewMode == .collapsed ? (isPreviewDropDown ? 18 : 13) : 22
         let shape = OrganicNotchShape(
             topFlareRadius: topFlare,
             bottomCornerRadius: botRadius,
             isFloatingIsland: false
         )
 
+        let baseGlow = prefs.effectiveGlowStrength(isExpanded: previewMode != .collapsed)
+        let previewGlowStrength = isPreviewColorFlash
+            ? min(0.95, max(0.68, baseGlow * 2.1))
+            : (isPreviewColorDim ? min(0.68, max(0.45, baseGlow * 1.45)) : baseGlow)
+
         ZStack(alignment: .top) {
             NotchAmbientBackdropView(
-                accentColor: previewAccent,
+                accentColor: isPreviewColorDim ? Color.white.opacity(0.85) : previewAccent,
                 topFlareRadius: topFlare,
                 bottomCornerRadius: botRadius,
                 isFloatingIsland: false,
-                showAmbientGlow: prefs.showAmbientArtworkGlow,
-                glowStrength: prefs.effectiveGlowStrength(isExpanded: previewMode != .collapsed),
+                showAmbientGlow: prefs.showAmbientArtworkGlow || isPreviewColorFlash || isPreviewColorDim,
+                glowStrength: previewGlowStrength,
                 backgroundOpacity: prefs.backgroundOpacity,
-                isExpanded: previewMode != .collapsed
+                isExpanded: previewMode != .collapsed || isPreviewColorFlash
             )
+
+            if isPreviewColorFlash || isPreviewColorDim {
+                OrganicNotchRimShape(
+                    topFlareRadius: topFlare,
+                    bottomCornerRadius: botRadius,
+                    isFloatingIsland: false
+                )
+                .stroke(
+                    (isPreviewColorFlash ? previewAccent : Color.white).opacity(isPreviewColorFlash ? 0.92 : 0.68),
+                    lineWidth: isPreviewColorFlash ? 1.8 : 1.3
+                )
+                .shadow(color: (isPreviewColorFlash ? previewAccent : Color.white).opacity(0.65), radius: 5)
+            }
 
             switch previewMode {
             case .collapsed:
-                HStack(spacing: 9) {
-                    if prefs.showAlbumArtwork {
-                        NotchAlbumArtBadgeView(
-                            artworkImage: media.currentArtworkImage,
-                            trackID: media.currentTrack?.id ?? "preview-collapsed",
-                            accentColor: previewAccent,
-                            progress: 0.62,
-                            style: prefs.artworkStyle,
-                            size: 21,
-                            isPlaying: true,
-                            enableAnimations: prefs.enableAnimations,
-                            showProgressRing: prefs.artworkStyle == .circleWithRing
-                        )
-                    } else {
-                        ZStack {
-                            Circle().fill(previewAccent.opacity(0.24))
-                            Image(systemName: "play.circle.fill")
-                                .font(.system(size: 11, weight: .bold))
-                                .foregroundStyle(previewAccent)
+                if isPreviewDropDown {
+                    VStack(spacing: 0) {
+                        Color.clear.frame(height: 24)
+                        HStack(spacing: 10) {
+                            if prefs.showAlbumArtwork {
+                                NotchAlbumArtBadgeView(
+                                    artworkImage: media.currentArtworkImage,
+                                    trackID: media.currentTrack?.id ?? "preview-drop",
+                                    accentColor: previewAccent,
+                                    progress: 0.62,
+                                    style: prefs.artworkStyle,
+                                    size: previewFeedback.isPauseFeedback ? 22 : 26,
+                                    isPlaying: !previewFeedback.isPauseFeedback,
+                                    enableAnimations: prefs.enableAnimations,
+                                    showProgressRing: prefs.artworkStyle == .circleWithRing
+                                )
+                            }
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(previewTitle)
+                                    .font(.system(size: 11.5, weight: .bold))
+                                    .foregroundStyle(.white)
+                                    .lineLimit(1)
+                                if previewFeedback.isPauseFeedback {
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "pause.fill").font(.system(size: 8.5, weight: .bold))
+                                        Text(loc.text(es: "Reproducción en pausa", en: "Playback paused"))
+                                            .font(.system(size: 10, weight: .semibold))
+                                    }
+                                    .foregroundStyle(previewAccent)
+                                } else {
+                                    Text(previewArtist)
+                                        .font(.system(size: 10))
+                                        .foregroundStyle(Color.white.opacity(0.68))
+                                        .lineLimit(1)
+                                }
+                            }
+                            Spacer(minLength: 4)
+                            previewCollapsedRightIndicator
                         }
-                        .frame(width: 21, height: 21)
+                        .padding(.horizontal, topFlare + 12)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                     }
+                } else {
+                    HStack(spacing: 9) {
+                        if prefs.showAlbumArtwork {
+                            NotchAlbumArtBadgeView(
+                                artworkImage: media.currentArtworkImage,
+                                trackID: media.currentTrack?.id ?? "preview-collapsed",
+                                accentColor: previewAccent,
+                                progress: 0.62,
+                                style: prefs.artworkStyle,
+                                size: 21,
+                                isPlaying: !previewFeedback.isPauseFeedback,
+                                enableAnimations: prefs.enableAnimations,
+                                showProgressRing: prefs.artworkStyle == .circleWithRing
+                            )
+                        } else {
+                            ZStack {
+                                Circle().fill(previewAccent.opacity(0.24))
+                                Image(systemName: "play.circle.fill")
+                                    .font(.system(size: 11, weight: .bold))
+                                    .foregroundStyle(previewAccent)
+                            }
+                            .frame(width: 21, height: 21)
+                        }
 
-                    if prefs.showTrackTitleInCollapsedPill {
-                        Text(previewTitle)
-                            .font(.system(size: 11.5, weight: .semibold))
-                            .foregroundStyle(.white)
-                            .lineLimit(1)
-                    } else {
+                        if isPreviewSideways && previewFeedback.isPauseFeedback {
+                            HStack(spacing: 5) {
+                                Text(loc.text(es: "En pausa", en: "Paused"))
+                                    .font(.system(size: 11, weight: .bold))
+                                    .foregroundStyle(previewAccent)
+                                Text("·")
+                                    .foregroundStyle(.white.opacity(0.45))
+                                Text(previewTitle)
+                                    .font(.system(size: 11.2, weight: .semibold))
+                                    .foregroundStyle(.white.opacity(0.92))
+                                    .lineLimit(1)
+                            }
+                        } else if prefs.showTrackTitleInCollapsedPill || isPreviewSideways {
+                            Text(isPreviewSideways ? "\(previewTitle) · \(previewArtist)" : previewTitle)
+                                .font(.system(size: 11.5, weight: .semibold))
+                                .foregroundStyle(.white)
+                                .lineLimit(1)
+                        } else {
+                            Spacer(minLength: 4)
+                        }
+
                         Spacer(minLength: 4)
-                    }
 
-                    Spacer(minLength: 4)
-
-                    if prefs.showVisualizerBars {
-                        NotchEqualizerVisualizerView(
-                            isPlaying: true,
-                            accentColor: previewAccent,
-                            barCount: 4,
-                            barWidth: 2.3,
-                            barSpacing: 2.0,
-                            maxHeight: 13,
-                            enableAnimations: prefs.enableAnimations,
-                            style: prefs.visualizerStyle,
-                            speedMultiplier: prefs.animationSpeed
-                        )
+                        previewCollapsedRightIndicator
                     }
+                    .padding(.horizontal, topFlare + 10)
+                    .frame(height: height)
                 }
-                .padding(.horizontal, topFlare + 10)
-                .frame(height: height)
 
             case .expanded:
                 VStack(spacing: 10) {
@@ -1318,7 +2323,9 @@ private struct NotchSettingsInteractivePreviewCard: View {
                         Spacer()
 
                         HStack(spacing: 6) {
+                            Image(systemName: "slider.vertical.3")
                             Image(systemName: "speaker.wave.2.fill")
+                            Image(systemName: "airplayaudio")
                             Image(systemName: "pin")
                             Image(systemName: "gearshape.fill")
                             Image(systemName: "xmark")
@@ -1481,5 +2488,44 @@ private struct NotchSettingsInteractivePreviewCard: View {
         .frame(width: width, height: height, alignment: .top)
         .clipShape(shape)
         .shadow(color: Color.black.opacity(0.55), radius: 14, y: 6)
+    }
+
+    @ViewBuilder
+    private var previewCollapsedRightIndicator: some View {
+        if isPreviewSkipSwap {
+            ZStack {
+                Circle().fill(previewAccent.opacity(0.24)).frame(width: 20, height: 20)
+                Image(systemName: "forward.fill")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(previewAccent)
+            }
+            .transition(.scale(scale: 0.6).combined(with: .opacity))
+        } else if previewFeedback.isPauseFeedback {
+            ZStack {
+                if isPreviewPausePop {
+                    Circle()
+                        .fill(previewAccent.opacity(0.22))
+                        .overlay(Circle().stroke(previewAccent.opacity(0.75), lineWidth: 1.1))
+                        .frame(width: 20, height: 20)
+                }
+                Image(systemName: "pause.fill")
+                    .font(.system(size: 10.5, weight: .bold))
+                    .foregroundStyle(isPreviewPausePop ? previewAccent : Color.white.opacity(0.90))
+            }
+            .transition(.scale(scale: 0.6).combined(with: .opacity))
+        } else if prefs.showVisualizerBars {
+            NotchEqualizerVisualizerView(
+                isPlaying: true,
+                accentColor: previewAccent,
+                barCount: 4,
+                barWidth: 2.3,
+                barSpacing: 2.0,
+                maxHeight: 13,
+                enableAnimations: prefs.enableAnimations,
+                style: prefs.visualizerStyle,
+                speedMultiplier: prefs.animationSpeed
+            )
+            .transition(.opacity)
+        }
     }
 }

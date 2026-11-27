@@ -10,6 +10,10 @@ let package = Package(
         .executable(
             name: "MacFileExplorer",
             targets: ["MacFileExplorer"]
+        ),
+        .executable(
+            name: "MacFileExplorerMusicDecoy",
+            targets: ["MacFileExplorerMusicDecoy"]
         )
     ],
     targets: [
@@ -20,10 +24,19 @@ let package = Package(
                 .process("Resources")
             ]
         ),
+        .executableTarget(
+            name: "MacFileExplorerMusicDecoy",
+            path: "Sources/MacFileExplorerMusicDecoy"
+        ),
         .testTarget(
             name: "MacFileExplorerTests",
             dependencies: ["MacFileExplorer"],
             path: "Tests/MacFileExplorerTests"
+        ),
+        .testTarget(
+            name: "MacFileExplorerValidationTests",
+            dependencies: ["MacFileExplorer"],
+            path: "Tests/MacFileExplorerValidationTests"
         )
     ]
 )

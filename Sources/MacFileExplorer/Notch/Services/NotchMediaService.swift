@@ -235,7 +235,18 @@ public final class NotchMediaService {
 
     // MARK: - Estado Observable Público
 
-    public private(set) var currentTrack: NotchTrackInfo?
+    public private(set) var currentTrack: NotchTrackInfo? {
+        didSet {
+            let newHasActive = currentTrack != nil
+            if hasActiveTrack != newHasActive {
+                hasActiveTrack = newHasActive
+            }
+            let newIsPlaying = currentTrack?.isPlaying ?? false
+            if isPlaying != newIsPlaying {
+                isPlaying = newIsPlaying
+            }
+        }
+    }
     public private(set) var currentArtworkImage: NSImage?
     public private(set) var isDemoMode: Bool = false
     public private(set) var isMonitoring: Bool = false
@@ -243,16 +254,15 @@ public final class NotchMediaService {
     public private(set) var lastTrackChangeAt: Date?
     public private(set) var connectionStatus = NotchMediaConnectionStatus()
 
+    /// Propiedades almacenadas (no computadas sobre `currentTrack`) para que el refresco periódico
+    /// del progreso (`elapsedTime`) cada ~1.5 s NO invalide el `CommandMenu("Notch")` ni cierre submenús abiertos.
+    public private(set) var hasActiveTrack: Bool = false
+    public private(set) var isPlaying: Bool = false
+
     /// Callback disparado cuando cambia el `id` de la canción (ideal para el anuncio de nueva canción en `NotchManager`).
     public var onTrackChanged: ((NotchTrackInfo?) -> Void)?
-
-    public var hasActiveTrack: Bool {
-        currentTrack != nil
-    }
-
-    public var isPlaying: Bool {
-        currentTrack?.isPlaying ?? false
-    }
+    /// Callback disparado cuando la pista actual alterna entre reproduciendo y en pausa (`isPlaying`).
+    public var onPlaybackStateChanged: ((Bool, NotchTrackInfo) -> Void)?
 
     // MARK: - Interpolación en Vivo del Progreso
 
@@ -784,7 +794,7 @@ public final class NotchMediaService {
 
     private func isApplicationRunning(bundleID: String) -> Bool {
         NSWorkspace.shared.runningApplications.contains {
-            $0.bundleIdentifier == bundleID && !$0.isTerminated
+            $0.bundleIdentifier == bundleID && !$0.isTerminated && !NotchMusicDecoyService.isDecoyProcess($0)
         }
     }
 
@@ -968,7 +978,9 @@ public final class NotchMediaService {
         guard !isDemoMode else { return }
 
         let runningApps: [RunningAppInfo] = NSWorkspace.shared.runningApplications.compactMap { app in
-            guard !app.isTerminated, let bid = app.bundleIdentifier else { return nil }
+            guard !app.isTerminated, !NotchMusicDecoyService.isDecoyProcess(app), let bid = app.bundleIdentifier else {
+                return nil
+            }
             return RunningAppInfo(
                 pid: app.processIdentifier,
                 bundleID: bid,
@@ -1176,6 +1188,7 @@ public final class NotchMediaService {
             pausedSince = Date()
         }
 
+        let previousPlayingState = currentTrack?.isPlaying
         currentTrack = next
 
         if backend != .demo {
@@ -1191,17 +1204,23 @@ public final class NotchMediaService {
             if next.artworkData == nil || next.artist.isEmpty || !next.hasKnownDuration {
                 triggerTrackEnrichmentIfNeeded(for: next, videoId: detectedVideoID)
             }
-        } else if let vid = detectedVideoID,
-                  !vid.isEmpty,
-                  artworkURLCache["ytimg::\(vid)"] == nil,
-                  !attemptedYouTubeArtworkVideoIDs.contains(vid) {
-            // Si el videoId llegó un ciclo después del cambio de pista (o al abrir la vista del reproductor), traer la carátula exacta de YouTube.
-            triggerTrackEnrichmentIfNeeded(for: next, videoId: vid)
+        } else {
+            if let prevPlaying = previousPlayingState, prevPlaying != next.isPlaying {
+                onPlaybackStateChanged?(next.isPlaying, next)
+            }
+            if let vid = detectedVideoID,
+               !vid.isEmpty,
+               artworkURLCache["ytimg::\(vid)"] == nil,
+               !attemptedYouTubeArtworkVideoIDs.contains(vid) {
+                // Si el videoId llegó un ciclo después del cambio de pista (o al abrir la vista del reproductor), traer la carátula exacta de YouTube.
+                triggerTrackEnrichmentIfNeeded(for: next, videoId: vid)
+            }
         }
     }
 
     private func optimisticallyUpdatePlaybackState(isPlaying: Bool) {
         guard var track = currentTrack else { return }
+        let didChange = track.isPlaying != isPlaying
         let now = Date()
         lastOptimisticToggleAt = now
         track.elapsedTime = track.interpolatedElapsedTime(at: now)
@@ -1210,6 +1229,9 @@ public final class NotchMediaService {
         track.lastUpdatedAt = now
         pausedSince = isPlaying ? nil : now
         currentTrack = track
+        if didChange {
+            onPlaybackStateChanged?(isPlaying, track)
+        }
     }
 
     // MARK: - Enriquecimiento de Carátula Exacta (YouTube Thumbnail + oEmbed + iTunes Estricto)

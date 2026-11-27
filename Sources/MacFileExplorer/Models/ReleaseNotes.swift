@@ -95,6 +95,112 @@ public enum ReleaseNotesCatalog {
 
     public static let sections: [ReleaseNoteSection] = [
         ReleaseNoteSection(
+            id: "v2.8.0-notch-calendar-meet-eq-pdf-clipboard-perf",
+            semanticVersion: "2.8.0",
+            versionLabelES: "Versión 2.8.0 — Google Calendar y Meet en el Notch, Volumen y Ecualizador 5 bandas, PDF interactivo, Portapapeles con Fecha y Ordenar, Foco multi-monitor y Boost de velocidad",
+            versionLabelEN: "Version 2.8.0 — Google Calendar & Meet in Notch, Volume & 5-Band EQ, Interactive PDF Preview, Clipboard Date & Sort, Multi-Monitor Focus & Speed Boost",
+            dateLabelES: "27 nov 2026",
+            dateLabelEN: "Nov 27, 2026",
+            items: [
+                ReleaseNoteItem(
+                    id: "notch-exclusive-meet-alert-card",
+                    icon: "video.badge.checkmark",
+                    titleES: "Aviso de Meet limpio y exclusivo en el «Notch» (sin recortar la música)",
+                    titleEN: "Clean, Full-Card Meet Alert in «Notch» (Without Clipping Music Controls)",
+                    summaryES: "Cuando está sonando música y llega una notificación de Meet próxima, el Notch ahora muestra únicamente la tarjeta completa de la reunión (con título, horario, botón destacado «Unirse a Meet», acceso a Calendar y botón «✕» para volver a la música) en lugar de superponerla y cortar el reproductor.",
+                    summaryEN: "When music is playing and an upcoming Meet alert triggers, Notch now shows a clean, dedicated full-card meeting notification (with title, schedule, prominent \"Join Meet\" button, Calendar shortcut, and an \"✕\" button to return to music) instead of clipping the music player underneath."
+                ),
+                ReleaseNoteItem(
+                    id: "v270-speed-stability-and-installer-improvements",
+                    icon: "checkmark.shield.fill",
+                    titleES: "Navegación más rápida, mayor estabilidad y mejoras en el instalador",
+                    titleEN: "Faster Folder Navigation, Stability Fixes & Installer Improvements",
+                    summaryES: "Se aceleró la apertura y el recorrido de carpetas grandes, se mejoró la estabilidad al copiar o mover archivos, guardar páginas PDF como imagen, usar el ecualizador del Notch, el historial del portapapeles y el foco de ventanas, y se reforzó el instalador y la verificación de descargas para una primera instalación más segura.",
+                    summaryEN: "Sped up opening and browsing large folders, improved reliability for file transfers, saving PDF pages as images, the Notch equalizer, clipboard history, and window focus, and strengthened the installer, first-run wizard, and update download verification."
+                ),
+                ReleaseNoteItem(
+                    id: "notch-calendar-icon-styles-positions-and-native-colors",
+                    icon: "paintbrush.pointed.fill",
+                    titleES: "5 ajustes nuevos para el ícono del Calendario en el «Notch» y colores reales de eventos/Meets",
+                    titleEN: "5 New «Notch» Calendar Icon Styles/Positions & Native Calendar Colors for Events/Meets",
+                    summaryES: "En Configuración de Notch → Calendario y Meet ahora podés elegir el estilo del botón de Calendario (circular, cápsula del mismo tamaño que «YouTube Music», mosaico con fecha o cápsula con próxima hora), su posición en la barra superior (junto a YouTube Music, centro, derecha o extremo derecho), su tamaño (Pequeño, Mediano o Grande), si mostrar el número del día actual y el contador de eventos, y si usar los mismos colores de eventos y Meets que tenés configurados en tu calendario.",
+                    summaryEN: "In Notch Settings → Calendar & Meet you can now customize the Calendar button style (circle, pill matching \"YouTube Music\", date badge tile, or next-event pill), its position in the top bar (next to YouTube Music, center, right, or far right), its size (Small, Medium, or Large), day-number and event-counter badges, plus a toggle to use the exact event and Meet colors configured in your Google Calendar / macOS Calendar."
+                ),
+                ReleaseNoteItem(
+                    id: "notch-calendar-date-time-dedup-fix",
+                    icon: "calendar.badge.checkmark",
+                    titleES: "Fechas exactas, horarios AM/PM y sin duplicados en el Calendario del «Notch»",
+                    titleEN: "Exact Dates, Accurate AM/PM Times & Zero Duplicates in «Notch» Calendar",
+                    summaryES: "Se corrigió la lectura de fechas y horarios desde Google Calendar en el Notch: ahora decodifica con exactitud el día, mes y año de cada evento (sin mezclar eventos de otros días en «Hoy»), hereda correctamente AM/PM en rangos como «2:30 – 3:00pm» (mostrando 14:30 – 15:00 en lugar de 02:30 – 15:00) y elimina filas duplicadas.",
+                    summaryEN: "Fixed Google Calendar date and time parsing in Notch: it now accurately decodes each event's exact day, month, and year (preventing events from other days from leaking into \"Day\"), properly inherits AM/PM in ranges like \"2:30 – 3:00pm\" (showing 14:30 – 15:00 instead of 02:30 – 15:00), and removes duplicate event cards."
+                ),
+                ReleaseNoteItem(
+                    id: "notch-menu-submenus-stability-fix",
+                    icon: "menubar.rectangle",
+                    titleES: "Submenús estables en la barra superior mientras suena el «Notch»",
+                    titleEN: "Stable Menu Bar Submenus While «Notch» Is Playing",
+                    summaryES: "Se corrigió un problema por el cual, mientras el Notch estaba activo reproduciendo música, los submenús desplegados en la barra de menús (como Animación al cambiar de tema, Animación al pausar o Pantallas) se cerraban solos cada segundo al actualizarse el progreso de la canción.",
+                    summaryEN: "Fixed an issue where open menu bar submenus (such as Track Change Animation, Pause Animation, or Displays) would close on their own every second while Notch was actively playing music."
+                ),
+                ReleaseNoteItem(
+                    id: "clipboard-history-date-column-and-sorting",
+                    icon: "arrow.up.arrow.down.circle",
+                    titleES: "Columna Fecha y ordenamiento en el Historial del Portapapeles",
+                    titleEN: "Date Column & Sorting in Clipboard History",
+                    summaryES: "La lista del Historial del Portapapeles ahora muestra una columna dedicada de Fecha y hora junto a cada elemento copiado, encabezados clicables («Elemento» y «Fecha») para ordenar al instante y un menú «Ordenar» que permite ordenar por Fecha, Contenido, Tipo, Tamaño, Aplicación de origen o Más usados (ascendente o descendente, con opción de mantener fijados arriba).",
+                    summaryEN: "The Clipboard History list now displays a dedicated Date & time column next to every copied item, clickable column headers (\"Item\" and \"Date\") for instant sorting, and a \"Sort\" menu supporting Date, Content, Type, Size, Source App, and Most Used (ascending or descending, with an option to keep pinned items on top)."
+                ),
+                ReleaseNoteItem(
+                    id: "notch-google-calendar-and-meet-alerts",
+                    icon: "calendar.badge.clock",
+                    titleES: "Google Calendar y alertas de Meet integradas en el «Notch» (con 10+ ajustes)",
+                    titleEN: "Google Calendar & Live Meet Alerts Built Into «Notch» (With 10+ Settings)",
+                    summaryES: "El Notch ahora integra tu Google Calendar (usando tu cuenta de Gmail logueada en MacFileExplorer, más opción de Calendario de macOS) con formato visual estilo Google Calendar (Agenda con barra de color, Línea de tiempo o Compacto) y vista Diaria o Semanal. Al hacer clic abre Google Calendar o tu reunión directamente en Google Chrome, convive de forma inteligente con la música avisando cuando está por empezar una Meet (con sonido, animación superior y botón directo «Unirse a Meet» en 1 clic) y trae más de 10 configuraciones dedicadas en Configuración de Notch → Calendario y Meet.",
+                    summaryEN: "Notch now integrates your Google Calendar (using your signed-in Gmail account in MacFileExplorer, plus optional macOS Calendar) in authentic Google Calendar style (Color-striped Agenda, Hourly Timeline, or Compact) with Daily or Weekly views. Clicking opens Google Calendar or meetings directly in Google Chrome, coexists smoothly with playing music by alerting you before a Meet starts (with configurable sound, top animation, and a 1-click \"Join Meet\" button), and includes 10+ dedicated settings under Notch Settings → Calendar & Meet."
+                ),
+                ReleaseNoteItem(
+                    id: "quicklook-interactive-pdf-preview",
+                    icon: "doc.richtext",
+                    titleES: "Visor PDF interactivo en Vista Rápida: seleccionar texto, copiar/pegar y copiar imágenes",
+                    titleEN: "Interactive PDF Preview in Quick Look: Select Text, Copy/Paste & Image Capture",
+                    summaryES: "Al previsualizar un PDF con la barra espaciadora ahora contás con un visor completo: podés seleccionar y copiar texto (⌘C), copiar la página entera o todo el texto del PDF, recortar cualquier gráfico o zona del documento como imagen en alta resolución, pegar texto o imágenes (⌘V) sobre la página con Deshacer y Guardar (⌘S), buscar texto (⌘F), hacer zoom, rotar páginas y ver miniaturas laterales.",
+                    summaryEN: "Previewing a PDF with Spacebar now opens a rich interactive viewer: select and copy text (⌘C), copy the current page or entire document text, drag-capture any diagram or region as a crisp HD image (or copy the full page as an image), paste text or images (⌘V) onto the page with Undo and Save (⌘S), search text (⌘F), zoom, rotate pages, and toggle page thumbnails."
+                ),
+                ReleaseNoteItem(
+                    id: "taskbar-single-window-focus-multimonitor",
+                    icon: "macwindow.on.rectangle",
+                    titleES: "Enfoque de una sola ventana en la Barra de tareas y AltTab (multi-monitor)",
+                    titleEN: "Single-Window Focus in Taskbar & AltTab (Multi-Monitor)",
+                    summaryES: "Al hacer clic en una ventana específica de una app con varias ventanas abiertas (por ejemplo, Chrome en la pantalla de la Mac y en un monitor externo), ahora solo se trae al frente y se enfoca exactamente la ventana que cliqueaste — sin levantar las demás ventanas de esa app en otros monitores y sin moverla jamás de pantalla.",
+                    summaryEN: "Clicking a specific window of an app with multiple open windows (such as Chrome across your MacBook screen and an external display) now raises and focuses only the exact window you clicked — without bringing the app's other windows to the front on other monitors and without ever moving it to another display."
+                ),
+                ReleaseNoteItem(
+                    id: "upgrade-dialog-redesign-and-dmg-wizard-installer",
+                    icon: "arrow.down.circle.fill",
+                    titleES: "Cartel de actualizaciones renovado, instalador en 1 doble clic y acceso directo al Asistente inicial",
+                    titleEN: "Redesigned Update Dialog, 1-Double-Click DMG Installer & Quick Re-Run for Setup Wizard",
+                    summaryES: "Se rediseñó por completo la ventana de descarga de actualizaciones para que nunca recorte textos ni botones, muestre un resumen limpio de novedades en tu idioma y explique en 2 pasos cómo instalar. Además, se corrigió el arranque automático del Asistente en instalaciones desde cero, se sumó «Instalar MacFileExplorer.command» dentro del .dmg para instalar en un doble clic abriendo el Asistente automáticamente, y ahora podés volver a ejecutar el Asistente cuando quieras desde el menú MacFileExplorer, el ícono de barra superior, Ayuda o Acerca de.",
+                    summaryEN: "Completely redesigned the update download window so text and action buttons never clip, showing clean localized highlights and a 2-step install guide. Also fixed automatic Setup Wizard launching on fresh installs, added a double-click \"Instalar MacFileExplorer.command\" installer inside the .dmg that launches the Setup Wizard automatically on fresh installs, and added quick shortcuts to re-run the Setup Wizard anytime from the MacFileExplorer menu, menu bar tray icon, Help, or About."
+                ),
+                ReleaseNoteItem(
+                    id: "notch-music-decoy-blocker",
+                    icon: "hand.raised.slash",
+                    titleES: "Elegir tu reproductor por defecto al presionar ▶ Play y bloquear Apple Music desde «Notch»",
+                    titleEN: "Pick Your Default ▶ Play Music App & Block Apple Music Auto-Launch Inside «Notch»",
+                    summaryES: "Ahora podés configurar desde Configuración de Notch (o el menú superior Notch → Reproductor al presionar ▶ Play) qué querés que pase cuando apretás ▶ Play en el teclado o conectás auriculares Bluetooth sin nada abierto: bloquear por completo la apertura automática de Apple Music (0% CPU, estilo Music Decoy) o abrir automáticamente tu reproductor favorito como YouTube Music (app instalada o versión Web), Spotify o cualquier otra app de tu Mac.",
+                    summaryEN: "Inside Notch Settings (or the top Notch → Default ▶ Play Music App menu), you can now choose what happens when you press the ▶ Play key or connect Bluetooth headphones with nothing playing: silently block Apple Music from auto-launching (0% CPU, Music Decoy style) or automatically open your preferred player such as YouTube Music (installed app or Web), Spotify, or any other app on your Mac."
+                ),
+                ReleaseNoteItem(
+                    id: "notch-header-volume-and-equalizer",
+                    icon: "slider.vertical.3",
+                    titleES: "Control de volumen y Ecualizador de sonido de 5 bandas directo en la barra superior del «Notch»",
+                    titleEN: "System Volume Control & 5-Band Sound Equalizer Right in the «Notch» Top Bar",
+                    summaryES: "Ahora la barra superior del reproductor Notch suma dos botones rápidos junto a la salida de audio: un control de Volumen en tiempo real (con barra deslizable, botón de silencio, ajustes finos y accesos rápidos 25%/50%/75%/100%) y un Ecualizador de sonido de 5 bandas (60 Hz a 12 kHz) con 8 perfiles prearmados (Plano, Graves, Voces, Rock, Pop, Electro, Acústico y Noche) que procesa el audio de tu Mac en vivo sin drivers adicionales.",
+                    summaryEN: "The expanded Notch top bar now includes two new quick controls next to audio output: a live System Volume control (interactive slider, 1-click mute, fine step buttons, and 25%/50%/75%/100% quick presets) and a real-time 5-band Sound Equalizer (60 Hz to 12 kHz) with 8 ready-made presets (Flat, Bass, Vocal, Rock, Pop, Electro, Acoustic, and Night) that shapes your Mac's audio live with zero third-party drivers."
+                )
+            ]
+        ),
+        ReleaseNoteSection(
             id: "v2.7.0-setup-wizard-tour-notch-customization-bug-reporter",
             semanticVersion: "2.7.0",
             versionLabelES: "Versión 2.7.0 — Asistente de instalación, Tour interactivo, Novedades al actualizar, 10 ajustes nuevos del Notch y Reporte de errores",
@@ -102,6 +208,22 @@ public enum ReleaseNotesCatalog {
             dateLabelES: "27 nov 2026",
             dateLabelEN: "Nov 27, 2026",
             items: [
+                ReleaseNoteItem(
+                    id: "notch-track-change-and-pause-animations",
+                    icon: "forward.fill",
+                    titleES: "5 formas de avisar el cambio de tema en el «Notch» + animaciones e ícono «⏸» al pausar",
+                    titleEN: "5 Customizable Track-Change Animations + Pause Animations & \"⏸\" Icon in «Notch»",
+                    summaryES: "Ahora podés activar o desactivar el aviso al cambiar de canción en el Notch y elegir entre 5 estilos distintos: desplegar hacia abajo, ensancharse a los costados sin bajar, solo hacer un destello de color, cambiar las ondas por el ícono «≫» o un impulso lateral suave. Además, al poner pausa las ondas musicales se cambian por el símbolo «⏸» (configurable) y podés elegir entre 5 animaciones breves de pausa y probar cada una en vivo desde Configuración de Notch.",
+                    summaryEN: "You can now turn track-change notifications in Notch on or off and choose from 5 distinct visual styles: Drop Down, Expand Sideways (without dropping downward), Color Pulse Only, Swap Waves to \"≫\", or Slide Nudge. Plus, when you pause playback, the equalizer waves swap to a crisp \"⏸\" pause icon (toggleable) with 5 selectable subtle pause animations — all testable live inside Notch Settings."
+                ),
+                ReleaseNoteItem(
+                    id: "menu-bar-and-bilingual-translation-completeness",
+                    icon: "globe",
+                    titleES: "Corrección de traducciones en el menú superior y revisión completa Español / Inglés",
+                    titleEN: "Top Menu Bar Translation Fix & Complete Spanish / English Localization Audit",
+                    summaryES: "Se corrigió el menú superior de la aplicación para que muestre siempre «Ocultar MacFileExplorer» / «Hide MacFileExplorer» y «Salir de MacFileExplorer» / «Quit MacFileExplorer» junto con todos los submenús del sistema (Edición, Ventana, Mover y redimensionar, Autorrelleno y Servicios) en el idioma elegido sin mezclar español e inglés. También se completaron traducciones faltantes en mensajes de error, propiedades de audio, atajos de la Ayuda y permisos de macOS.",
+                    summaryEN: "Fixed the top application menu so it always displays «Hide MacFileExplorer» / «Ocultar MacFileExplorer» and «Quit MacFileExplorer» / «Salir de MacFileExplorer», along with all system submenus (Edit, Window, Move & Resize, AutoFill, and Services) in your selected language with zero mixed wording. Also filled in remaining untranslated error messages, audio properties, Help shortcut badges, and macOS permission prompts."
+                ),
                 ReleaseNoteItem(
                     id: "notch-10-new-customization-settings",
                     icon: "paintpalette.fill",
