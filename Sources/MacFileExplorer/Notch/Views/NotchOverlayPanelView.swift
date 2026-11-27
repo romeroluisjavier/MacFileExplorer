@@ -295,10 +295,7 @@ public struct NotchOverlayPanelView: View {
     }
 
     private var accentColor: Color {
-        if let track {
-            return track.dominantColor.swiftUIColor
-        }
-        return prefs.lastPlayedSource?.swiftUIAccentColor ?? NotchMediaSource.youtubeMusic.swiftUIAccentColor
+        prefs.resolvedAccentColor(for: track)
     }
 
     private var metrics: NotchSilhouetteMetrics {
@@ -311,9 +308,7 @@ public struct NotchOverlayPanelView: View {
     }
 
     private var morphAnimation: Animation? {
-        prefs.enableAnimations
-            ? .spring(response: 0.36, dampingFraction: 0.78, blendDuration: 0.1)
-            : nil
+        prefs.resolvedAnimation(baseResponse: 0.36)
     }
 
     public var body: some View {
@@ -337,7 +332,8 @@ public struct NotchOverlayPanelView: View {
                         bottomCornerRadius: currentMetrics.bottomCornerRadius,
                         isFloatingIsland: isFloating,
                         showAmbientGlow: prefs.showAmbientArtworkGlow,
-                        glowStrength: phase.isExpanded ? 0.30 : 0.20,
+                        glowStrength: prefs.effectiveGlowStrength(isExpanded: phase.isExpanded),
+                        backgroundOpacity: prefs.backgroundOpacity,
                         isExpanded: phase.isExpanded
                     )
 
@@ -391,7 +387,7 @@ public struct NotchOverlayPanelView: View {
                 )
                 .shadow(
                     color: prefs.showAmbientArtworkGlow
-                        ? accentColor.opacity(phase.isExpanded ? 0.20 : (isFloating ? 0.18 : 0.10))
+                        ? accentColor.opacity((phase.isExpanded ? 0.36 : (isFloating ? 0.30 : 0.18)) * prefs.ambientGlowIntensity)
                         : .clear,
                     radius: phase.isExpanded ? 18 : 10,
                     x: 0,
@@ -442,21 +438,25 @@ public struct NotchOverlayPanelView: View {
         let artSize = prefs.pillSize.collapsedArtworkSize
 
         return HStack(spacing: 0) {
-            // Ala izquierda: carátula circular con anillo o cuadrada redondeada
+            // Ala izquierda: carátula (si está activada) o ícono limpio de la app musical
             ZStack {
                 if let track {
-                    NotchAlbumArtBadgeView(
-                        artworkImage: media.currentArtworkImage,
-                        trackID: track.id,
-                        accentColor: accentColor,
-                        progress: progress,
-                        style: prefs.artworkStyle,
-                        size: artSize,
-                        isPlaying: track.isPlaying,
-                        enableAnimations: prefs.enableAnimations,
-                        showProgressRing: prefs.artworkStyle == .circleWithRing,
-                        fallbackSymbol: track.sourceApp.symbolName
-                    )
+                    if prefs.showAlbumArtwork {
+                        NotchAlbumArtBadgeView(
+                            artworkImage: media.currentArtworkImage,
+                            trackID: track.id,
+                            accentColor: accentColor,
+                            progress: progress,
+                            style: prefs.artworkStyle,
+                            size: artSize,
+                            isPlaying: track.isPlaying,
+                            enableAnimations: prefs.enableAnimations,
+                            showProgressRing: prefs.artworkStyle == .circleWithRing,
+                            fallbackSymbol: track.sourceApp.symbolName
+                        )
+                    } else {
+                        collapsedSourceSymbolGlyph(source: track.sourceApp, size: artSize)
+                    }
                 } else {
                     idleNotchLeftGlyph(size: artSize)
                 }
@@ -478,7 +478,9 @@ public struct NotchOverlayPanelView: View {
                             barWidth: 2.5,
                             barSpacing: 2.2,
                             maxHeight: 14,
-                            enableAnimations: prefs.enableAnimations
+                            enableAnimations: prefs.enableAnimations,
+                            style: prefs.visualizerStyle,
+                            speedMultiplier: prefs.animationSpeed
                         )
                     } else {
                         Image(systemName: track.isPlaying ? "speaker.wave.2.fill" : "pause.fill")
@@ -493,7 +495,9 @@ public struct NotchOverlayPanelView: View {
                         barWidth: 2.3,
                         barSpacing: 2.0,
                         maxHeight: 11,
-                        enableAnimations: false
+                        enableAnimations: false,
+                        style: prefs.visualizerStyle,
+                        speedMultiplier: prefs.animationSpeed
                     )
                 }
             }
@@ -509,20 +513,26 @@ public struct NotchOverlayPanelView: View {
 
         return HStack(spacing: 10) {
             if let track {
-                NotchAlbumArtBadgeView(
-                    artworkImage: media.currentArtworkImage,
-                    trackID: track.id,
-                    accentColor: accentColor,
-                    progress: progress,
-                    style: prefs.artworkStyle,
-                    size: artSize,
-                    isPlaying: track.isPlaying,
-                    enableAnimations: prefs.enableAnimations,
-                    showProgressRing: prefs.artworkStyle == .circleWithRing,
-                    fallbackSymbol: track.sourceApp.symbolName
-                )
-                .fixedSize()
-                .layoutPriority(2)
+                if prefs.showAlbumArtwork {
+                    NotchAlbumArtBadgeView(
+                        artworkImage: media.currentArtworkImage,
+                        trackID: track.id,
+                        accentColor: accentColor,
+                        progress: progress,
+                        style: prefs.artworkStyle,
+                        size: artSize,
+                        isPlaying: track.isPlaying,
+                        enableAnimations: prefs.enableAnimations,
+                        showProgressRing: prefs.artworkStyle == .circleWithRing,
+                        fallbackSymbol: track.sourceApp.symbolName
+                    )
+                    .fixedSize()
+                    .layoutPriority(2)
+                } else {
+                    collapsedSourceSymbolGlyph(source: track.sourceApp, size: artSize)
+                        .fixedSize()
+                        .layoutPriority(2)
+                }
 
                 if prefs.showTrackTitleInCollapsedPill {
                     NotchMarqueeTextView(
@@ -531,7 +541,7 @@ public struct NotchOverlayPanelView: View {
                         color: Color.white.opacity(0.95),
                         enableMarquee: prefs.enableMarqueeTitle,
                         alignment: .leading,
-                        speed: 26,
+                        speed: prefs.scaledMarqueeSpeed(26),
                         pauseDuration: 2.0
                     )
                     .frame(minWidth: 0, maxWidth: .infinity)
@@ -547,7 +557,9 @@ public struct NotchOverlayPanelView: View {
                         barWidth: 2.5,
                         barSpacing: 2.1,
                         maxHeight: 14,
-                        enableAnimations: prefs.enableAnimations
+                        enableAnimations: prefs.enableAnimations,
+                        style: prefs.visualizerStyle,
+                        speedMultiplier: prefs.animationSpeed
                     )
                     .fixedSize()
                     .layoutPriority(2)
@@ -566,13 +578,27 @@ public struct NotchOverlayPanelView: View {
                     barWidth: 2.2,
                     barSpacing: 2.0,
                     maxHeight: 10,
-                    enableAnimations: false
+                    enableAnimations: false,
+                    style: prefs.visualizerStyle,
+                    speedMultiplier: prefs.animationSpeed
                 )
                 .fixedSize()
             }
         }
         .padding(.horizontal, 14)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private func collapsedSourceSymbolGlyph(source: NotchMediaSource, size: CGFloat) -> some View {
+        ZStack {
+            Circle()
+                .fill(accentColor.opacity(0.22))
+                .overlay(Circle().stroke(accentColor.opacity(0.45), lineWidth: 0.75))
+            Image(systemName: source.symbolName)
+                .font(.system(size: max(9.5, size * 0.48), weight: .bold))
+                .foregroundStyle(accentColor)
+        }
+        .frame(width: size, height: size)
     }
 
     private func idleNotchLeftGlyph(size: CGFloat) -> some View {
@@ -601,18 +627,22 @@ public struct NotchOverlayPanelView: View {
 
             if let track {
                 HStack(spacing: 10) {
-                    NotchAlbumArtBadgeView(
-                        artworkImage: media.currentArtworkImage,
-                        trackID: track.id,
-                        accentColor: accentColor,
-                        progress: media.liveProgress(),
-                        style: prefs.artworkStyle,
-                        size: isFloating ? 32 : 26,
-                        isPlaying: track.isPlaying,
-                        enableAnimations: prefs.enableAnimations,
-                        showProgressRing: prefs.artworkStyle == .circleWithRing,
-                        fallbackSymbol: track.sourceApp.symbolName
-                    )
+                    if prefs.showAlbumArtwork {
+                        NotchAlbumArtBadgeView(
+                            artworkImage: media.currentArtworkImage,
+                            trackID: track.id,
+                            accentColor: accentColor,
+                            progress: media.liveProgress(),
+                            style: prefs.artworkStyle,
+                            size: isFloating ? 32 : 26,
+                            isPlaying: track.isPlaying,
+                            enableAnimations: prefs.enableAnimations,
+                            showProgressRing: prefs.artworkStyle == .circleWithRing,
+                            fallbackSymbol: track.sourceApp.symbolName
+                        )
+                    } else {
+                        collapsedSourceSymbolGlyph(source: track.sourceApp, size: isFloating ? 30 : 24)
+                    }
 
                     VStack(alignment: .leading, spacing: 1) {
                         NotchMarqueeTextView(
@@ -620,11 +650,12 @@ public struct NotchOverlayPanelView: View {
                             font: .system(size: 12, weight: .bold),
                             color: .white,
                             enableMarquee: prefs.enableMarqueeTitle,
-                            alignment: .leading
+                            alignment: .leading,
+                            speed: prefs.scaledMarqueeSpeed(28)
                         )
                         .frame(height: 15)
 
-                        Text(track.displaySubtitle)
+                        Text(track.displaySubtitle(includeAlbum: prefs.showAlbumName))
                             .font(.system(size: 10.5, weight: .medium))
                             .foregroundStyle(Color.white.opacity(0.66))
                             .lineLimit(1)
@@ -640,7 +671,9 @@ public struct NotchOverlayPanelView: View {
                             barWidth: 2.4,
                             barSpacing: 2.0,
                             maxHeight: 14,
-                            enableAnimations: prefs.enableAnimations
+                            enableAnimations: prefs.enableAnimations,
+                            style: prefs.visualizerStyle,
+                            speedMultiplier: prefs.animationSpeed
                         )
                     }
                 }

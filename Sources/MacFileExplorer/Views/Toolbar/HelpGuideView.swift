@@ -277,6 +277,30 @@ public struct HelpGuideView: View {
 
             VStack(alignment: .leading, spacing: 6) {
                 Button {
+                    AppOnboardingManager.shared.startWizardManually()
+                } label: {
+                    Label(
+                        loc.text(es: "Asistente de instalación inicial…", en: "Setup Wizard…"),
+                        systemImage: "wand.and.stars"
+                    )
+                    .font(.system(size: 11.5))
+                }
+                .buttonStyle(.link)
+
+                Button {
+                    onClose?()
+                    GoogleAccountsManager.shared.openOrFocusMainWindow()
+                    AppOnboardingManager.shared.startTour()
+                } label: {
+                    Label(
+                        loc.text(es: "Iniciar tour interactivo…", en: "Start Interactive Tour…"),
+                        systemImage: "map"
+                    )
+                    .font(.system(size: 11.5))
+                }
+                .buttonStyle(.link)
+
+                Button {
                     AboutWindowController.shared.show()
                 } label: {
                     Label(
@@ -937,14 +961,34 @@ extension HelpGuideView {
 
     private static let highlightedTopics: [HelpTopicCard] = [
         HelpTopicCard(
+            id: "hl-setup-wizard-tour-upgrade-highlights",
+            icon: "sparkles",
+            badgeES: "Nuevo · v2.7",
+            badgeEN: "New · v2.7",
+            titleES: "Asistente inicial, Tour interactivo y Novedades destacadas al actualizar",
+            titleEN: "First-Install Setup Wizard, Interactive Tour & Post-Upgrade What's New",
+            bodyES: "Al instalar MacFileExplorer por primera vez te acompaña un asistente en 6 pasos simples para elegir tu idioma, ícono y qué herramientas opcionales encender (Barra de tareas, AltTab, reproductor Notch, Portapapeles, icono en la barra superior y Ver Escritorio con ⌘D). Si preferís empezar enseguida sin configurar paso a paso, tocá «Instalar por defecto» en un clic. Luego un tour interactivo te muestra con globitos cada zona de la ventana —pudiendo suspenderlo o cerrarlo cuando quieras con un clic o presionando Esc—. Además, cada vez que actualizás a una versión nueva, la app abre automáticamente las Notas de la versión resaltando exactamente qué funciones se agregaron desde la versión que tenías instalada.",
+            bodyEN: "Installing MacFileExplorer for the first time greets you with a clear 6-step Setup Wizard to pick your language, app icon, and optional modules (Taskbar, AltTab, Notch music player, Clipboard History, menu bar tray icon, and View Desktop with ⌘D). Prefer to jump right in? Click «Install by Default» to start immediately with safe defaults. Afterwards, an interactive guided tour points out each area of the window with friendly callout bubbles—suspend or close it anytime in one click or by pressing Esc. Plus, whenever you upgrade to a newer version, MacFileExplorer automatically opens Release Notes highlighting every feature added since your previously installed version."
+        ),
+        HelpTopicCard(
             id: "hl-notch-music-player",
             icon: "waveform",
-            badgeES: "Nuevo · v2.5.1",
-            badgeEN: "New · v2.5.1",
-            titleES: "Reproductor de música Notch (Menú superior «Notch»)",
-            titleEN: "Notch Music Player («Notch» Top Menu)",
-            bodyES: "Integrado directamente alrededor del Notch de tu MacBook (o en el borde superior de cualquier pantalla), muestra lo que estás escuchando en YouTube Music, Spotify, Apple Music o el navegador sin tapar tu trabajo ni robar foco. En modo compacto muestra la carátula con anillo de progreso y un ecualizador animado a los lados del Notch; al pasar el puntero o hacer clic se despliega con animaciones fluidas, brillo ambiental del color del álbum, barra de progreso interactiva, controles de reproducción, selector rápido de salida de audio y letras sincronizadas estilo karaoke. Activá, probá con una canción demo o personalizá cada detalle desde el menú superior «Notch».",
-            bodyEN: "Seamlessly integrated around your MacBook's notch (or the top center of any display), showing what's playing in YouTube Music, Spotify, Apple Music, or your browser without interrupting your work or stealing focus. While collapsed, it displays album artwork with a progress ring and animated equalizer bars on either side of the notch; hover or click to smoothly expand into a rich player with ambient album-art glow, interactive progress scrubber, playback controls, quick audio output switcher, and synced karaoke lyrics. Enable it, try the built-in Demo track, or customize every detail from the top «Notch» menu."
+            badgeES: "Actualizado · v2.7",
+            badgeEN: "Updated · v2.7",
+            titleES: "Reproductor de música Notch con 10 nuevas opciones y barra clicable (Menú «Notch»)",
+            titleEN: "Notch Music Player with 10 New Customizations & Clickable Seek Bar («Notch» Menu)",
+            bodyES: "Integrado directamente alrededor del Notch de tu MacBook (o en modo isla flotante en cualquier monitor), muestra lo que escuchás en YouTube Music, Spotify, Apple Music o el navegador sin tapar tu trabajo ni robar foco. Hacé clic o arrastrá sobre la barra de avance para saltar al instante a cualquier minuto (también en YouTube Music), revisá letras sincronizadas tipo karaoke, cambiá la salida de audio en 1 clic, reabrí tu último reproductor cuando está en pausa o cerralo por completo con la cruz «✕». En Configuración de Notch → Apariencia y Animaciones (con vista previa en vivo) podés elegir color de acento, tipo y velocidad de animaciones, 4 estilos de visualizador, tapa y nombre del álbum, insignia de la app, intensidad del brillo, opacidad del fondo y tamaño de letras.",
+            bodyEN: "Seamlessly integrated around your MacBook's notch (or as a floating island on any display), showing what's playing in YouTube Music, Spotify, Apple Music, or your browser without interrupting your work or stealing focus. Click or drag along the progress bar to jump to any timestamp (including YouTube Music), follow synced karaoke lyrics, switch audio output in 1 click, reopen your last music app when idle, or close completely with «✕». Under Notch Settings → Appearance & Animations (with live preview), customize accent color, animation style & speed, 4 visualizer styles, album cover & album name visibility, app corner badge, ambient glow intensity, backdrop opacity, and lyrics font size."
+        ),
+        HelpTopicCard(
+            id: "hl-about-bug-reporter",
+            icon: "ladybug.fill",
+            badgeES: "Nuevo · v2.7",
+            badgeEN: "New · v2.7",
+            titleES: "Reportar errores e ideas desde «Acerca de» + revisión mensual de errores internos",
+            titleEN: "Report Bugs & Ideas Inside «About» + Monthly Internal Error Check",
+            bodyES: "Desde MacFileExplorer → Acerca de → Reportar error / Idea (o Ayuda → Reportar un error o sugerencia…) tenés un formulario simple, amigable y sin desplazamiento con botón «Enviar reporte» siempre visible para reportar cualquier error o sugerencia en GitHub con tu Mac y versión ya detectados. Además, una vez al mes junto a la comprobación de actualizaciones, la app revisa si aparecieron errores internos nuevos (ocultando siempre tu nombre, archivos y datos personales) para que puedas enviarlos en 1 clic.",
+            bodyEN: "Open MacFileExplorer → About → Report Bug / Idea (or Help → Report a Bug or Suggestion…) for a clean, scroll-free form with an always-visible «Send Report» button to share issues or feature ideas on GitHub with your Mac and version pre-filled. Once a month during the update check-in, the app also scans its internal error log for new issues (automatically hiding your name, filenames, and personal info) so you can review and send them in 1 click."
         ),
         HelpTopicCard(
             id: "hl-quicklook-media-actions-free-move",
@@ -1120,6 +1164,14 @@ extension HelpGuideView {
 
     private static let allFeatureTopics: [HelpTopicCard] = [
         HelpTopicCard(
+            id: "af-setup-wizard-tour-upgrade",
+            icon: "wand.and.stars",
+            titleES: "Asistente de bienvenida (6 pasos + Instalar por defecto), Tour interactivo y Novedades al actualizar",
+            titleEN: "Setup Wizard (6 Steps + Install by Default), Interactive Tour & Automatic Post-Upgrade Release Notes",
+            bodyES: "El Asistente inicial permite elegir paso a paso idioma, ícono y módulos opcionales (o aplicar todo en un clic con «Instalar por defecto»). El Tour interactivo recorre las 7 zonas clave con globitos desplegables y se suspende al instante con «Suspender tour», la cruz ✕ o Esc. Y tras cada actualización, «Acerca de → Notas de la versión» se abre automáticamente con un cartel de bienvenida y etiquetas «NUEVO» en cada mejora incorporada desde tu versión anterior.",
+            bodyEN: "The Setup Wizard lets you configure language, icon, and optional modules step by step (or apply safe defaults in one click via «Install by Default»). The Interactive Tour walks through 7 key areas with floating callout bubbles and can be stopped instantly with «Stop Tour», ✕, or Esc. After every update, «About → Release Notes» opens automatically with a celebratory banner and «NEW» tags on every feature added since your previous version."
+        ),
+        HelpTopicCard(
             id: "af-views-columns",
             icon: "tablecells",
             titleES: "Vistas Detalles, Iconos Grandes, Lista con 3 modos e ícono rojo para PDF",
@@ -1215,12 +1267,28 @@ extension HelpGuideView {
 
     private static let settingsTopics: [HelpTopicCard] = [
         HelpTopicCard(
+            id: "cfg-onboarding-wizard-tour",
+            icon: "map",
+            titleES: "Reabrir el Asistente inicial, repetir el Tour y ver novedades tras actualizar (Menú Ayuda)",
+            titleEN: "Reopen Setup Wizard, Replay Interactive Tour & Post-Upgrade Highlights (Help Menu)",
+            bodyES: "Podés volver a abrir el asistente en cualquier momento desde Ayuda → Asistente de instalación inicial… (precargando tus ajustes actuales) o iniciar los globitos guiados desde Ayuda → Iniciar tour interactivo… y suspenderlos cuando quieras con «Suspender tour» o Esc. Cuando actualizás desde una versión anterior, MacFileExplorer detecta el cambio automáticamente y abre las Notas de la versión destacando solo lo nuevo desde tu versión previa, con un botón «Ver todo sin resaltar» si preferís la vista clásica.",
+            bodyEN: "Reopen the setup assistant anytime via Help → Setup Wizard… (pre-filled with your current settings) or launch the guided callout bubbles via Help → Start Interactive Tour… and stop them anytime with «Stop Tour» or Esc. Whenever you update from an older version, MacFileExplorer automatically detects the upgrade and opens Release Notes highlighting only what's new since your previous version, with a «View all without highlights» button whenever you want the classic view."
+        ),
+        HelpTopicCard(
             id: "cfg-notch",
             icon: "waveform",
-            titleES: "Reproductor Notch, carátula, letras y pantallas (Menú Notch)",
-            titleEN: "Notch Music Player, Artwork, Lyrics & Displays (Notch Menu)",
-            bodyES: "Arranca desactivado por defecto y se controla desde el menú superior «Notch» o «Configuración de Notch…». Detecta canción, artista, progreso y carátula exacta de YouTube Music (app o navegador), Spotify y Apple Music; ofrece accesos rápidos para volver a abrir tu último reproductor cuando no suena música, y el botón «✕» cierra y oculta el Notch por completo. Podés configurar inicio automático, letras sincronizadas, anuncios al cambiar de tema, brillo ambiental, estilo de carátula, tamaño, pantallas, apertura por puntero o clic, swipe horizontal y ocultamiento en pantalla completa o en pausa.",
-            bodyEN: "Starts disabled by default and is managed from the top «Notch» menu or «Notch Settings…». Reads exact song, artist, progress, and cover art from YouTube Music (app or browser), Spotify, and Apple Music; shows quick buttons to reopen your last music app when idle, and the «✕» button closes and hides the Notch completely. Configure launch-on-startup, synced lyrics, track-change announcements, ambient glow, artwork style, sizing, displays, hover vs click expansion, horizontal swipe, and full-screen or paused auto-hide."
+            titleES: "Reproductor Notch: colores, animaciones, visualizador, carátula, letras y pantallas (Menú Notch)",
+            titleEN: "Notch Music Player: Colors, Animations, Visualizer, Artwork, Lyrics & Displays (Notch Menu)",
+            bodyES: "Arranca desactivado por defecto y se controla desde «Notch → Configuración de Notch…» (con vista previa en vivo). Además de detectar canción, progreso clicable (incluyendo YouTube Music), carátula y botones para reabrir tu última app musical cuando está en pausa, ahora podés personalizar 10 opciones adicionales: color de acento (carátula, app o personalizado), tipo de animación (Elástico, Fluido, Preciso o Suave), velocidad (0.5×–2.0×), mostrar u ocultar tapa del álbum, nombre del álbum e insignia de la app, 4 estilos de visualizador (Barras, Onda, Puntos o Pulso), intensidad del brillo ambiental, opacidad del fondo (vidrio translúcido a negro OLED) y tamaño de texto de letras sincronizadas.",
+            bodyEN: "Starts disabled by default and is managed from «Notch → Notch Settings…» (with instant live preview). Alongside exact song info, clickable seeking (including YouTube Music), cover art, and 1-click reopen when idle, you can customize 10 extra visual options: accent color (auto from artwork, app brand, or custom), animation style (Bouncy, Fluid, Snappy, or Gentle), animation speed (0.5×–2.0×), show/hide album cover, album name, and corner app badge, 4 visualizer styles (Bars, Wave, Dots, or Pulse), ambient glow intensity, background opacity (frosted glass to pure OLED black), and synced lyrics font size."
+        ),
+        HelpTopicCard(
+            id: "cfg-bug-reporter",
+            icon: "ladybug.fill",
+            titleES: "Reportar errores o ideas y diagnóstico mensual automático (Acerca de / Ayuda)",
+            titleEN: "Report Bugs or Ideas & Monthly Automatic Diagnostics (About / Help)",
+            bodyES: "Desde Acerca de MacFileExplorer → Reportar error / Idea (o Ayuda → Reportar un error o sugerencia…) podés enviar errores, ideas o consultas directo a GitHub sin tecnicismos, previsualizar qué datos técnicos se adjuntan (siempre ocultando tu nombre, archivos y correos) y activar o desactivar el aviso mensual automático de errores internos.",
+            bodyEN: "Under About MacFileExplorer → Report Bug / Idea (or Help → Report a Bug or Suggestion…) you can submit issues, ideas, or questions to GitHub in plain words, preview the exact sanitized technical diagnostics before sending (always hiding your name, filenames, and emails), and toggle the monthly internal error check-in."
         ),
         HelpTopicCard(
             id: "cfg-shortcuts-and-tools",

@@ -24,6 +24,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         DispatchQueue.main.async {
             LocalizationManager.shared.applyLanguageToMainMenu()
         }
+        let onboarding = AppOnboardingManager.shared
+        onboarding.onRequestShowWizard = {
+            SetupWizardWindowController.shared.show()
+        }
+        onboarding.onCloseWizard = {
+            SetupWizardWindowController.shared.close()
+        }
+        onboarding.onRequestShowUpgradeNotes = { previousVersion, currentVersion in
+            AboutWindowController.shared.showWhatsNewUpgrade(
+                fromPreviousVersion: previousVersion,
+                toCurrentVersion: currentVersion
+            )
+        }
+        onboarding.onRequestFocusMainWindow = {
+            GoogleAccountsManager.shared.openOrFocusMainWindow()
+        }
+        onboarding.handleApplicationLaunch()
         AdvancedSearchService.prewarmOCRInBackground()
         NSApplication.shared.activate(ignoringOtherApps: true)
     }
@@ -96,6 +113,7 @@ struct MacFileExplorerApp: App {
                 .onChange(of: loc.preference) { _, _ in
                     DispatchQueue.main.async {
                         LocalizationManager.shared.applyLanguageToMainMenu()
+                        SetupWizardWindowController.shared.refreshLocalizedTitle()
                     }
                 }
         }
@@ -1704,6 +1722,27 @@ struct MacFileExplorerApp: App {
                 Divider()
 
                 Button {
+                    AppOnboardingManager.shared.startWizardManually()
+                } label: {
+                    Label(
+                        loc.text(es: "Asistente de instalación inicial…", en: "Setup Wizard…"),
+                        systemImage: "wand.and.stars"
+                    )
+                }
+
+                Button {
+                    GoogleAccountsManager.shared.openOrFocusMainWindow()
+                    AppOnboardingManager.shared.startTour()
+                } label: {
+                    Label(
+                        loc.text(es: "Iniciar tour interactivo…", en: "Start Interactive Tour…"),
+                        systemImage: "map"
+                    )
+                }
+
+                Divider()
+
+                Button {
                     HelpWindowController.shared.show(section: .sidebar)
                 } label: {
                     Label(loc.text(es: "Guía del Menú Lateral…", en: "Sidebar Menu Guide…"), systemImage: "sidebar.left")
@@ -1739,6 +1778,12 @@ struct MacFileExplorerApp: App {
                     HelpWindowController.shared.show(section: .releases)
                 } label: {
                     Label(loc.text(es: "Historial de releases…", en: "Release History…"), systemImage: "sparkles")
+                }
+
+                Button {
+                    AboutWindowController.shared.show(initialTab: .reportBug)
+                } label: {
+                    Label(loc.text(es: "Reportar un error o sugerencia…", en: "Report a Bug or Suggestion…"), systemImage: "ladybug")
                 }
             }
         }

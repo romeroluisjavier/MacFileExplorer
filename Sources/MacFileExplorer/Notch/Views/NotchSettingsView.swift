@@ -374,68 +374,315 @@ public struct NotchSettingsView: View {
 
     // MARK: - Pestaña 2: Apariencia y Animaciones
 
+    private var customColorBinding: Binding<Color> {
+        Binding(
+            get: { prefs.customAccentColor.swiftUIColor },
+            set: { newColor in
+                let nsColor = NSColor(newColor)
+                prefs.customAccentColor = NotchRGBColor(nsColor: nsColor)
+            }
+        )
+    }
+
+    private var animationSpeedLabel: String {
+        let s = prefs.animationSpeed
+        if s <= 0.7 {
+            return String(format: "%.1f× · %@", s, loc.text(es: "Lenta", en: "Slow"))
+        } else if s >= 1.65 {
+            return String(format: "%.1f× · %@", s, loc.text(es: "Turbo", en: "Turbo"))
+        } else if s >= 1.25 {
+            return String(format: "%.1f× · %@", s, loc.text(es: "Rápida", en: "Fast"))
+        }
+        return String(format: "%.1f× · %@", s, loc.text(es: "Normal", en: "Normal"))
+    }
+
     private var appearanceTabContent: some View {
         VStack(alignment: .leading, spacing: 16) {
             sectionHeader(
                 title: loc.text(es: "Apariencia y Animaciones", en: "Appearance & Animations"),
                 subtitle: loc.text(
-                    es: "Personaliza el estilo de la carátula, el tamaño de la píldora, el resplandor ambiental y las letras sincronizadas.",
-                    en: "Customize artwork style, pill proportions, ambient album glow, and live synced lyrics."
+                    es: "Personaliza colores, tipo y velocidad de animaciones, visualizador, tapa y nombre de álbum, opacidad y letras.",
+                    en: "Customize accent colors, animation style & speed, visualizer, album cover & name, backdrop opacity, and lyrics."
                 )
             )
 
-            settingsCard(title: loc.text(es: "Estilo de carátula y Tamaño", en: "Artwork Style & Pill Size")) {
+            // Vista previa interactiva en vivo para ver cada cambio al instante
+            NotchSettingsInteractivePreviewCard(
+                previewMode: $previewMode,
+                prefs: prefs,
+                media: media,
+                loc: loc
+            )
+
+            // Tarjeta 1: Color y Fondo (#1 Color de acento, #7 Intensidad brillo, #8 Opacidad fondo)
+            settingsCard(title: loc.text(es: "Color y Fondo", en: "Color & Backdrop")) {
                 VStack(alignment: .leading, spacing: 10) {
-                    Text(loc.text(es: "Estilo de carátula en píldora colapsada", en: "Collapsed Pill Artwork Style"))
-                        .font(.system(size: 12.5, weight: .semibold))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(loc.text(es: "Color de acento", en: "Accent Color"))
+                            .font(.system(size: 13, weight: .medium))
+                        Text(loc.text(es: "Tiñe el brillo ambiental, el ecualizador y la barra de progreso.", en: "Tints the ambient glow, equalizer, and progress bar."))
+                            .font(.system(size: 11.5))
+                            .foregroundStyle(.secondary)
+                    }
 
-                    HStack(spacing: 12) {
-                        ForEach(NotchArtworkStyle.allCases) { style in
-                            let selected = prefs.artworkStyle == style
-                            Button {
-                                prefs.artworkStyle = style
-                            } label: {
-                                HStack(spacing: 10) {
-                                    NotchAlbumArtBadgeView(
-                                        artworkImage: media.currentArtworkImage,
-                                        trackID: "settings-preview-\(style.rawValue)",
-                                        accentColor: Color(red: 0.96, green: 0.24, blue: 0.42),
-                                        progress: 0.68,
-                                        style: style,
-                                        size: 32,
-                                        isPlaying: true,
-                                        enableAnimations: false,
-                                        showProgressRing: style == .circleWithRing
-                                    )
-                                    .padding(4)
-                                    .background(RoundedRectangle(cornerRadius: 8).fill(Color.black))
-
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text(style.localizedShortTitle(using: loc))
-                                            .font(.system(size: 12.5, weight: .semibold))
-                                            .foregroundStyle(.primary)
-                                        Text(
-                                            style == .circleWithRing
-                                                ? loc.text(es: "Con anillo de progreso en vivo", en: "With live progress ring")
-                                                : loc.text(es: "Estilo Dynamic Island", en: "Dynamic Island style")
-                                        )
-                                        .font(.system(size: 11))
-                                        .foregroundStyle(.secondary)
-                                    }
-                                    Spacer()
-                                }
-                                .padding(10)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                        .fill(selected ? Color.accentColor.opacity(0.14) : Color.primary.opacity(0.04))
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                                .stroke(selected ? Color.accentColor : Color.primary.opacity(0.12), lineWidth: selected ? 1.5 : 0.8)
-                                        )
-                                )
-                            }
-                            .buttonStyle(.plain)
+                    Picker("", selection: $prefs.accentColorMode) {
+                        ForEach(NotchAccentColorMode.allCases) { mode in
+                            Text(mode.localizedTitle(using: loc)).tag(mode)
                         }
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.segmented)
+                    .frame(maxWidth: .infinity)
+
+                    if prefs.accentColorMode == .custom {
+                        HStack(spacing: 10) {
+                            ForEach(NotchRGBColor.presetPalette, id: \.id) { swatch in
+                                let isSelected = abs(prefs.customAccentColor.r - swatch.color.r) < 0.03 &&
+                                    abs(prefs.customAccentColor.g - swatch.color.g) < 0.03 &&
+                                    abs(prefs.customAccentColor.b - swatch.color.b) < 0.03
+                                Button {
+                                    prefs.customAccentColor = swatch.color
+                                } label: {
+                                    Circle()
+                                        .fill(swatch.color.swiftUIColor)
+                                        .frame(width: 22, height: 22)
+                                        .overlay(
+                                            Circle()
+                                                .strokeBorder(Color.white.opacity(isSelected ? 0.95 : 0.22), lineWidth: isSelected ? 2.2 : 0.9)
+                                        )
+                                        .scaleEffect(isSelected ? 1.12 : 1.0)
+                                }
+                                .buttonStyle(.plain)
+                                .help(loc.text(es: swatch.nameES, en: swatch.nameEN))
+                            }
+
+                            Spacer(minLength: 6)
+
+                            ColorPicker(
+                                loc.text(es: "Otro color", en: "Custom"),
+                                selection: customColorBinding,
+                                supportsOpacity: false
+                            )
+                            .font(.system(size: 11.5, weight: .medium))
+                            .fixedSize()
+                        }
+                        .padding(.top, 2)
+                    }
+                }
+
+                Divider()
+
+                Toggle(loc.text(es: "Brillo radial ambiental según el color activo", en: "Ambient Radial Glow"), isOn: $prefs.showAmbientArtworkGlow)
+
+                if prefs.showAmbientArtworkGlow {
+                    VStack(alignment: .leading, spacing: 5) {
+                        HStack {
+                            Text(loc.text(es: "Intensidad del brillo ambiental", en: "Ambient Glow Intensity"))
+                                .font(.system(size: 12.5, weight: .medium))
+                            Spacer()
+                            Text("\(Int((prefs.ambientGlowIntensity * 100).rounded()))%")
+                                .font(.system(size: 12, design: .monospaced))
+                                .foregroundStyle(.secondary)
+                        }
+                        Slider(
+                            value: $prefs.ambientGlowIntensity,
+                            in: NotchPreferences.minAmbientGlowIntensity...NotchPreferences.maxAmbientGlowIntensity,
+                            step: 0.05
+                        )
+                    }
+                }
+
+                Divider()
+
+                VStack(alignment: .leading, spacing: 5) {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(loc.text(es: "Opacidad del fondo del Notch", en: "Notch Background Opacity"))
+                                .font(.system(size: 12.5, weight: .medium))
+                            Text(loc.text(es: "100% negro OLED puro para fundirse con el bisel; valores menores aplican vidrio oscuro translúcido.", en: "100% pure OLED black blends into the bezel; lower values add frosted dark glass."))
+                                .font(.system(size: 11))
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Text("\(Int((prefs.backgroundOpacity * 100).rounded()))%")
+                            .font(.system(size: 12, design: .monospaced))
+                            .foregroundStyle(.secondary)
+                    }
+                    Slider(
+                        value: $prefs.backgroundOpacity,
+                        in: NotchPreferences.minBackgroundOpacity...NotchPreferences.maxBackgroundOpacity,
+                        step: 0.02
+                    )
+                }
+            }
+
+            // Tarjeta 2: Animaciones y Visualizador (#2 Tipo animación, #3 Velocidad, #6 Estilo visualizador)
+            settingsCard(title: loc.text(es: "Animaciones y Visualizador", en: "Animations & Visualizer")) {
+                Toggle(loc.text(es: "Animaciones fluidas en transiciones y controles", en: "Fluid Animations for Transitions & Controls"), isOn: $prefs.enableAnimations)
+
+                if prefs.enableAnimations {
+                    Divider()
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(loc.text(es: "Tipo de animación", en: "Animation Style"))
+                                    .font(.system(size: 13, weight: .medium))
+                                Text(prefs.animationStyle.localizedDescription(using: loc))
+                                    .font(.system(size: 11.2))
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            Picker("", selection: $prefs.animationStyle) {
+                                ForEach(NotchAnimationStyle.allCases) { style in
+                                    Text(style.localizedTitle(using: loc)).tag(style)
+                                }
+                            }
+                            .pickerStyle(.segmented)
+                            .frame(width: 268)
+                        }
+                    }
+
+                    Divider()
+
+                    VStack(alignment: .leading, spacing: 5) {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(loc.text(es: "Velocidad de las animaciones", en: "Animation Speed"))
+                                    .font(.system(size: 12.5, weight: .medium))
+                                Text(loc.text(es: "Controla la rapidez de expansión, ecualizador y texto deslizante.", en: "Controls expansion speed, equalizer motion, and scrolling text."))
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            Text(animationSpeedLabel)
+                                .font(.system(size: 11.5, weight: .semibold, design: .monospaced))
+                                .foregroundStyle(Color.accentColor)
+                        }
+                        Slider(
+                            value: $prefs.animationSpeed,
+                            in: NotchPreferences.minAnimationSpeed...NotchPreferences.maxAnimationSpeed,
+                            step: 0.1
+                        )
+                    }
+                }
+
+                Divider()
+
+                Toggle(loc.text(es: "Mostrar ecualizador musical animado", en: "Show Animated Music Visualizer"), isOn: $prefs.showVisualizerBars)
+
+                if prefs.showVisualizerBars {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(loc.text(es: "Estilo del visualizador", en: "Visualizer Style"))
+                                .font(.system(size: 12.5, weight: .medium))
+                            Text(loc.text(es: "Elige cómo se mueve el ritmo junto a la canción.", en: "Pick how the live audio animation moves."))
+                                .font(.system(size: 11))
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Picker("", selection: $prefs.visualizerStyle) {
+                            ForEach(NotchVisualizerStyle.allCases) { style in
+                                Text(style.localizedTitle(using: loc)).tag(style)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        .frame(width: 268)
+                    }
+                }
+            }
+
+            // Tarjeta 3: Carátula, Álbum y Tamaño (#4 Ver tapa de álbum, #5 Ver nombre de álbum, #9 Insignia app)
+            settingsCard(title: loc.text(es: "Tapa del Álbum, Metadatos y Tamaño", en: "Album Cover, Metadata & Size")) {
+                Toggle(isOn: $prefs.showAlbumArtwork) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(loc.text(es: "Mostrar tapa del álbum (carátula)", en: "Show Album Cover Artwork"))
+                            .font(.system(size: 13, weight: .medium))
+                        Text(loc.text(es: "Desactívalo para un aspecto minimalista solo con ícono de fuente y controles.", en: "Turn off for a minimalist layout with just the source icon and controls."))
+                            .font(.system(size: 11.2))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                if prefs.showAlbumArtwork {
+                    Divider()
+
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text(loc.text(es: "Estilo de carátula en píldora colapsada", en: "Collapsed Pill Artwork Style"))
+                            .font(.system(size: 12.5, weight: .semibold))
+
+                        HStack(spacing: 12) {
+                            ForEach(NotchArtworkStyle.allCases) { style in
+                                let selected = prefs.artworkStyle == style
+                                Button {
+                                    prefs.artworkStyle = style
+                                } label: {
+                                    HStack(spacing: 10) {
+                                        NotchAlbumArtBadgeView(
+                                            artworkImage: media.currentArtworkImage,
+                                            trackID: "settings-preview-\(style.rawValue)",
+                                            accentColor: prefs.resolvedAccentColor(for: media.currentTrack),
+                                            progress: 0.68,
+                                            style: style,
+                                            size: 32,
+                                            isPlaying: true,
+                                            enableAnimations: false,
+                                            showProgressRing: style == .circleWithRing
+                                        )
+                                        .padding(4)
+                                        .background(RoundedRectangle(cornerRadius: 8).fill(Color.black))
+
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text(style.localizedShortTitle(using: loc))
+                                                .font(.system(size: 12.5, weight: .semibold))
+                                                .foregroundStyle(.primary)
+                                            Text(
+                                                style == .circleWithRing
+                                                    ? loc.text(es: "Con anillo de progreso en vivo", en: "With live progress ring")
+                                                    : loc.text(es: "Estilo Dynamic Island", en: "Dynamic Island style")
+                                            )
+                                            .font(.system(size: 11))
+                                            .foregroundStyle(.secondary)
+                                        }
+                                        Spacer()
+                                    }
+                                    .padding(10)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                            .fill(selected ? Color.accentColor.opacity(0.14) : Color.primary.opacity(0.04))
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                                    .stroke(selected ? Color.accentColor : Color.primary.opacity(0.12), lineWidth: selected ? 1.5 : 0.8)
+                                            )
+                                    )
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    }
+
+                    Divider()
+
+                    Toggle(isOn: $prefs.showSourceBadgeOnArtwork) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(loc.text(es: "Mostrar insignia de la app musical sobre la carátula", en: "Show Music App Badge on Album Cover"))
+                                .font(.system(size: 13, weight: .medium))
+                            Text(loc.text(es: "Muestra el pequeño ícono de YouTube Music, Spotify o Apple Music en la esquina de la tapa.", en: "Displays the small YouTube Music, Spotify, or Apple Music badge in the corner of the cover."))
+                                .font(.system(size: 11.2))
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+
+                Divider()
+
+                Toggle(isOn: $prefs.showAlbumName) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(loc.text(es: "Mostrar nombre del álbum", en: "Show Album Name"))
+                            .font(.system(size: 13, weight: .medium))
+                        Text(loc.text(es: "Muestra el nombre del álbum junto al artista cuando la canción incluye ese dato.", en: "Displays the album name alongside the artist whenever provided by the player."))
+                            .font(.system(size: 11.2))
+                            .foregroundStyle(.secondary)
                     }
                 }
 
@@ -460,13 +707,8 @@ public struct NotchSettingsView: View {
                 }
             }
 
-            settingsCard(title: loc.text(es: "Efectos Visuales y Contenido", en: "Visual Effects & Content")) {
-                Toggle(loc.text(es: "Animaciones fluidas con resorte", en: "Fluid Spring Animations"), isOn: $prefs.enableAnimations)
-                Divider()
-                Toggle(loc.text(es: "Brillo radial ambiental según la carátula", en: "Ambient Album-Art Radial Glow"), isOn: $prefs.showAmbientArtworkGlow)
-                Divider()
-                Toggle(loc.text(es: "Barras animadas del ecualizador musical", en: "Animated Music Equalizer Bars"), isOn: $prefs.showVisualizerBars)
-                Divider()
+            // Tarjeta 4: Texto y Letras Sincronizadas (#10 Tamaño de texto en letras)
+            settingsCard(title: loc.text(es: "Texto y Letras Sincronizadas", en: "Text & Synced Lyrics")) {
                 Toggle(loc.text(es: "Mostrar título en la píldora colapsada", en: "Show Track Title in Collapsed Pill"), isOn: $prefs.showTrackTitleInCollapsedPill)
                 Divider()
                 Toggle(loc.text(es: "Desplazamiento suave (Marquee) en títulos largos", en: "Smooth Marquee Scrolling for Long Titles"), isOn: $prefs.enableMarqueeTitle)
@@ -474,6 +716,26 @@ public struct NotchSettingsView: View {
                 Toggle(loc.text(es: "Anunciar nuevas canciones automáticamente", en: "Announce New Tracks Automatically"), isOn: $prefs.announceNewTracks)
                 Divider()
                 Toggle(loc.text(es: "Habilitar letras sincronizadas en vivo (LRCLIB)", en: "Enable Live Synced Lyrics (LRCLIB)"), isOn: $prefs.showSyncedLyrics)
+
+                if prefs.showSyncedLyrics {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(loc.text(es: "Tamaño de texto en letras", en: "Lyrics Font Size"))
+                                .font(.system(size: 12.5, weight: .medium))
+                            Text(loc.text(es: "Ajusta el tamaño de las letras tipo karaoke para leer más cómodo.", en: "Adjusts synced karaoke lyrics size for comfortable reading."))
+                                .font(.system(size: 11))
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Picker("", selection: $prefs.lyricsFontSize) {
+                            ForEach(NotchLyricsFontSize.allCases) { size in
+                                Text(size.localizedTitle(using: loc)).tag(size)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        .frame(width: 240)
+                    }
+                }
             }
         }
     }
@@ -860,7 +1122,7 @@ private struct NotchSettingsInteractivePreviewCard: View {
     @Bindable var loc: LocalizationManager
 
     private var previewAccent: Color {
-        media.currentTrack?.dominantColor.swiftUIColor ?? Color(red: 0.96, green: 0.24, blue: 0.42)
+        prefs.resolvedAccentColor(for: media.currentTrack)
     }
 
     private var previewTitle: String {
@@ -868,7 +1130,10 @@ private struct NotchSettingsInteractivePreviewCard: View {
     }
 
     private var previewArtist: String {
-        media.currentTrack?.displaySubtitle ?? "Neon Horizon • YouTube Music"
+        if let track = media.currentTrack {
+            return track.displaySubtitle(includeAlbum: prefs.showAlbumName)
+        }
+        return prefs.showAlbumName ? "Neon Horizon · Afterglow" : "Neon Horizon"
     }
 
     var body: some View {
@@ -920,12 +1185,16 @@ private struct NotchSettingsInteractivePreviewCard: View {
                 // Silueta orgánica animada del Notch
                 previewNotchSilhouette
                     .animation(
-                        prefs.enableAnimations ? .spring(response: 0.38, dampingFraction: 0.78) : nil,
+                        prefs.resolvedAnimation(baseResponse: 0.38),
                         value: previewMode
                     )
                     .animation(
-                        prefs.enableAnimations ? .spring(response: 0.34, dampingFraction: 0.80) : nil,
+                        prefs.resolvedAnimation(baseResponse: 0.34),
                         value: prefs.artworkStyle
+                    )
+                    .animation(
+                        prefs.resolvedAnimation(baseResponse: 0.30),
+                        value: prefs.showAlbumArtwork
                     )
             }
             .frame(height: previewMode == .collapsed ? 116 : 212)
@@ -935,7 +1204,7 @@ private struct NotchSettingsInteractivePreviewCard: View {
                     .stroke(Color.primary.opacity(0.14), lineWidth: 1)
             )
             .animation(
-                prefs.enableAnimations ? .spring(response: 0.38, dampingFraction: 0.80) : nil,
+                prefs.resolvedAnimation(baseResponse: 0.38),
                 value: previewMode
             )
         }
@@ -972,24 +1241,35 @@ private struct NotchSettingsInteractivePreviewCard: View {
                 bottomCornerRadius: botRadius,
                 isFloatingIsland: false,
                 showAmbientGlow: prefs.showAmbientArtworkGlow,
-                glowStrength: previewMode == .collapsed ? 0.22 : 0.32,
+                glowStrength: prefs.effectiveGlowStrength(isExpanded: previewMode != .collapsed),
+                backgroundOpacity: prefs.backgroundOpacity,
                 isExpanded: previewMode != .collapsed
             )
 
             switch previewMode {
             case .collapsed:
                 HStack(spacing: 9) {
-                    NotchAlbumArtBadgeView(
-                        artworkImage: media.currentArtworkImage,
-                        trackID: media.currentTrack?.id ?? "preview-collapsed",
-                        accentColor: previewAccent,
-                        progress: 0.62,
-                        style: prefs.artworkStyle,
-                        size: 21,
-                        isPlaying: true,
-                        enableAnimations: prefs.enableAnimations,
-                        showProgressRing: prefs.artworkStyle == .circleWithRing
-                    )
+                    if prefs.showAlbumArtwork {
+                        NotchAlbumArtBadgeView(
+                            artworkImage: media.currentArtworkImage,
+                            trackID: media.currentTrack?.id ?? "preview-collapsed",
+                            accentColor: previewAccent,
+                            progress: 0.62,
+                            style: prefs.artworkStyle,
+                            size: 21,
+                            isPlaying: true,
+                            enableAnimations: prefs.enableAnimations,
+                            showProgressRing: prefs.artworkStyle == .circleWithRing
+                        )
+                    } else {
+                        ZStack {
+                            Circle().fill(previewAccent.opacity(0.24))
+                            Image(systemName: "play.circle.fill")
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundStyle(previewAccent)
+                        }
+                        .frame(width: 21, height: 21)
+                    }
 
                     if prefs.showTrackTitleInCollapsedPill {
                         Text(previewTitle)
@@ -1010,7 +1290,9 @@ private struct NotchSettingsInteractivePreviewCard: View {
                             barWidth: 2.3,
                             barSpacing: 2.0,
                             maxHeight: 13,
-                            enableAnimations: prefs.enableAnimations
+                            enableAnimations: prefs.enableAnimations,
+                            style: prefs.visualizerStyle,
+                            speedMultiplier: prefs.animationSpeed
                         )
                     }
                 }
@@ -1039,24 +1321,41 @@ private struct NotchSettingsInteractivePreviewCard: View {
                             Image(systemName: "speaker.wave.2.fill")
                             Image(systemName: "pin")
                             Image(systemName: "gearshape.fill")
+                            Image(systemName: "xmark")
                         }
                         .font(.system(size: 9.5))
                         .foregroundStyle(Color.white.opacity(0.68))
                     }
 
                     HStack(spacing: 14) {
-                        NotchAlbumArtBadgeView(
-                            artworkImage: media.currentArtworkImage,
-                            trackID: media.currentTrack?.id ?? "preview-expanded",
-                            accentColor: previewAccent,
-                            progress: 0.62,
-                            style: .roundedSquare,
-                            size: 66,
-                            isPlaying: true,
-                            enableAnimations: prefs.enableAnimations,
-                            showProgressRing: false
-                        )
-                        .shadow(color: prefs.showAmbientArtworkGlow ? previewAccent.opacity(0.45) : .clear, radius: 10, y: 4)
+                        if prefs.showAlbumArtwork {
+                            ZStack(alignment: .bottomTrailing) {
+                                NotchAlbumArtBadgeView(
+                                    artworkImage: media.currentArtworkImage,
+                                    trackID: media.currentTrack?.id ?? "preview-expanded",
+                                    accentColor: previewAccent,
+                                    progress: 0.62,
+                                    style: .roundedSquare,
+                                    size: 66,
+                                    isPlaying: true,
+                                    enableAnimations: prefs.enableAnimations,
+                                    showProgressRing: false
+                                )
+                                .shadow(color: prefs.showAmbientArtworkGlow ? previewAccent.opacity(0.65 * prefs.ambientGlowIntensity) : .clear, radius: 10, y: 4)
+
+                                if prefs.showSourceBadgeOnArtwork {
+                                    ZStack {
+                                        Circle().fill(Color.black.opacity(0.88))
+                                        Image(systemName: "play.circle.fill")
+                                            .font(.system(size: 10, weight: .bold))
+                                            .foregroundStyle(NotchMediaSource.youtubeMusic.swiftUIAccentColor)
+                                    }
+                                    .frame(width: 19, height: 19)
+                                    .overlay(Circle().stroke(Color.white.opacity(0.22), lineWidth: 0.7))
+                                    .offset(x: 3, y: 3)
+                                }
+                            }
+                        }
 
                         VStack(alignment: .leading, spacing: 7) {
                             HStack {
@@ -1079,7 +1378,9 @@ private struct NotchSettingsInteractivePreviewCard: View {
                                         barWidth: 2.3,
                                         barSpacing: 2.0,
                                         maxHeight: 14,
-                                        enableAnimations: prefs.enableAnimations
+                                        enableAnimations: prefs.enableAnimations,
+                                        style: prefs.visualizerStyle,
+                                        speedMultiplier: prefs.animationSpeed
                                     )
                                 }
                             }
@@ -1120,17 +1421,19 @@ private struct NotchSettingsInteractivePreviewCard: View {
             case .lyrics:
                 HStack(spacing: 14) {
                     VStack(spacing: 7) {
-                        NotchAlbumArtBadgeView(
-                            artworkImage: media.currentArtworkImage,
-                            trackID: media.currentTrack?.id ?? "preview-lyrics",
-                            accentColor: previewAccent,
-                            progress: 0.62,
-                            style: .roundedSquare,
-                            size: 50,
-                            isPlaying: true,
-                            enableAnimations: prefs.enableAnimations,
-                            showProgressRing: false
-                        )
+                        if prefs.showAlbumArtwork {
+                            NotchAlbumArtBadgeView(
+                                artworkImage: media.currentArtworkImage,
+                                trackID: media.currentTrack?.id ?? "preview-lyrics",
+                                accentColor: previewAccent,
+                                progress: 0.62,
+                                style: .roundedSquare,
+                                size: 50,
+                                isPlaying: true,
+                                enableAnimations: prefs.enableAnimations,
+                                showProgressRing: false
+                            )
+                        }
                         Text(previewTitle)
                             .font(.system(size: 11.5, weight: .bold))
                             .foregroundStyle(.white)
@@ -1154,19 +1457,19 @@ private struct NotchSettingsInteractivePreviewCard: View {
                         .frame(width: 1)
                         .padding(.vertical, 12)
 
-                    VStack(alignment: .leading, spacing: 7) {
+                    VStack(alignment: .leading, spacing: max(5, prefs.lyricsFontSize.lineSpacing - 2)) {
                         Text("Neon echoes in the quiet rain")
-                            .font(.system(size: 11))
+                            .font(.system(size: prefs.lyricsFontSize.inactiveFontSize - 1.0))
                             .foregroundStyle(Color.white.opacity(0.32))
                         Text("Feel the bassline rising in the dark")
-                            .font(.system(size: 12.5, weight: .bold))
+                            .font(.system(size: prefs.lyricsFontSize.activeFontSize - 0.8, weight: .bold))
                             .foregroundStyle(.white)
                             .shadow(color: previewAccent.opacity(0.65), radius: 5)
                         Text("Glowing softly like a distant spark")
-                            .font(.system(size: 11.2))
+                            .font(.system(size: prefs.lyricsFontSize.inactiveFontSize - 0.8))
                             .foregroundStyle(Color.white.opacity(0.50))
                         Text("Hold the moment while the colors bloom")
-                            .font(.system(size: 11))
+                            .font(.system(size: prefs.lyricsFontSize.inactiveFontSize - 1.0))
                             .foregroundStyle(Color.white.opacity(0.32))
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)

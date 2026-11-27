@@ -11,6 +11,15 @@
   <meta property="og:type" content="website" />
   <link id="page-favicon" rel="icon" type="image/png" href="assets/app-icon-mono-dark.png" />
 
+  <!-- Google Tag Manager / Google Analytics (GTM-KRXBVJVT) -->
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    window.dataLayer.push({ 'gtm.start': new Date().getTime(), event: 'gtm.js' });
+    function gtag(){ dataLayer.push(arguments); }
+    gtag('js', new Date());
+  </script>
+  <script async src="https://www.googletagmanager.com/gtm.js?id=GTM-KRXBVJVT"></script>
+
   <!-- Privacy-friendly analytics (Umami Cloud — cookie-free) -->
   <script defer src="https://cloud.umami.is/script.js" data-website-id="fcb832bf-d2ed-494c-9b18-1789e836870f"></script>
 
@@ -1109,6 +1118,9 @@
 </head>
 
 <body class="text-slate-900 dark:text-slate-100 antialiased selection:bg-brand-500/20 selection:text-brand-600">
+  <!-- Google Tag Manager (noscript) -->
+  <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-KRXBVJVT"
+    height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <!-- Authentic 1998 Retro Era Vector Logos Sprite (Windows 95/98 Flying Flag & 1977–1998 Rainbow Apple) -->
   <svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" style="position:absolute;width:0;height:0;overflow:hidden;pointer-events:none" aria-hidden="true">
     <defs>
@@ -1172,7 +1184,7 @@
           <img id="nav-app-icon" src="assets/app-icon-mono-dark.png" alt="MacFileExplorer" class="w-8 h-8 rounded-lg shadow-sm group-hover:scale-105 transition-transform shrink-0" />
           <div class="flex items-center gap-2 min-w-0">
             <span class="font-bold tracking-tight text-[15px] text-slate-900 dark:text-white truncate">MacFileExplorer</span>
-            <span id="nav-version-pill" class="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-brand-500/12 text-brand-600 dark:text-brand-400 border border-brand-500/20">v2.6.0</span>
+            <span id="nav-version-pill" class="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-brand-500/12 text-brand-600 dark:text-brand-400 border border-brand-500/20">v2.7.0</span>
           </div>
         </a>
 
@@ -1244,8 +1256,8 @@
           </a>
 
           <!-- Desktop Download CTA -->
-          <a id="nav-download-cta" href="https://github.com/romeroluisjavier/MacFileExplorer/releases/download/v2.6.0/MacFileExplorer-2.6.0.dmg"
-            data-umami-event="download-dmg" data-umami-event-location="nav" data-umami-event-version="v2.6.0"
+          <a id="nav-download-cta" href="https://github.com/romeroluisjavier/MacFileExplorer/releases/download/v2.7.0/MacFileExplorer-2.7.0.dmg"
+            data-umami-event="download-dmg" data-umami-event-location="nav" data-umami-event-version="v2.7.0"
             class="btn-primary hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[12.5px] font-semibold text-white bg-gradient-to-b from-[#1A90FF] to-[#0071E3] hover:brightness-110 shadow-md shadow-brand-600/25 transition-all whitespace-nowrap">
             <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2.3" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v11m0 0-4-4m4 4 4-4M4 19h16"/>
@@ -1288,8 +1300,8 @@
             </div>
           </div>
 
-          <a id="mobile-download-cta" href="https://github.com/romeroluisjavier/MacFileExplorer/releases/download/v2.6.0/MacFileExplorer-2.6.0.dmg"
-            data-umami-event="download-dmg" data-umami-event-location="mobile" data-umami-event-version="v2.6.0"
+          <a id="mobile-download-cta" href="https://github.com/romeroluisjavier/MacFileExplorer/releases/download/v2.7.0/MacFileExplorer-2.7.0.dmg"
+            data-umami-event="download-dmg" data-umami-event-location="mobile" data-umami-event-version="v2.7.0"
             class="btn-primary w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold text-white bg-gradient-to-b from-[#1A90FF] to-[#0071E3] shadow-md">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.3" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v11m0 0-4-4m4 4 4-4M4 19h16"/>
@@ -1338,7 +1350,7 @@
           </span>
           <span id="hero-release-badge" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold mac-glass text-indigo-700 dark:text-indigo-300">
             <span class="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
-            <span id="hero-release-badge-text">Latest version: v2.6.0</span>
+            <span id="hero-release-badge-text">Latest version: v2.7.0</span>
           </span>
         </div>
 
@@ -1356,13 +1368,13 @@
 
         <!-- Primary CTAs (stack cleanly on mobile) -->
         <div class="mt-7 sm:mt-9 flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 max-w-md sm:max-w-none mx-auto">
-          <a id="hero-download-cta" href="https://github.com/romeroluisjavier/MacFileExplorer/releases/download/v2.6.0/MacFileExplorer-2.6.0.dmg"
-            data-umami-event="download-dmg" data-umami-event-location="hero" data-umami-event-version="v2.6.0"
+          <a id="hero-download-cta" href="https://github.com/romeroluisjavier/MacFileExplorer/releases/download/v2.7.0/MacFileExplorer-2.7.0.dmg"
+            data-umami-event="download-dmg" data-umami-event-location="hero" data-umami-event-version="v2.7.0"
             class="btn-primary inline-flex items-center justify-center gap-2.5 px-7 py-3.5 rounded-2xl text-[15px] font-semibold text-white bg-gradient-to-b from-[#1A90FF] to-[#0071E3] hover:brightness-110 shadow-xl shadow-brand-600/25 transition-all hover:-translate-y-0.5">
             <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v12m0 0-4.5-4.5M12 15l4.5-4.5M4 20h16"/>
             </svg>
-            <span id="hero-download-label">Download MacFileExplorer v2.6.0</span>
+            <span id="hero-download-label">Download MacFileExplorer v2.7.0</span>
           </a>
 
           <a href="#install"
@@ -1386,7 +1398,7 @@
             </h2>
           </div>
 
-          <!-- Mobile-friendly 5-tab strip -->
+          <!-- Mobile-friendly 6-tab strip -->
           <div class="flex justify-center mb-4 sm:mb-5">
             <div class="inline-flex items-center gap-0.5 sm:gap-1 p-1 sm:p-1.5 rounded-2xl mac-glass overflow-x-auto no-scrollbar max-w-full" role="tablist" aria-label="Summary preview">
               <button type="button" data-hero-id="taskbar" role="tab" aria-selected="true"
@@ -1398,6 +1410,11 @@
                 class="hero-tab shrink-0 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-[11px] sm:text-[13px] font-semibold transition-all text-slate-600 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white inline-flex items-center gap-1 sm:gap-1.5">
                 <span class="hero-tab-dot w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
                 <span>AltTab</span>
+              </button>
+              <button type="button" data-hero-id="notch" role="tab" aria-selected="false"
+                class="hero-tab shrink-0 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-[11px] sm:text-[13px] font-semibold transition-all text-slate-600 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white inline-flex items-center gap-1 sm:gap-1.5">
+                <span class="hero-tab-dot w-1.5 h-1.5 rounded-full bg-rose-400"></span>
+                <span data-i18n="hero.tabNotch">Notch</span>
               </button>
               <button type="button" data-hero-id="startmenu" role="tab" aria-selected="false"
                 class="hero-tab shrink-0 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-[11px] sm:text-[13px] font-semibold transition-all text-slate-600 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white inline-flex items-center gap-1 sm:gap-1.5">
@@ -1436,7 +1453,7 @@
                   aria-label="Pause auto-rotation">
                   <svg id="hero-icon-pause" class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path d="M5.75 3a.75.75 0 0 0-.75.75v12.5c0 .414.336.75.75.75h1.5a.75.75 0 0 0 .75-.75V3.75A.75.75 0 0 0 7.25 3h-1.5Zm7 0a.75.75 0 0 0-.75.75v12.5c0 .414.336.75.75.75h1.5a.75.75 0 0 0 .75-.75V3.75a.75.75 0 0 0-.75-.75h-1.5Z"/></svg>
                   <svg id="hero-icon-play" class="w-3.5 h-3.5 hidden" fill="currentColor" viewBox="0 0 20 20"><path d="M6.3 2.84A1.5 1.5 0 0 0 4 4.11v11.78a1.5 1.5 0 0 0 2.3 1.27l9.344-5.891a1.5 1.5 0 0 0 0-2.538L6.3 2.841Z"/></svg>
-                  <span id="hero-slide-counter" class="tabular-nums">1 / 5</span>
+                  <span id="hero-slide-counter" class="tabular-nums">1 / 6</span>
                 </button>
                 <span class="text-slate-300 dark:text-white/15">·</span>
                 <button type="button" id="hero-enlarge-btn" class="text-brand-600 dark:text-brand-400 font-semibold hover:underline" data-i18n="hero.clickZoom">Click to enlarge</button>
@@ -1981,7 +1998,7 @@
             <button type="button" data-demo-filter="gifs"
               class="demo-filter-btn active shrink-0 px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all bg-brand-600 text-white shadow-sm inline-flex items-center gap-1.5">
               <span class="w-1.5 h-1.5 rounded-full bg-emerald-300"></span>
-              <span data-i18n="demo.filterGifs">In motion (28)</span>
+              <span data-i18n="demo.filterGifs">In motion (29)</span>
             </button>
             <button type="button" data-demo-filter="screenshots"
               class="demo-filter-btn shrink-0 px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all text-slate-600 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white">
@@ -1989,7 +2006,7 @@
             </button>
             <button type="button" data-demo-filter="all"
               class="demo-filter-btn shrink-0 px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all text-slate-600 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white">
-              <span data-i18n="demo.filterAll">All (34)</span>
+              <span data-i18n="demo.filterAll">All (35)</span>
             </button>
           </div>
         </div>
@@ -2011,7 +2028,7 @@
             How to install on your Mac
           </h2>
           <p class="desktop-subtext mt-3 text-slate-600 dark:text-slate-400 text-[15px] sm:text-base" data-i18n="install.subtitle">
-            No technical skills or terminal commands required. Just follow these 3 quick steps:
+            No technical skills or terminal commands required. Just follow these 4 quick steps:
           </p>
         </div>
 
@@ -2029,13 +2046,13 @@
                     Click the blue button below. The installer file will land in your <strong>Downloads</strong> folder in just a few seconds.
                   </p>
                 </div>
-                <a id="install-download-cta" href="https://github.com/romeroluisjavier/MacFileExplorer/releases/download/v2.6.0/MacFileExplorer-2.6.0.dmg"
-                  data-umami-event="download-dmg" data-umami-event-location="install" data-umami-event-version="v2.6.0"
+                <a id="install-download-cta" href="https://github.com/romeroluisjavier/MacFileExplorer/releases/download/v2.7.0/MacFileExplorer-2.7.0.dmg"
+                  data-umami-event="download-dmg" data-umami-event-location="install" data-umami-event-version="v2.7.0"
                   class="btn-primary inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-gradient-to-b from-[#1A90FF] to-[#0071E3] hover:brightness-110 shadow-md shadow-brand-600/25 transition-all shrink-0 self-start sm:self-center">
                   <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v11m0 0-4-4m4 4 4-4M4 19h16"/>
                   </svg>
-                  <span id="install-download-label">Download v2.6.0 (.dmg)</span>
+                  <span id="install-download-label">Download v2.7.0 (.dmg)</span>
                 </a>
               </div>
             </div>
@@ -2068,8 +2085,8 @@
           </li>
 
           <!-- Step 3 -->
-          <li class="reveal relative flex items-start gap-4 sm:gap-6 pt-8" data-delay="3">
-            <span class="install-stepper-line absolute left-5 sm:left-[21px] top-0 h-8 w-0.5 pointer-events-none" aria-hidden="true"></span>
+          <li class="reveal relative flex items-start gap-4 sm:gap-6 py-8 border-b border-slate-900/10 dark:border-white/10" data-delay="3">
+            <span class="install-stepper-line absolute left-5 sm:left-[21px] top-0 bottom-0 w-0.5 pointer-events-none" aria-hidden="true"></span>
             <span class="install-step-num relative z-10 w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-emerald-500 text-white font-extrabold text-base sm:text-lg flex items-center justify-center shrink-0 shadow-md shadow-emerald-500/25 ring-4 ring-[#edf2fb] dark:ring-[#111520]">3</span>
             <div class="flex-1 min-w-0 pt-0.5">
               <h3 class="install-step-title text-lg sm:text-xl font-bold text-slate-950 dark:text-white leading-snug" data-i18n="install.s3Title">Open for the first time</h3>
@@ -2081,6 +2098,44 @@
                   <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
                 </svg>
                 <span data-i18n="install.s3Tip">Only needed the very first time. After that, open it normally like any other Mac app.</span>
+              </p>
+            </div>
+          </li>
+
+          <!-- Step 4: First-Install Setup Wizard & Guided Tour Preview GIF -->
+          <li class="reveal relative flex items-start gap-4 sm:gap-6 pt-8" data-delay="4">
+            <span class="install-stepper-line absolute left-5 sm:left-[21px] top-0 h-8 w-0.5 pointer-events-none" aria-hidden="true"></span>
+            <span class="install-step-num relative z-10 w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-violet-600 text-white font-extrabold text-base sm:text-lg flex items-center justify-center shrink-0 shadow-md shadow-violet-600/25 ring-4 ring-[#edf2fb] dark:ring-[#111520]">4</span>
+            <div class="flex-1 min-w-0 pt-0.5">
+              <h3 class="install-step-title text-lg sm:text-xl font-bold text-slate-950 dark:text-white leading-snug" data-i18n="install.s4Title">Personalize in 6 friendly steps (or Install by Default)</h3>
+              <p class="install-step-body mt-1 text-sm text-slate-600 dark:text-slate-300 leading-relaxed max-w-2xl" data-i18n-html="install.s4Desc">
+                The first time you open it, a guided <strong>Setup Wizard</strong> lets you choose your language, app icon, and which optional tools you want enabled (Taskbar, AltTab, Notch music player, Clipboard &amp; View Desktop <strong>⌘D</strong>) — or click <strong>Install by Default</strong> to jump right in. Afterwards, a quick callout tour walks you around the app and can be stopped anytime.
+              </p>
+
+              <button type="button" id="install-wizard-preview-btn"
+                class="group mt-4 w-full text-left rounded-2xl overflow-hidden bg-slate-900/[0.04] dark:bg-white/[0.05] border border-slate-900/10 dark:border-white/15 shadow-lg hover:shadow-xl hover:border-brand-500/50 transition-all focus:outline-none focus:ring-2 focus:ring-brand-500">
+                <div class="flex items-center justify-between px-3.5 py-2 border-b border-slate-900/10 dark:border-white/10 bg-white/60 dark:bg-slate-900/60">
+                  <span class="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-violet-700 dark:text-violet-300">
+                    <span class="w-1.5 h-1.5 rounded-full bg-violet-500 animate-pulse"></span>
+                    <span data-i18n="install.s4Badge">First-install Setup Wizard · 6 steps</span>
+                  </span>
+                  <span class="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-500 dark:text-slate-400 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">
+                    <span data-i18n="install.s4Zoom">Click to enlarge</span>
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15"/>
+                    </svg>
+                  </span>
+                </div>
+                <img src="assets/wizard_step_by_step.gif" loading="lazy"
+                  alt="MacFileExplorer 6-step First-Install Setup Wizard preview"
+                  class="w-full h-auto block bg-[#edf2fb] dark:bg-slate-900" />
+              </button>
+
+              <p class="install-step-tip mt-2.5 inline-flex items-start gap-2 text-xs sm:text-[13px] text-violet-700 dark:text-violet-300 font-medium leading-relaxed">
+                <svg class="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z"/>
+                </svg>
+                <span data-i18n="install.s4Tip">Every option can be turned on or off anytime later, and you can re-open the wizard or guided tour from the Help menu.</span>
               </p>
             </div>
           </li>
@@ -2375,8 +2430,8 @@
   <script>
     const REPO_OWNER = 'romeroluisjavier';
     const REPO_NAME = 'MacFileExplorer';
-    let currentVersionTag = 'v2.6.0';
-    let currentDmgUrl = `https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/download/v2.6.0/MacFileExplorer-2.6.0.dmg`;
+    let currentVersionTag = 'v2.7.0';
+    let currentDmgUrl = `https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/download/v2.7.0/MacFileExplorer-2.7.0.dmg`;
     let currentLang = localStorage.getItem('mfe-lang') === 'es' ? 'es' : 'en';
     let currentTheme = ['light', 'dark', 'win98', 'macos98'].includes(localStorage.getItem('mfe-theme-v2'))
       ? localStorage.getItem('mfe-theme-v2')
@@ -2418,6 +2473,7 @@
         'hero.meta': 'Lightweight download (~22 MB) · No account or subscription · Native on Apple Silicon (M1–M4) & Intel',
         'hero.summaryTitle': 'Summary',
         'hero.tabTaskbar': 'Taskbar',
+        'hero.tabNotch': 'Notch',
         'hero.tabStart': 'Start Menu',
         'hero.tabExplorer': 'File Explorer',
         'hero.tabOffice': 'Office & Drive',
@@ -2489,12 +2545,12 @@
         'demo.eyebrow': 'Visual tour',
         'demo.title': 'See it in action',
         'demo.subtitle': 'Explore how every feature looks and feels on your Mac. Tap any card to view it full screen.',
-        'demo.filterGifs': 'In motion (28)',
+        'demo.filterGifs': 'In motion (29)',
         'demo.filterShots': 'Screenshots (6)',
-        'demo.filterAll': 'All (34)',
+        'demo.filterAll': 'All (35)',
         'install.eyebrow': 'Ready in 1 minute',
         'install.title': 'How to install on your Mac',
-        'install.subtitle': 'No technical skills or terminal commands required. Just follow these 3 quick steps:',
+        'install.subtitle': 'No technical skills or terminal commands required. Just follow these 4 quick steps:',
         'install.s1Title': 'Download the installer',
         'install.s1Desc': 'Click the blue download button. The installer file will land in your <strong>Downloads</strong> folder in just a few seconds.',
         'install.s1Btn': 'Download',
@@ -2504,6 +2560,11 @@
         'install.s3Title': 'Open for the first time',
         'install.s3Desc': 'Open your <strong>Applications</strong> folder, <strong>right-click</strong> <strong>MacFileExplorer</strong>, and choose <strong>Open</strong>. Click <strong>Open</strong> once more on the prompt — and you\'re done!',
         'install.s3Tip': 'Only needed the very first time. After that, open it normally like any other Mac app.',
+        'install.s4Title': 'Personalize in 6 friendly steps (or Install by Default)',
+        'install.s4Desc': 'The first time you open it, a guided <strong>Setup Wizard</strong> lets you choose your language, app icon, and which optional tools you want enabled (Taskbar, AltTab, Notch music player, Clipboard &amp; View Desktop <strong>⌘D</strong>) — or click <strong>Install by Default</strong> to jump right in. Afterwards, a quick callout tour walks you around the app and can be stopped anytime.',
+        'install.s4Badge': 'First-install Setup Wizard · 6 steps',
+        'install.s4Zoom': 'Click to enlarge',
+        'install.s4Tip': 'Every option can be turned on or off anytime later, and you can re-open the wizard or guided tour from the Help menu.',
         'install.secTitle': 'Did Apple show a security message when opening it?',
         'install.secIntro': 'That\'s completely normal for free open-source apps downloaded outside the App Store. If right-clicking doesn\'t show an <strong>Open</strong> button:',
         'install.secStep1': 'Click <strong>OK</strong> on the macOS notice.',
@@ -2575,6 +2636,7 @@
         'hero.meta': 'Descarga liviana (~22 MB) · Sin cuentas ni suscripciones · Nativa en Apple Silicon (M1–M4) e Intel',
         'hero.summaryTitle': 'Resumen',
         'hero.tabTaskbar': 'Barra de tareas',
+        'hero.tabNotch': 'Notch',
         'hero.tabStart': 'Menú Inicio',
         'hero.tabExplorer': 'Explorador',
         'hero.tabOffice': 'Office y Drive',
@@ -2646,12 +2708,12 @@
         'demo.eyebrow': 'Recorrido visual',
         'demo.title': 'Mirala en acción',
         'demo.subtitle': 'Explorá cómo se ve y cómo se usa cada función en tu Mac. Tocá cualquier tarjeta para verla en grande.',
-        'demo.filterGifs': 'En movimiento (28)',
+        'demo.filterGifs': 'En movimiento (29)',
         'demo.filterShots': 'Imágenes (6)',
-        'demo.filterAll': 'Todo (34)',
+        'demo.filterAll': 'Todo (35)',
         'install.eyebrow': 'Listo en 1 minuto',
         'install.title': 'Cómo instalarla en tu Mac',
-        'install.subtitle': 'No necesitás saber nada técnico ni escribir comandos. Seguí estos 3 pasos simples:',
+        'install.subtitle': 'No necesitás saber nada técnico ni escribir comandos. Seguí estos 4 pasos simples:',
         'install.s1Title': 'Descargá el instalador',
         'install.s1Desc': 'Tocá el botón azul de descarga. Se va a guardar el archivo de instalación en tu carpeta de <strong>Descargas</strong> en pocos segundos.',
         'install.s1Btn': 'Descargar',
@@ -2661,6 +2723,11 @@
         'install.s3Title': 'Abrila por primera vez',
         'install.s3Desc': 'Andá a tu carpeta <strong>Aplicaciones</strong>, hacé <strong>clic derecho</strong> sobre <strong>MacFileExplorer</strong> y elegí <strong>Abrir</strong>. En el cartel que aparece, tocá <strong>Abrir</strong> una vez más y ¡listo!',
         'install.s3Tip': 'Solo hace falta la primera vez. Después la abrís siempre con un clic normal como cualquier otra app de tu Mac.',
+        'install.s4Title': 'Personalizala en 6 pasos guiados (o instalá por defecto)',
+        'install.s4Desc': 'La primera vez que la abrís, un <strong>asistente paso a paso</strong> te permite elegir el idioma, el ícono y qué herramientas opcionales activar (Barra de tareas, AltTab, reproductor Notch, Portapapeles y Ver Escritorio <strong>⌘D</strong>) — o tocar <strong>Instalar por defecto</strong> para empezar al instante. Al terminar, un breve tour con globitos te muestra la app y podés suspenderlo en cualquier momento.',
+        'install.s4Badge': 'Asistente inicial · 6 pasos',
+        'install.s4Zoom': 'Clic para agrandar',
+        'install.s4Tip': 'Cada opción se puede prender o apagar cuando quieras, y podés volver a abrir el asistente o el tour desde el menú Ayuda.',
         'install.secTitle': '¿Te apareció un aviso de seguridad de Apple al abrirla?',
         'install.secIntro': 'Es completamente normal en apps gratuitas que se descargan fuera de la App Store. Si al hacer clic derecho no ves el botón <strong>Abrir</strong>:',
         'install.secStep1': 'Tocá <strong>OK</strong> en el aviso que te mostró macOS.',
@@ -2707,7 +2774,7 @@
       }
     };
 
-    const HERO_ORDER = ['taskbar', 'alttab', 'startmenu', 'explorer', 'office'];
+    const HERO_ORDER = ['taskbar', 'alttab', 'notch', 'startmenu', 'explorer', 'office'];
 
     const HERO_PREVIEWS = {
       taskbar: {
@@ -2723,6 +2790,13 @@
         title: { en: 'Fast AltTab window switcher', es: 'Selector rápido de ventanas AltTab' },
         en: 'Fast AltTab switcher: view every open window in a crisp grid and jump anywhere in a second.',
         es: 'Selector rápido AltTab: mirá todas tus ventanas abiertas en una cuadrícula y saltá a cualquiera en un segundo.'
+      },
+      notch: {
+        src: 'assets/notch-now-playing-demo.gif',
+        badge: { en: 'Notch Player', es: 'Reproductor Notch' },
+        title: { en: 'Notch Music Player for YouTube Music, Spotify & Apple Music', es: 'Reproductor musical en el Notch para YouTube Music, Spotify y Apple Music' },
+        en: 'Notch Music Player: control YouTube Music, Spotify & Apple Music from your MacBook notch (or floating island) with exact artwork, clickable progress bar, synced lyrics & audio switcher.',
+        es: 'Reproductor musical en el Notch: controlá YouTube Music, Spotify y Apple Music directo desde el notch de tu MacBook (o píldora flotante) con carátula exacta, barra de avance interactiva, letras sincronizadas y selector de audio.'
       },
       startmenu: {
         src: 'assets/taskbar-startmenu-demo.gif',
@@ -2756,6 +2830,15 @@
     };
 
     const DEMO_ITEMS = [
+      {
+        id: 'wizard-setup-gif', type: 'gifs', src: 'assets/wizard_step_by_step.gif',
+        badge: { en: 'v2.7.0 · Setup Wizard', es: 'v2.7.0 · Asistente inicial' },
+        title: { en: '6-Step First-Install Setup Wizard & Guided Tour', es: 'Asistente de instalación en 6 pasos y Tour guiado' },
+        desc: {
+          en: 'Personalize your language, app icon, Taskbar, AltTab, Notch music player, and productivity tools step by step on first launch — or click «Install by Default (skip Wizard)» to jump right in. Includes an interactive callout tour you can stop anytime.',
+          es: 'Elegí tu idioma, ícono, Barra de tareas, AltTab, reproductor Notch y herramientas de productividad paso a paso la primera vez que instalás la app — o tocá «Instalar por defecto (omitir asistente)» para empezar al instante. Incluye un tour interactivo con globitos que podés suspender cuando quieras.'
+        }
+      },
       {
         id: 'notch-now-playing-gif', type: 'gifs', src: 'assets/notch-now-playing-demo.gif',
         badge: { en: 'v2.6.0 · Notch Player', es: 'v2.6.0 · Reproductor Notch' },
@@ -3066,13 +3149,37 @@
 
     const STATIC_RELEASES = [
       {
+        tag: 'v2.7.0',
+        date: { en: 'Nov 27, 2026', es: '27 nov 2026' },
+        title: {
+          en: 'First-Install Setup Wizard, Interactive Callout Tour, Post-Upgrade What\'s New, 10 New Notch Customizations, Clickable Seek Bar & Built-In Bug Reporter',
+          es: 'Asistente de instalación en 6 pasos, Tour interactivo, Novedades al actualizar, 10 opciones nuevas del Notch, Barra clicable y Reporte de errores'
+        },
+        latest: true,
+        dmgUrl: `https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/download/v2.7.0/MacFileExplorer-2.7.0.dmg`,
+        highlights: {
+          en: [
+            'First-Install 6-Step Setup Wizard + «Install by Default (skip Wizard)»: pick your language, app icon, Taskbar, AltTab, Notch music player, Clipboard, and View Desktop (⌘D) step by step—or jump right in with one click.',
+            'Interactive Guided Tour & Post-Upgrade Release Notes: friendly callout bubbles explain each part of the app and can be stopped anytime (Esc), and updating to a newer version automatically opens Release Notes highlighting only what\'s new since your previous version.',
+            '10 New Notch Player Settings + Clickable YouTube Music Seek Bar: customize accent color (auto/app/custom), animation style & speed (0.5×–2.0×), 4 visualizer styles, album cover & album name visibility, app corner badge, ambient glow intensity, backdrop opacity, lyrics font size, plus click/drag progress seeking.',
+            'Built-In Friendly Bug & Idea Reporter in «About» + Monthly Internal Error Check: scroll-free form with an always-visible «Send Report» button and privacy-sanitized technical diagnostics (hiding your name, filenames, and emails).'
+          ],
+          es: [
+            'Asistente inicial en 6 pasos + «Instalar por defecto (omitir asistente)»: elegí tu idioma, ícono, Barra de tareas, AltTab, reproductor Notch, Portapapeles y Ver Escritorio (⌘D) paso a paso o empezá en un clic.',
+            'Tour interactivo con globitos y Novedades destacadas al actualizar: globitos guiados que podés suspender en cualquier momento (Esc), y al actualizar la app se abren automáticamente las Notas de la versión resaltando solo lo nuevo desde tu versión anterior.',
+            '10 nuevas configuraciones del Notch + barra de avance clicable en YouTube Music: elegí color de acento (carátula, app o personalizado), tipo y velocidad de animaciones (0.5×–2.0×), 4 estilos de visualizador, tapa y nombre del álbum, insignia de la app, intensidad del brillo, opacidad del fondo y tamaño de letras, además de adelantar/retroceder haciendo clic en la barra.',
+            'Reporte de errores e ideas directo en «Acerca de» + revisión mensual del log interno: formulario simple y sin scroll con botón «Enviar reporte» siempre visible y diagnóstico técnico sin datos personales.'
+          ]
+        }
+      },
+      {
         tag: 'v2.6.0',
         date: { en: 'Nov 26, 2026', es: '26 nov 2026' },
         title: {
           en: 'Notch Music Player (YouTube Music & Spotify), Smart No-Scroll Taskbar, Pinned Order, Auto-Hide Preview, All Shortcuts Manager & Tools (⌘D)',
           es: 'Reproductor musical «Notch» (YouTube Music y Spotify), Barra de tareas sin scroll, Apps fijadas primero, Preview sin fantasma, Administrador de atajos y Tools (⌘D)'
         },
-        latest: true,
+        latest: false,
         dmgUrl: `https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/download/v2.6.0/MacFileExplorer-2.6.0.dmg`,
         highlights: {
           en: [
@@ -3696,6 +3803,16 @@
     heroImg.addEventListener('click', openHeroSummaryLightbox);
     if (heroEnlargeBtn) heroEnlargeBtn.addEventListener('click', openHeroSummaryLightbox);
 
+    const installWizardPreviewBtn = document.getElementById('install-wizard-preview-btn');
+    if (installWizardPreviewBtn) {
+      installWizardPreviewBtn.addEventListener('click', () => {
+        const wizardItem = DEMO_ITEMS.find((i) => i.id === 'wizard-setup-gif');
+        if (!wizardItem) return;
+        currentLightboxList = [wizardItem];
+        openLightbox(0);
+      });
+    }
+
     const lightbox = document.getElementById('lightbox');
     const lbImg = document.getElementById('lightbox-img');
     const lbTitle = document.getElementById('lightbox-title');
@@ -4106,6 +4223,43 @@
         renderReleases(STATIC_RELEASES);
       }
     }
+
+    // =========================================================================
+    // GOOGLE TAG MANAGER / GOOGLE ANALYTICS — DOWNLOAD TRACKING (.dmg)
+    // =========================================================================
+    document.addEventListener('click', (event) => {
+      const link = event.target.closest('a[href$=".dmg"], [data-umami-event="download-dmg"]');
+      if (!link) return;
+      const href = link.getAttribute('href') || '';
+      const fileName = href.split('/').pop() || 'MacFileExplorer.dmg';
+      const downloadLocation = link.getAttribute('data-umami-event-location') || link.id || 'page';
+      const appVersion = link.getAttribute('data-umami-event-version') || currentVersionTag || 'unknown';
+
+      window.dataLayer = window.dataLayer || [];
+      window.dataLayer.push({
+        event: 'download_dmg',
+        file_name: fileName,
+        file_extension: 'dmg',
+        link_url: href,
+        download_location: downloadLocation,
+        app_version: appVersion
+      });
+      if (typeof window.gtag === 'function') {
+        window.gtag('event', 'file_download', {
+          file_name: fileName,
+          file_extension: 'dmg',
+          link_url: href,
+          download_location: downloadLocation,
+          app_version: appVersion
+        });
+        window.gtag('event', 'download_dmg', {
+          file_name: fileName,
+          link_url: href,
+          download_location: downloadLocation,
+          app_version: appVersion
+        });
+      }
+    });
 
     // =========================================================================
     // BOOT — DEFAULT LIGHT MODE + DEFAULT ENGLISH

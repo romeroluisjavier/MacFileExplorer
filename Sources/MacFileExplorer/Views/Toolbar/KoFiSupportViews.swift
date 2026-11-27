@@ -339,6 +339,7 @@ public struct MonthlySupportFloatingToastView: View {
     @Bindable private var loc = LocalizationManager.shared
     @Bindable private var supportManager = MonthlySupportCheckManager.shared
     @Bindable private var updateManager = AppUpdateManager.shared
+    @Bindable private var bugReport = BugReportService.shared
     @Environment(\.colorScheme) private var colorScheme
 
     public init() {}
@@ -404,6 +405,9 @@ public struct MonthlySupportFloatingToastView: View {
 
             // 2. Franja integrada de comprobación automática de actualizaciones
             updateStatusStrip
+
+            // 2b. Franja condicional de diagnóstico interno mensual (solo si se detectaron errores nuevos en INTERNAL_ERROR.log)
+            internalErrorDiagnosticsStrip
 
             // 3. Invitación cálida + Botón Ko-fi + QR escaneable
             HStack(alignment: .center, spacing: 12) {
@@ -476,6 +480,97 @@ public struct MonthlySupportFloatingToastView: View {
                 )
         )
         .shadow(color: .black.opacity(colorScheme == .dark ? 0.45 : 0.18), radius: 18, y: 8)
+    }
+
+    @ViewBuilder
+    private var internalErrorDiagnosticsStrip: some View {
+        if bugReport.hasUnreportedErrors, let scan = bugReport.unreportedScan {
+            HStack(spacing: 8) {
+                Image(systemName: "ladybug.fill")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.orange)
+
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(loc.text(
+                        es: "Se detectaron \(scan.totalOccurrences) errores internos (\(scan.uniqueCount) únicos)",
+                        en: "\(scan.totalOccurrences) internal errors detected (\(scan.uniqueCount) unique)"
+                    ))
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.primary)
+
+                    Text(loc.text(
+                        es: "Resumen sanitizado sin datos personales",
+                        en: "Privacy-sanitized summary · no personal data"
+                    ))
+                    .font(.system(size: 9.8))
+                    .foregroundStyle(.secondary)
+                }
+
+                Spacer(minLength: 4)
+
+                Button {
+                    AboutWindowController.shared.show(initialTab: .reportBug)
+                } label: {
+                    Text(loc.text(es: "Revisar", en: "Review"))
+                        .font(.system(size: 10.5, weight: .medium))
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    Task {
+                        _ = await bugReport.submitMonthlyAutoReport(from: scan)
+                    }
+                } label: {
+                    Text(loc.text(es: "Reportar", en: "Report"))
+                        .font(.system(size: 10.5, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 8.5)
+                        .padding(.vertical, 4)
+                        .background(Capsule(style: .continuous).fill(Color.orange))
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    bugReport.dismissUnreportedErrorsForThisMonth()
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 8.5, weight: .bold))
+                        .foregroundStyle(.tertiary)
+                }
+                .buttonStyle(.plain)
+                .help(loc.text(es: "Ignorar por este mes", en: "Ignore for this month"))
+            }
+            .padding(.horizontal, 9)
+            .padding(.vertical, 7)
+            .background(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(Color.orange.opacity(0.12))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .strokeBorder(Color.orange.opacity(0.32), lineWidth: 0.75)
+            )
+        } else if bugReport.lastRelayAutoSubmittedCount > 0 {
+            HStack(spacing: 6) {
+                Image(systemName: "checkmark.shield.fill")
+                    .font(.system(size: 11.5))
+                    .foregroundStyle(.green)
+                Text(loc.text(
+                    es: "Se reportaron automáticamente \(bugReport.lastRelayAutoSubmittedCount) errores sanitizados en GitHub.",
+                    en: "Automatically reported \(bugReport.lastRelayAutoSubmittedCount) sanitized errors to GitHub."
+                ))
+                .font(.system(size: 10.5, weight: .medium))
+                .foregroundStyle(.secondary)
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 9)
+            .padding(.vertical, 5.5)
+            .background(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(Color.green.opacity(0.09))
+            )
+        }
     }
 
     @ViewBuilder

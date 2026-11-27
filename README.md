@@ -5,7 +5,7 @@ Un explorador de archivos nativo, ágil y moderno para macOS, inspirado en la pr
 ![macOS 14+](https://img.shields.io/badge/macOS-14.0%2B-blue?logo=apple)
 ![Swift 6](https://img.shields.io/badge/Swift-6.0-orange?logo=swift)
 ![Architecture](https://img.shields.io/badge/Architecture-Universal%20(Apple%20Silicon%20%2B%20Intel)-brightgreen)
-![Release](https://img.shields.io/badge/Release-v2.6.0-blueviolet)
+![Release](https://img.shields.io/badge/Release-v2.7.0-blueviolet)
 [![Downloads](https://img.shields.io/github/downloads/romeroluisjavier/MacFileExplorer/total?label=Downloads&color=0071E3)](https://github.com/romeroluisjavier/MacFileExplorer/releases)
 [![Support me on Ko-fi](https://img.shields.io/badge/Ko--fi-Support%20me%20(Optional%20Tip)-F57373?logo=ko-fi&logoColor=white)](https://ko-fi.com/luisjavierromero)
 
@@ -36,12 +36,12 @@ Un explorador de archivos nativo, ágil y moderno para macOS, inspirado en la pr
 
 ---
 
-## ✨ Novedades recientes (v2.6.0)
+## ✨ Novedades recientes (v2.7.0)
 
-- 🎵 **Nuevo reproductor musical «Notch» (YouTube Music, Spotify y Apple Music)**: transforma el Notch de tu MacBook (o la parte superior de cualquier monitor en modo píldora flotante) en un reproductor fluido sin robar foco, con carátula exacta, ecualizador animado, brillo ambiental, barra de progreso, letras sincronizadas tipo karaoke, cambio rápido de salida de audio, botones para reabrir tu última app musical cuando no suena nada y cruz `✕` para cerrarlo por completo (activable desde el nuevo menú superior **Notch**).
-- 🧭 **Barra de tareas inteligente (v2.6.0)**: ajuste automático de ancho sin scroll horizontal cuando hay muchas ventanas abiertas (configurable), opción **Apps fijadas primero en su mismo orden** (con pin sutil, divisor y aviso al arrastrar), ocultamiento automático de **Preview** y apps de documentos cuando no tienen ventanas, y ajuste instantáneo al maximizar ventanas como Chrome.
-- ⌨️ **Administrador central de atajos + submenú «Herramientas (Tools)» con `⌘D` (View Desktop)**: buscá, personalizá y revisá conflictos de todos los atajos desde *Archivo → Administrar todos los atajos de teclado…*, y usá **`⌘D`** desde cualquier app para mostrar y enfocar el Escritorio de tu Mac.
-- 🛡️ **Guía transparente de Permisos de macOS y nombres unificados**: nueva sección *Permisos de macOS* en la Ayuda explicando qué pide cada función y por qué es lo mínimo necesario, más nombres de configuración unificados en todos los menús (`Notch Settings…`, `Taskbar Settings…`, `AltTab Settings…`, `Clipboard Settings…`, `Tools Settings…`).
+- ✨ **Asistente de instalación inicial (6 pasos + *Install by Default*), Tour interactivo y Novedades al actualizar**: al instalar por primera vez podés elegir paso a paso idioma, ícono y qué módulos activar (o iniciar en 1 clic con *Instalar por defecto*), recorrer un tour con globitos suspendible en cualquier momento (`Esc`) y ver automáticamente resaltado todo lo nuevo tras cada actualización.
+- 🎨 **10 nuevas configuraciones del reproductor «Notch» + barra de avance clicable en YouTube Music**: personalizá color de acento (carátula, app o personalizado), tipo y velocidad de animaciones (`0.5×–2.0×`), 4 estilos de visualizador (*Barras*, *Onda*, *Puntos*, *Pulso*), mostrar u ocultar tapa y nombre del álbum e insignia de la app, intensidad del brillo ambiental, opacidad del fondo (vidrio translúcido a negro OLED) y tamaño de texto en letras sincronizadas — además de hacer clic o arrastrar en la barra para adelantar o retroceder canciones en YouTube Music, Spotify y Apple Music.
+- 🐞 **Reporte de errores e ideas directo desde «Acerca de» + revisión mensual del log interno**: pestaña simple y sin scroll con botón **Enviar reporte** siempre visible (y vista previa de diagnóstico sanitizado sin datos personales) más aviso mensual automático si se detectan errores nuevos.
+- 🧭 **Barra de tareas inteligente, AltTab, Administrador central de atajos y `⌘D` (View Desktop)**: ajuste automático sin scroll horizontal, apps fijadas primero, ocultamiento de Preview sin ventanas, ajuste instantáneo al maximizar Chrome y gestión unificada de atajos.
 
 ---
 
@@ -78,12 +78,12 @@ Un explorador de archivos nativo, ágil y moderno para macOS, inspirado en la pr
 
 ### 1. Descargar el instalador
 Descarga la versión más reciente en formato `.dmg` directamente desde GitHub Releases:
-- 👉 **[Descargar MacFileExplorer-2.6.0.dmg](https://github.com/romeroluisjavier/MacFileExplorer/releases/download/v2.6.0/MacFileExplorer-2.6.0.dmg)** *(también disponible en [GitHub Releases](https://github.com/romeroluisjavier/MacFileExplorer/releases) y en [`releases/README.md`](./releases/README.md))*
+- 👉 **[Descargar MacFileExplorer-2.7.0.dmg](https://github.com/romeroluisjavier/MacFileExplorer/releases/download/v2.7.0/MacFileExplorer-2.7.0.dmg)** *(también disponible en [GitHub Releases](https://github.com/romeroluisjavier/MacFileExplorer/releases) y en [`releases/README.md`](./releases/README.md))*
 
 ---
 
 ### 2. Instalación en tu Mac
-1. Haz doble clic en el archivo descargado **`MacFileExplorer-2.6.0.dmg`**.
+1. Haz doble clic en el archivo descargado **`MacFileExplorer-2.7.0.dmg`**.
 2. Arrastra el icono de **MacFileExplorer** a la carpeta **Applications** (Aplicaciones).
 
 ---

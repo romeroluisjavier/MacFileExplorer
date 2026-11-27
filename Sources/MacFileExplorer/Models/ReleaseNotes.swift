@@ -39,6 +39,7 @@ public struct ReleaseNoteItem: Identifiable, Sendable {
 /// Bloque cronológico de cambios (agrupado por etapa / fecha) dentro de las Notas de la versión.
 public struct ReleaseNoteSection: Identifiable, Sendable {
     public let id: String
+    public let semanticVersion: String
     public let versionLabelES: String
     public let versionLabelEN: String
     public let dateLabelES: String
@@ -47,6 +48,7 @@ public struct ReleaseNoteSection: Identifiable, Sendable {
 
     public init(
         id: String,
+        semanticVersion: String = "0.0.0",
         versionLabelES: String,
         versionLabelEN: String,
         dateLabelES: String,
@@ -54,11 +56,17 @@ public struct ReleaseNoteSection: Identifiable, Sendable {
         items: [ReleaseNoteItem]
     ) {
         self.id = id
+        self.semanticVersion = semanticVersion
         self.versionLabelES = versionLabelES
         self.versionLabelEN = versionLabelEN
         self.dateLabelES = dateLabelES
         self.dateLabelEN = dateLabelEN
         self.items = items
+    }
+
+    /// Indica si esta sección corresponde a una versión estrictamente más reciente que `previousVersion`.
+    public func isNewer(than previousVersion: String) -> Bool {
+        AppVersionComparator.isNewer(semanticVersion, than: previousVersion)
     }
 
     @MainActor
@@ -75,11 +83,64 @@ public struct ReleaseNoteSection: Identifiable, Sendable {
 /// Catálogo oficial de Release Notes de MacFileExplorer en lenguaje claro para cualquier usuario.
 /// Nota para desarrolladores/agentes: agregar las novedades más recientes al principio del catálogo.
 public enum ReleaseNotesCatalog {
+    /// Devuelve todas las secciones con novedades posteriores a `previousVersion`.
+    public static func sectionsNewer(than previousVersion: String) -> [ReleaseNoteSection] {
+        sections.filter { $0.isNewer(than: previousVersion) }
+    }
+
+    /// Cantidad total de novedades individuales incorporadas después de `previousVersion`.
+    public static func newItemsCount(since previousVersion: String) -> Int {
+        sectionsNewer(than: previousVersion).reduce(0) { $0 + $1.items.count }
+    }
+
     public static let sections: [ReleaseNoteSection] = [
         ReleaseNoteSection(
+            id: "v2.7.0-setup-wizard-tour-notch-customization-bug-reporter",
+            semanticVersion: "2.7.0",
+            versionLabelES: "Versión 2.7.0 — Asistente de instalación, Tour interactivo, Novedades al actualizar, 10 ajustes nuevos del Notch y Reporte de errores",
+            versionLabelEN: "Version 2.7.0 — Setup Wizard, Interactive Tour, Post-Upgrade What's New, 10 New Notch Settings & Built-In Bug Reporter",
+            dateLabelES: "27 nov 2026",
+            dateLabelEN: "Nov 27, 2026",
+            items: [
+                ReleaseNoteItem(
+                    id: "notch-10-new-customization-settings",
+                    icon: "paintpalette.fill",
+                    titleES: "10 nuevas opciones de personalización para el reproductor «Notch»",
+                    titleEN: "10 New Customization Options for the «Notch» Music Player",
+                    summaryES: "En Configuración de Notch → Apariencia y Animaciones (con vista previa en vivo al instante) ahora podés elegir el color de acento (automático de la carátula, color de tu app musical o un color propio), el tipo de animación (Elástico, Fluido, Preciso o Suave), la velocidad de las animaciones (de 0.5× a 2.0×), mostrar u ocultar la tapa del álbum, el nombre del álbum y la insignia de la app, cambiar el estilo del visualizador musical (Barras, Onda, Puntos o Pulso), regular la intensidad del brillo ambiental y la opacidad del fondo (vidrio translúcido o negro puro) y ajustar el tamaño de texto de las letras sincronizadas.",
+                    summaryEN: "In Notch Settings → Appearance & Animations (with live instant preview) you can now customize the accent color (auto from album art, music app brand color, or your own custom color), animation style (Bouncy, Fluid, Snappy, or Gentle), animation speed (0.5× to 2.0×), toggle album cover art, album name, and app corner badge, switch between 4 animated visualizer styles (Bars, Wave, Dots, or Pulse), tune ambient glow intensity and background opacity (frosted glass to pure OLED black), and choose the font size for synced karaoke lyrics."
+                ),
+                ReleaseNoteItem(
+                    id: "notch-interactive-youtube-music-progress-seek",
+                    icon: "slider.horizontal.below.rectangle",
+                    titleES: "Barra de avance clicable en el «Notch» para adelantar o retroceder canciones (incluyendo YouTube Music)",
+                    titleEN: "Clickable Progress Bar Seeking in «Notch» (Including YouTube Music)",
+                    summaryES: "Ahora podés hacer clic o arrastrar directamente sobre la barra de avance del reproductor Notch para saltar al instante a cualquier momento de la canción que estés escuchando en YouTube Music, Spotify o Apple Music, sin abrir la ventana del reproductor.",
+                    summaryEN: "Click or drag directly along the Notch progress bar to jump instantly to any part of the current song in YouTube Music, Spotify, or Apple Music without switching windows."
+                ),
+                ReleaseNoteItem(
+                    id: "onboarding-setup-wizard-guided-tour-and-upgrade-highlights",
+                    icon: "sparkles",
+                    titleES: "Nuevo asistente de instalación inicial, tour interactivo y novedades destacadas al actualizar",
+                    titleEN: "New First-Install Setup Wizard, Interactive Guided Tour & Post-Upgrade What's New Highlights",
+                    summaryES: "Al instalar MacFileExplorer por primera vez ahora te guía un asistente claro en 6 pasos para elegir tu idioma, ícono y qué módulos opcionales querés activar (Barra de tareas, AltTab, reproductor Notch, Portapapeles, acceso en la barra superior y Ver Escritorio con ⌘D), con un botón «Instalar por defecto» para empezar al instante en un clic. Luego podés recorrer un tour interactivo con globitos señalando cada zona de la ventana —que podés suspender o cerrar en cualquier momento con un clic o presionando Esc— y volver a abrir ambos cuando quieras desde el menú Ayuda. Además, cada vez que actualices a una nueva versión, la app abrirá automáticamente las Notas de la versión resaltando exactamente qué funciones se agregaron desde la versión que tenías instalada.",
+                    summaryEN: "Installing MacFileExplorer for the first time now greets you with a friendly 6-step setup wizard to choose your language, app icon, and which optional modules you want enabled (Taskbar, AltTab, Notch music player, Clipboard History, menu bar tray icon, and View Desktop with ⌘D), plus an «Install by Default» button to start immediately in one click. Afterwards, an interactive guided tour highlights each area of the window with floating callout bubbles that you can suspend or close at any moment (or replay anytime from the Help menu). Plus, whenever you update to a newer version, MacFileExplorer automatically opens Release Notes highlighting every feature added since the version you previously had installed."
+                ),
+                ReleaseNoteItem(
+                    id: "about-bug-report-and-monthly-log-diagnostics",
+                    icon: "ladybug.fill",
+                    titleES: "Reportar errores e ideas directo desde «Acerca de» + revisión mensual del log interno",
+                    titleEN: "Report Bugs & Ideas Right Inside «About» + Monthly Internal Error Check",
+                    summaryES: "La ventana «Acerca de MacFileExplorer» ahora incluye una pestaña simple y sin desplazamiento «Reportar error / Idea» (accesible también desde Ayuda → Reportar un error o sugerencia…) con botón «Enviar reporte» siempre visible para contarnos cualquier problema o sugerencia sin tecnicismos. Además, una vez al mes junto a la comprobación de actualizaciones, la app revisa si aparecieron errores nuevos en su registro interno (ocultando siempre tu usuario, nombres de archivos y datos personales) y te avisa para revisarlos y enviarlos en un clic.",
+                    summaryEN: "The «About MacFileExplorer» window now features a clean, scroll-free «Report Bug / Idea» tab (also available via Help → Report a Bug or Suggestion…) with an always-visible «Send Report» button so you can share issues or ideas in plain words. Plus, during the monthly update check-in, the app scans its internal error log for new issues (automatically hiding your username, filenames, and personal info) and offers a 1-click option to review and send them."
+                )
+            ]
+        ),
+        ReleaseNoteSection(
             id: "v2.6.0-notch-player-taskbar-smart-layout-shortcuts-tools",
-            versionLabelES: "Versión 2.6.0 — Reproductor musical «Notch», Barra de tareas inteligente sin scroll ni apps fantasma, Administrador de atajos, «Tools» (⌘D) y Permisos transparentes",
-            versionLabelEN: "Version 2.6.0 — «Notch» Music Player, Smart No-Scroll & Auto-Hide Taskbar, All Shortcuts Manager, «Tools» (⌘D) & Transparent Permissions Guide",
+            semanticVersion: "2.6.0",
+            versionLabelES: "Versión 2.6.0 — Reproductor «Notch», Barra inteligente, Atajos y «Tools» (⌘D)",
+            versionLabelEN: "Version 2.6.0 — «Notch» Player, Smart Taskbar, All Shortcuts & «Tools» (⌘D)",
             dateLabelES: "26 nov 2026",
             dateLabelEN: "Nov 26, 2026",
             items: [
@@ -88,8 +149,8 @@ public enum ReleaseNotesCatalog {
                     icon: "waveform",
                     titleES: "Nuevo reproductor de música «Notch» con animaciones fluidas, YouTube Music, Spotify y letras sincronizadas",
                     titleEN: "New «Notch» Music Player with Fluid Animations, YouTube Music, Spotify & Synced Lyrics",
-                    summaryES: "Se incorporó un nuevo menú «Notch» en la barra superior para transformar el Notch de tu MacBook (o la parte superior de cualquier monitor) en un reproductor de música interactivo y elegante sin robarte el foco. Mientras suena música en YouTube Music, Spotify, Apple Music o el navegador, verás la carátula exacta y un ecualizador animado a los costados del Notch, con breves avisos al cambiar de canción. Al pasar el cursor o hacer clic se despliega suavemente con brillo ambiental del color de la portada, controles para pausar, cambiar o adelantar, cambio rápido de parlantes o auriculares y letras sincronizadas en vivo. Cuando no suena música ofrece accesos directos para volver a abrir tu último reproductor (como YouTube Music), la cruz «✕» cierra y oculta el Notch por completo, y podés personalizar tamaño, estilo de carátula, pantallas y comportamiento desde «Configuración de Notch…».",
-                    summaryEN: "Added a new «Notch» menu in the top bar that turns your MacBook's notch (or the top center of any display) into a sleek, interactive music player without stealing focus from your work. While listening on YouTube Music, Spotify, Apple Music, or your browser, exact album artwork and an animated equalizer sit cleanly beside the notch with brief track-change previews. Hover or click to smoothly expand with ambient artwork glow, playback and scrubbing controls, a quick audio output switcher, and live time-synced lyrics. When nothing is playing it offers quick buttons to reopen your last music app (such as YouTube Music), the «✕» button completely closes and hides the Notch, and you can customize size, artwork style, displays, and behavior in «Notch Settings…»."
+                    summaryES: "Se incorporó un nuevo menú «Notch» en la barra superior para transformar el Notch de tu MacBook (o la parte superior de cualquier monitor) en un reproductor de música interactivo y elegante sin robarte el foco. Mientras suena música en YouTube Music, Spotify, Apple Music o el navegador, verás la carátula exacta y un ecualizador animado a los costados del Notch, con breves avisos al cambiar de canción. Al pasar el cursor o hacer clic se despliega suavemente con brillo ambiental del color de la portada, controles para pausar o cambiar tema, barra de avance clicable y arrastrable para saltar al instante a cualquier minuto de la canción (también en YouTube Music), cambio rápido de parlantes o auriculares y letras sincronizadas en vivo. Cuando no suena música ofrece accesos directos para volver a abrir tu último reproductor (como YouTube Music), la cruz «✕» cierra y oculta el Notch por completo, y podés personalizar tamaño, estilo de carátula, pantallas y comportamiento desde «Configuración de Notch…».",
+                    summaryEN: "Added a new «Notch» menu in the top bar that turns your MacBook's notch (or the top center of any display) into a sleek, interactive music player without stealing focus from your work. While listening on YouTube Music, Spotify, Apple Music, or your browser, exact album artwork and an animated equalizer sit cleanly beside the notch with brief track-change previews. Hover or click to smoothly expand with ambient artwork glow, playback controls, a clickable and draggable progress bar to jump instantly to any part of the song (including YouTube Music), a quick audio output switcher, and live time-synced lyrics. When nothing is playing it offers quick buttons to reopen your last music app (such as YouTube Music), the «✕» button completely closes and hides the Notch, and you can customize size, artwork style, displays, and behavior in «Notch Settings…»."
                 ),
                 ReleaseNoteItem(
                     id: "taskbar-overflow-shrink-to-fit-vs-scroll",
@@ -117,7 +178,7 @@ public enum ReleaseNotesCatalog {
                 ),
                 ReleaseNoteItem(
                     id: "taskbar-auto-hide-windowless-document-apps",
-                    icon: "macwindow.badge.minus",
+                    icon: "eye.slash.fill",
                     titleES: "Barra de tareas sin botones fantasma de Preview y apps de documentos sin ventanas",
                     titleEN: "No More Ghost Buttons in Taskbar for Windowless Preview & Document Apps",
                     summaryES: "Apps de documentos de macOS como Preview (Vista Previa), QuickTime Player, TextEdit, Pages, Numbers y Keynote ahora se ocultan automáticamente de la Barra de tareas apenas cerrás su última ventana, y vuelven a mostrarse normalmente cada vez que abrís un archivo en ellas. Además podés sumar o quitar cualquier otra app con clic derecho («Ocultar cuando no tenga ventanas») o desde Configuración de la Barra de tareas, y hacer clic medio sobre cualquier app sin ventanas para cerrarla directamente (configurable).",
@@ -151,6 +212,7 @@ public enum ReleaseNotesCatalog {
         ),
         ReleaseNoteSection(
             id: "v2.5.1-kofi-monthly-checkin-start-menu-focus-mono-dark",
+            semanticVersion: "2.5.1",
             versionLabelES: "Versión 2.5.1 — Menú Inicio sin robar foco, aviso mensual con actualizaciones + Ko-fi, «Acerca de» renovado e ícono Mono Oscuro",
             versionLabelEN: "Version 2.5.1 — Non-Activating Start Menu, Monthly Update Check-In + Optional Ko-fi Tip, Wider About Window & Dark Mono Default Icon",
             dateLabelES: "26 nov 2026",
@@ -176,6 +238,7 @@ public enum ReleaseNotesCatalog {
         ),
         ReleaseNoteSection(
             id: "v2.5.0-office-quicklook-media-actions-taskbar-upgrades",
+            semanticVersion: "2.5.0",
             versionLabelES: "Versión 2.5.0 — Editor Office y CSV con selección por arrastre, Vista Rápida libre con Acciones rápidas y Copiar, Barra de tareas avanzada e ícono rojo PDF",
             versionLabelEN: "Version 2.5.0 — Office & CSV Editor with Drag-Select, Free Quick Look with Media Quick Actions & Copy, Advanced Taskbar & Red PDF Icon",
             dateLabelES: "25 nov 2026",
@@ -281,6 +344,7 @@ public enum ReleaseNotesCatalog {
         ),
         ReleaseNoteSection(
             id: "v2.0.0-start-menu-animations-instant-navigation-bilingual",
+            semanticVersion: "2.0.0",
             versionLabelES: "Versión 2.0.0 — 8 animaciones en el Menú Inicio, carpetas instantáneas y traducción total",
             versionLabelEN: "Version 2.0.0 — 8 Start Menu Animations, Instant Folder Switching & Full Bilingual Polish",
             dateLabelES: "25 nov 2026",
@@ -338,6 +402,7 @@ public enum ReleaseNotesCatalog {
         ),
         ReleaseNoteSection(
             id: "v1.8.1-apple-silicon-performance-and-app-icons",
+            semanticVersion: "1.8.1",
             versionLabelES: "Versión 1.8.1 — Optimización Apple Silicon y 5 íconos seleccionables",
             versionLabelEN: "Version 1.8.1 — Apple Silicon Optimization & 5 Selectable App Icons",
             dateLabelES: "24 nov 2026",
@@ -363,6 +428,7 @@ public enum ReleaseNotesCatalog {
         ),
         ReleaseNoteSection(
             id: "v1.8.0-windows-style-taskbar",
+            semanticVersion: "1.8.0",
             versionLabelES: "Versión 1.8.0 — Barra de tareas estilo Windows, Menú Inicio y Selector AltTab",
             versionLabelEN: "Version 1.8.0 — Windows-Style Taskbar, Start Menu & AltTab Window Switcher",
             dateLabelES: "24 nov 2026",
@@ -436,6 +502,7 @@ public enum ReleaseNotesCatalog {
         ),
         ReleaseNoteSection(
             id: "v1.7.0-ocr-cache-manager-help",
+            semanticVersion: "1.7.0",
             versionLabelES: "Versión 1.7.0 — Índice OCR en Background, Gestor de Caché y Ayuda",
             versionLabelEN: "Version 1.7.0 — Background OCR Index, Cache Manager & Help Guide",
             dateLabelES: "18 nov 2026",
@@ -469,6 +536,7 @@ public enum ReleaseNotesCatalog {
         ),
         ReleaseNoteSection(
             id: "v1.6.0-address-bar-bg-remove-ocr",
+            semanticVersion: "1.6.0",
             versionLabelES: "Versión 1.6.0 — Barra Editable, Eliminar Fondo (PNG) y OCR Preciso",
             versionLabelEN: "Version 1.6.0 — Editable Address Bar, Remove Background & Enhanced OCR",
             dateLabelES: "17 nov 2026",
@@ -502,6 +570,7 @@ public enum ReleaseNotesCatalog {
         ),
         ReleaseNoteSection(
             id: "v1.5.1-check-upgrades",
+            semanticVersion: "1.5.1",
             versionLabelES: "Versión 1.5.1 — Buscar actualizaciones desde GitHub",
             versionLabelEN: "Version 1.5.1 — Check Upgrades from GitHub",
             dateLabelES: "17 nov 2026",
@@ -519,6 +588,7 @@ public enum ReleaseNotesCatalog {
         ),
         ReleaseNoteSection(
             id: "v1.5.0-search-duplicates-transfer-queue",
+            semanticVersion: "1.5.0",
             versionLabelES: "Versión 1.5.0 — Búsqueda Avanzada, Duplicados y Cola de Transferencias",
             versionLabelEN: "Version 1.5.0 — Advanced Search, Duplicates & Transfer Queue",
             dateLabelES: "17 nov 2026",
@@ -560,6 +630,7 @@ public enum ReleaseNotesCatalog {
         ),
         ReleaseNoteSection(
             id: "v1.4.0-quick-actions-privacy-quicklook",
+            semanticVersion: "1.4.0",
             versionLabelES: "Versión 1.4.0 — Quick Actions, Privacy Stripper, Vista Rápida y Fluidez",
             versionLabelEN: "Version 1.4.0 — Quick Actions, Privacy Stripper, Quick Look & Performance",
             dateLabelES: "16 nov 2026",
@@ -633,6 +704,7 @@ public enum ReleaseNotesCatalog {
         ),
         ReleaseNoteSection(
             id: "v1.3-clipboard-tray-quicklook-sessions",
+            semanticVersion: "1.3.0",
             versionLabelES: "Versión 1.3 — Portapapeles Maccy, Tray Icon, Vista Rápida y Sesiones",
             versionLabelEN: "Version 1.3 — Maccy Clipboard, Tray Icon, Quick Look & Sessions",
             dateLabelES: "16 nov 2026",
@@ -674,6 +746,7 @@ public enum ReleaseNotesCatalog {
         ),
         ReleaseNoteSection(
             id: "v1.2-slack-mxmaster-responsive",
+            semanticVersion: "1.2.0",
             versionLabelES: "Versión 1.2 — Slack, Ratón MX Master y Barra Adaptable",
             versionLabelEN: "Version 1.2 — Slack, MX Master Mouse & Responsive Toolbar",
             dateLabelES: "13 nov 2026",
@@ -747,6 +820,7 @@ public enum ReleaseNotesCatalog {
         ),
         ReleaseNoteSection(
             id: "v1.1-customization-navigation",
+            semanticVersion: "1.1.0",
             versionLabelES: "Versión 1.1 — Personalización, Navegación e Iconos",
             versionLabelEN: "Version 1.1 — Customization, Navigation & Icons",
             dateLabelES: "12 nov 2026",
@@ -924,6 +998,7 @@ public enum ReleaseNotesCatalog {
         ),
         ReleaseNoteSection(
             id: "v1.0-google-dragdrop-productivity",
+            semanticVersion: "1.0.1",
             versionLabelES: "Actualización — Google en Pestañas, Arrastre y Productividad",
             versionLabelEN: "Update — Integrated Google Tabs, Drag & Drop & Productivity",
             dateLabelES: "11 nov 2026",
@@ -989,6 +1064,7 @@ public enum ReleaseNotesCatalog {
         ),
         ReleaseNoteSection(
             id: "v1.0-initial-foundation",
+            semanticVersion: "1.0.0",
             versionLabelES: "Versión 1.0 — Lanzamiento y Funciones Principales",
             versionLabelEN: "Version 1.0 — Initial Launch & Core Features",
             dateLabelES: "10 nov 2026",

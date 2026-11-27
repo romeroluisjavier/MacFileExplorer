@@ -110,6 +110,11 @@ public struct CSVSpreadsheetPreviewView: View {
             wasTruncated = doc.wasTruncated
             hasUnsavedChanges = false
         case .failure(let err):
+            InternalErrorLogger.shared.logNonFatalError(
+                category: "OFFICE_CSV_LOAD",
+                error: err,
+                context: ["ext": fileURL.pathExtension.lowercased()]
+            )
             loadError = err.localizedDescription
         }
         isLoading = false
@@ -407,6 +412,11 @@ public struct OfficeExcelPreviewView: View {
             activeSheetIndex = 0
             hasUnsavedChanges = false
         case .failure(let err):
+            InternalErrorLogger.shared.logNonFatalError(
+                category: "OFFICE_EXCEL_LOAD",
+                error: err,
+                context: ["ext": fileURL.pathExtension.lowercased()]
+            )
             loadError = err.localizedDescription
         }
         isLoading = false

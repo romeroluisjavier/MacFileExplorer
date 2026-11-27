@@ -30,7 +30,28 @@ public struct NotchRGBColor: Equatable, Hashable, Codable, Sendable {
         NSColor(calibratedRed: r, green: g, blue: b, alpha: 1.0)
     }
 
+    public init(nsColor: NSColor) {
+        let converted = nsColor.usingColorSpace(.sRGB) ?? nsColor
+        self.init(
+            r: Double(converted.redComponent),
+            g: Double(converted.greenComponent),
+            b: Double(converted.blueComponent)
+        )
+    }
+
     public static let defaultAccent = NotchRGBColor(r: 0.96, g: 0.24, b: 0.36)
+
+    /// Paleta curada de colores de acento rápidos para personalizar el Notch en 1 clic.
+    public static let presetPalette: [(id: String, nameES: String, nameEN: String, color: NotchRGBColor)] = [
+        ("crimson", "Carmesí", "Crimson", NotchRGBColor(r: 0.98, g: 0.22, b: 0.38)),
+        ("violet", "Violeta Neón", "Neon Violet", NotchRGBColor(r: 0.66, g: 0.36, b: 0.99)),
+        ("cobalt", "Azul Eléctrico", "Electric Blue", NotchRGBColor(r: 0.22, g: 0.58, b: 1.00)),
+        ("cyan", "Cian", "Cyan", NotchRGBColor(r: 0.14, g: 0.80, b: 0.94)),
+        ("emerald", "Esmeralda", "Emerald", NotchRGBColor(r: 0.14, g: 0.80, b: 0.45)),
+        ("amber", "Ámbar Dorado", "Amber Gold", NotchRGBColor(r: 0.99, g: 0.68, b: 0.16)),
+        ("coral", "Coral", "Coral", NotchRGBColor(r: 1.00, g: 0.42, b: 0.28)),
+        ("pearl", "Blanco Perla", "Pearl White", NotchRGBColor(r: 0.92, g: 0.94, b: 0.98))
+    ]
 }
 
 // MARK: - Fuente de Reproducción y Modos de Repetición
@@ -339,13 +360,30 @@ public struct NotchTrackInfo: Identifiable, Equatable, Sendable {
         return "\(normTitle)::\(normArtist)"
     }
 
-    /// Subtítulo limpio para mostrar debajo del título (`Artista`, `Álbum` o app fuente).
+    /// Subtítulo limpio para mostrar debajo del título (`Artista`, `Artista · Álbum`, `Álbum` o app fuente).
     public var displaySubtitle: String {
-        if !artist.isEmpty {
-            return artist
+        displaySubtitle(includeAlbum: false)
+    }
+
+    public func displaySubtitle(includeAlbum: Bool) -> String {
+        let trimmedArtist = artist.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedAlbum = album.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if includeAlbum && !trimmedAlbum.isEmpty {
+            let albumMatchesArtist = !trimmedArtist.isEmpty && trimmedAlbum.caseInsensitiveCompare(trimmedArtist) == .orderedSame
+            let albumMatchesTitle = !trimmedTitle.isEmpty && trimmedAlbum.caseInsensitiveCompare(trimmedTitle) == .orderedSame
+            if !trimmedArtist.isEmpty {
+                return (albumMatchesArtist || albumMatchesTitle) ? trimmedArtist : "\(trimmedArtist) · \(trimmedAlbum)"
+            }
+            return trimmedAlbum
         }
-        if !album.isEmpty {
-            return album
+
+        if !trimmedArtist.isEmpty {
+            return trimmedArtist
+        }
+        if includeAlbum && !trimmedAlbum.isEmpty {
+            return trimmedAlbum
         }
         return sourceAppName
     }
@@ -520,6 +558,149 @@ public enum NotchPillSize: String, CaseIterable, Identifiable, Codable, Sendable
         case .compact: return CGSize(width: 560, height: 224)
         case .normal: return CGSize(width: 610, height: 242)
         case .spacious: return CGSize(width: 656, height: 262)
+        }
+    }
+}
+
+/// Modo de color de acento del reproductor Notch.
+public enum NotchAccentColorMode: String, CaseIterable, Identifiable, Codable, Sendable {
+    case dynamicArtwork
+    case sourceBrand
+    case custom
+
+    public var id: String { rawValue }
+
+    public var symbolName: String {
+        switch self {
+        case .dynamicArtwork: return "sparkles"
+        case .sourceBrand: return "music.note"
+        case .custom: return "paintpalette.fill"
+        }
+    }
+
+    @MainActor
+    public func localizedTitle(using loc: LocalizationManager = .shared) -> String {
+        switch self {
+        case .dynamicArtwork: return loc.text(es: "Carátula (auto)", en: "Album Art (Auto)")
+        case .sourceBrand: return loc.text(es: "Color de la app", en: "App Brand Color")
+        case .custom: return loc.text(es: "Personalizado", en: "Custom Color")
+        }
+    }
+}
+
+/// Curva / personalidad de animación para expansión, contracción y transiciones del Notch.
+public enum NotchAnimationStyle: String, CaseIterable, Identifiable, Codable, Sendable {
+    case bouncySpring
+    case smoothFluid
+    case crispSnappy
+    case gentleEase
+
+    public var id: String { rawValue }
+
+    @MainActor
+    public func localizedTitle(using loc: LocalizationManager = .shared) -> String {
+        switch self {
+        case .bouncySpring: return loc.text(es: "Elástico", en: "Bouncy")
+        case .smoothFluid: return loc.text(es: "Fluido", en: "Fluid")
+        case .crispSnappy: return loc.text(es: "Preciso", en: "Snappy")
+        case .gentleEase: return loc.text(es: "Suave", en: "Gentle")
+        }
+    }
+
+    @MainActor
+    public func localizedDescription(using loc: LocalizationManager = .shared) -> String {
+        switch self {
+        case .bouncySpring: return loc.text(es: "Rebote expresivo estilo Isla Dinámica.", en: "Playful Dynamic Island bounce.")
+        case .smoothFluid: return loc.text(es: "Resorte equilibrado y natural (recomendado).", en: "Balanced natural spring (recommended).")
+        case .crispSnappy: return loc.text(es: "Respuesta directa casi sin rebote.", en: "Tight direct response with minimal bounce.")
+        case .gentleEase: return loc.text(es: "Deslizamiento progresivo clásico sin rebote.", en: "Classic smooth ease-in-out with zero bounce.")
+        }
+    }
+
+    /// Construye la `Animation` SwiftUI aplicando el estilo y el multiplicador de velocidad (`0.5...2.0`).
+    public func makeAnimation(baseResponse: Double = 0.36, speedMultiplier: Double = 1.0) -> Animation {
+        let safeSpeed = min(max(speedMultiplier, 0.5), 2.0)
+        let scaled = max(0.10, baseResponse / safeSpeed)
+        switch self {
+        case .bouncySpring:
+            return .spring(response: scaled * 1.06, dampingFraction: 0.64, blendDuration: 0.08)
+        case .smoothFluid:
+            return .spring(response: scaled, dampingFraction: 0.79, blendDuration: 0.10)
+        case .crispSnappy:
+            return .spring(response: scaled * 0.80, dampingFraction: 0.93, blendDuration: 0.06)
+        case .gentleEase:
+            return .easeInOut(duration: scaled * 0.95)
+        }
+    }
+}
+
+/// Estilo visual del ecualizador animado en tiempo real del Notch.
+public enum NotchVisualizerStyle: String, CaseIterable, Identifiable, Codable, Sendable {
+    case classicBars
+    case waveformMirror
+    case bouncingDots
+    case pulseRing
+
+    public var id: String { rawValue }
+
+    public var symbolName: String {
+        switch self {
+        case .classicBars: return "chart.bar.fill"
+        case .waveformMirror: return "waveform"
+        case .bouncingDots: return "ellipsis"
+        case .pulseRing: return "circle.circle.fill"
+        }
+    }
+
+    @MainActor
+    public func localizedTitle(using loc: LocalizationManager = .shared) -> String {
+        switch self {
+        case .classicBars: return loc.text(es: "Barras", en: "Bars")
+        case .waveformMirror: return loc.text(es: "Onda", en: "Wave")
+        case .bouncingDots: return loc.text(es: "Puntos", en: "Dots")
+        case .pulseRing: return loc.text(es: "Pulso", en: "Pulse")
+        }
+    }
+}
+
+/// Escala tipográfica del panel de letras sincronizadas tipo karaoke.
+public enum NotchLyricsFontSize: String, CaseIterable, Identifiable, Codable, Sendable {
+    case compact
+    case normal
+    case large
+
+    public var id: String { rawValue }
+
+    @MainActor
+    public func localizedTitle(using loc: LocalizationManager = .shared) -> String {
+        switch self {
+        case .compact: return loc.text(es: "Compacto", en: "Compact")
+        case .normal: return loc.text(es: "Normal", en: "Normal")
+        case .large: return loc.text(es: "Grande", en: "Large")
+        }
+    }
+
+    public var activeFontSize: CGFloat {
+        switch self {
+        case .compact: return 12.2
+        case .normal: return 13.5
+        case .large: return 15.2
+        }
+    }
+
+    public var inactiveFontSize: CGFloat {
+        switch self {
+        case .compact: return 11.0
+        case .normal: return 12.2
+        case .large: return 13.4
+        }
+    }
+
+    public var lineSpacing: CGFloat {
+        switch self {
+        case .compact: return 7
+        case .normal: return 9
+        case .large: return 11
         }
     }
 }

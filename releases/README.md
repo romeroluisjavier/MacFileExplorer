@@ -2,7 +2,28 @@
 
 > ☕ **MacFileExplorer es 100% gratis y sin anuncios.** Si te resulta útil y querés colaborar con una **propina opcional** para apoyar el desarrollo, podés invitar un café en [**ko-fi.com/luisjavierromero**](https://ko-fi.com/luisjavierromero) *(o escanear el código QR desde *Acerca de MacFileExplorer* o *Ayuda → Historial de releases* dentro de la app)*.
 
-## Versión 2.6.0 (Versión Actual)
+## Versión 2.7.0 (Versión Actual)
+
+- **Instalador (GitHub Releases):** [`MacFileExplorer-2.7.0.dmg`](https://github.com/romeroluisjavier/MacFileExplorer/releases/download/v2.7.0/MacFileExplorer-2.7.0.dmg) *(copia local: [`./MacFileExplorer-2.7.0.dmg`](./MacFileExplorer-2.7.0.dmg))*
+- **Tamaño:** ~30 MB
+- **Arquitectura:** Binario Universal (`arm64` Apple Silicon + `x86_64` Intel)
+- **Requisitos del sistema:** macOS 14.0 (Sonoma) o posterior
+
+### Novedades principales en la v2.7.0:
+1. **Asistente de instalación inicial (6 pasos), Tour interactivo y Novedades destacadas al actualizar**:
+   - **Asistente paso a paso al instalar por primera vez**: elegí tu idioma, ícono y qué módulos opcionales querés activar (Barra de tareas, AltTab, reproductor Notch, Portapapeles, ícono en la barra superior y Ver Escritorio con `⌘D`), con barra de progreso en vivo y botón **«Instalar por defecto (omitir asistente)»** para empezar al instante.
+   - **Tour interactivo con globitos desplegables**: señala las 7 zonas clave de la app y se puede suspender o cerrar en cualquier momento con un clic o `Esc` (y reabrirse cuando quieras desde el menú *Ayuda*).
+   - **Novedades automáticas tras cada upgrade**: al actualizar desde una versión previa, abre automáticamente *Acerca de → Notas de la versión* con banner de actualización y etiquetas **`NUEVO`** resaltando únicamente lo que se agregó desde tu versión anterior.
+2. **10 nuevas configuraciones para el reproductor «Notch» + barra de avance interactiva en YouTube Music**:
+   - Personalizá en vivo desde *Configuración de Notch → Apariencia y Animaciones*: **color de acento** (carátula, app musical o color personalizado), **tipo de animación** (*Elástico*, *Fluido*, *Preciso*, *Suave*), **velocidad** (`0.5×`–`2.0×`), **mostrar/ocultar tapa del álbum**, **mostrar/ocultar nombre del álbum**, **4 estilos de visualizador** (*Barras*, *Onda*, *Puntos*, *Pulso*), **intensidad del brillo ambiental**, **opacidad del fondo** (vidrio translúcido a negro OLED), **insignia de la app sobre la carátula** y **tamaño de texto en letras sincronizadas**.
+   - **Adelantar o retroceder canciones desde el Notch**: hacé clic o arrastrá directamente sobre la barra de avance (también compatible con YouTube Music, Spotify y Apple Music).
+3. **Reportar errores e ideas directo desde «Acerca de» + revisión mensual del log interno**:
+   - Pestaña simple, amigable y sin scroll **«Reportar error / Idea»** en *Acerca de* (y *Ayuda → Reportar un error o sugerencia…*) con botón **«Enviar reporte»** siempre visible, prellenado automático de versión/macOS y vista previa del diagnóstico técnico sin datos personales.
+   - Revisión mensual automática junto al chequeo de actualizaciones para detectar errores internos nuevos y ofrecer enviarlos en 1 clic.
+
+---
+
+## Versión 2.6.0
 
 - **Instalador (GitHub Releases):** [`MacFileExplorer-2.6.0.dmg`](https://github.com/romeroluisjavier/MacFileExplorer/releases/download/v2.6.0/MacFileExplorer-2.6.0.dmg) *(copia local: [`./MacFileExplorer-2.6.0.dmg`](./MacFileExplorer-2.6.0.dmg))*
 - **Tamaño:** ~28 MB

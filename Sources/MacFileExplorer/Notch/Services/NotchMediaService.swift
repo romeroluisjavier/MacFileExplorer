@@ -158,9 +158,18 @@ private final class NotchMediaRemoteBridge: @unchecked Sendable {
     }
 
     func setElapsedTime(_ seconds: TimeInterval) -> Bool {
-        guard let setElapsedTimeFn else { return false }
-        setElapsedTimeFn(max(0, seconds))
-        return true
+        let clamped = max(0, seconds)
+        if let setElapsedTimeFn {
+            setElapsedTimeFn(clamped)
+            return true
+        }
+        if let sendCommandFn {
+            let options: NSDictionary = [
+                "kMRMediaRemoteOptionPlaybackPosition": NSNumber(value: clamped)
+            ]
+            return sendCommandFn(24, options)
+        }
+        return false
     }
 
     private struct RawInfo: Sendable {
@@ -300,6 +309,7 @@ public final class NotchMediaService {
     private var lastArtworkDataHash: Int?
     private var lastYTMProbeFailedAt: Date?
     private var lastOptimisticToggleAt: Date?
+    private var lastOptimisticSeekAt: Date?
     private var browserUserForcedPause: Bool?
     private var browserAudioSilenceSince: Date?
     private var deniedAutomationBundleIDs: Set<String> = []
@@ -589,6 +599,7 @@ public final class NotchMediaService {
 
         track.elapsedTime = clamped
         track.lastUpdatedAt = Date()
+        lastOptimisticSeekAt = Date()
         currentTrack = track
 
         if isDemoMode { return }
@@ -626,12 +637,12 @@ public final class NotchMediaService {
                 """)
                 await self.schedulePostActionRefresh(delayMs: 280)
             }
-        case .mediaRemote:
+        case .mediaRemote, .browserWindowFallback:
             _ = NotchMediaRemoteBridge.shared.setElapsedTime(clamped)
             Task { [weak self] in
-                await self?.schedulePostActionRefresh(delayMs: 280)
+                await self?.schedulePostActionRefresh(delayMs: 320)
             }
-        case .browserWindowFallback, .none, .demo:
+        case .none, .demo:
             break
         }
     }
@@ -1088,6 +1099,16 @@ public final class NotchMediaService {
             }
             if !next.hasKnownDuration, prev.hasKnownDuration {
                 next.duration = prev.duration
+            }
+
+            // Evitar rebote visual con una encuesta en vuelo justo después de hacer clic/arrastrar la barra de avance.
+            if !forceUpdate,
+               let seekAt = lastOptimisticSeekAt,
+               Date().timeIntervalSince(seekAt) < 0.95 {
+                let expected = prev.interpolatedElapsedTime(at: next.lastUpdatedAt)
+                if abs(next.elapsedTime - expected) > 2.5 {
+                    next.elapsedTime = expected
+                }
             }
 
             // Evitar micro-saltos hacia atrás (< 0.9s) en fuentes con resolución de 1 segundo mientras reproduce.
@@ -2362,7 +2383,7 @@ public final class NotchMediaService {
             sourceApp: found.source,
             sourceBundleID: found.bundleID,
             sourceAppName: found.source == .youtubeMusic ? "YouTube Music" : found.appName,
-            supportsSeeking: false,
+            supportsSeeking: duration > 1,
             supportsShuffleRepeat: false,
             isShuffling: false,
             repeatMode: found.repeatMode,

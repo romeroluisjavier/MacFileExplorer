@@ -603,6 +603,11 @@ public struct OfficePowerPointPreviewView: View {
             selectedBoxID = model.slides.first?.textBoxes.first?.id
             hasUnsavedChanges = false
         case .failure(let err):
+            InternalErrorLogger.shared.logNonFatalError(
+                category: "OFFICE_PPTX_LOAD",
+                error: err,
+                context: ["ext": fileURL.pathExtension.lowercased()]
+            )
             loadError = err.localizedDescription
         }
         isLoading = false

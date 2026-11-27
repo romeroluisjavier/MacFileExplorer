@@ -57,10 +57,7 @@ public struct NotchExpandedContentView: View {
     }
 
     private var accentColor: Color {
-        if let track {
-            return track.dominantColor.swiftUIColor
-        }
-        return prefs.lastPlayedSource?.swiftUIAccentColor ?? NotchMediaSource.youtubeMusic.swiftUIAccentColor
+        prefs.resolvedAccentColor(for: track)
     }
 
     private var shouldTickTimeline: Bool {
@@ -126,11 +123,11 @@ public struct NotchExpandedContentView: View {
             .padding(.bottom, 15)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .animation(
-                prefs.enableAnimations ? .spring(response: 0.34, dampingFraction: 0.82) : nil,
+                prefs.resolvedAnimation(baseResponse: 0.34),
                 value: isAudioPickerOpen
             )
             .animation(
-                prefs.enableAnimations ? .spring(response: 0.36, dampingFraction: 0.80) : nil,
+                prefs.resolvedAnimation(baseResponse: 0.36),
                 value: isLyricsPaneOpen
             )
         }
@@ -331,16 +328,18 @@ public struct NotchExpandedContentView: View {
         progress: Double
     ) -> some View {
         HStack(alignment: .center, spacing: 16) {
-            // Columna izquierda: Carátula 78×78 redondeada con resplandor y mini-insignia de fuente
-            expandedArtworkView(
-                track: track,
-                size: compactArtworkDimension,
-                cornerRadius: 16
-            )
+            // Columna izquierda: Carátula redondeada con resplandor (opcional)
+            if prefs.showAlbumArtwork {
+                expandedArtworkView(
+                    track: track,
+                    size: compactArtworkDimension,
+                    cornerRadius: 16
+                )
+            }
 
             // Columna derecha: Metadatos + Ecualizador + Scrubber interactivo + Transporte
             VStack(alignment: .leading, spacing: 9) {
-                // Título (marquee), artista y ecualizador
+                // Título (marquee), artista/álbum y ecualizador
                 HStack(alignment: .center, spacing: 10) {
                     VStack(alignment: .leading, spacing: 2) {
                         NotchMarqueeTextView(
@@ -348,17 +347,18 @@ public struct NotchExpandedContentView: View {
                             font: .system(size: 14.5, weight: .bold),
                             color: .white,
                             enableMarquee: prefs.enableMarqueeTitle,
-                            alignment: .leading
+                            alignment: .leading,
+                            speed: prefs.scaledMarqueeSpeed(28)
                         )
                         .frame(height: 19)
 
                         NotchMarqueeTextView(
-                            text: track.displaySubtitle,
+                            text: track.displaySubtitle(includeAlbum: prefs.showAlbumName),
                             font: .system(size: 11.8, weight: .medium),
                             color: Color.white.opacity(0.66),
                             enableMarquee: prefs.enableMarqueeTitle,
                             alignment: .leading,
-                            speed: 24,
+                            speed: prefs.scaledMarqueeSpeed(24),
                             pauseDuration: 2.8
                         )
                         .frame(height: 15)
@@ -372,7 +372,9 @@ public struct NotchExpandedContentView: View {
                             barWidth: 2.6,
                             barSpacing: 2.3,
                             maxHeight: 16,
-                            enableAnimations: prefs.enableAnimations
+                            enableAnimations: prefs.enableAnimations,
+                            style: prefs.visualizerStyle,
+                            speedMultiplier: prefs.animationSpeed
                         )
                         .padding(.trailing, 2)
                     }
@@ -409,13 +411,15 @@ public struct NotchExpandedContentView: View {
         progress: Double
     ) -> some View {
         HStack(alignment: .center, spacing: 14) {
-            // Columna izquierda: Carátula + Título/Artista + Scrubber compacto + Transporte
+            // Columna izquierda: Carátula + Título/Artista/Álbum + Scrubber compacto + Transporte
             VStack(alignment: .center, spacing: 5.5) {
-                expandedArtworkView(
-                    track: track,
-                    size: 56,
-                    cornerRadius: 13
-                )
+                if prefs.showAlbumArtwork {
+                    expandedArtworkView(
+                        track: track,
+                        size: 56,
+                        cornerRadius: 13
+                    )
+                }
 
                 VStack(spacing: 1.5) {
                     NotchMarqueeTextView(
@@ -423,17 +427,18 @@ public struct NotchExpandedContentView: View {
                         font: .system(size: 12.8, weight: .bold),
                         color: .white,
                         enableMarquee: prefs.enableMarqueeTitle,
-                        alignment: .center
+                        alignment: .center,
+                        speed: prefs.scaledMarqueeSpeed(26)
                     )
                     .frame(height: 16)
 
                     NotchMarqueeTextView(
-                        text: track.displaySubtitle,
+                        text: track.displaySubtitle(includeAlbum: prefs.showAlbumName),
                         font: .system(size: 10.8, weight: .medium),
                         color: Color.white.opacity(0.62),
                         enableMarquee: prefs.enableMarqueeTitle,
                         alignment: .center,
-                        speed: 22
+                        speed: prefs.scaledMarqueeSpeed(22)
                     )
                     .frame(height: 14)
                 }
@@ -482,6 +487,7 @@ public struct NotchExpandedContentView: View {
                 accentColor: accentColor,
                 supportsSeeking: track.supportsSeeking,
                 enableAnimations: prefs.enableAnimations,
+                lyricsFontSize: prefs.lyricsFontSize,
                 loc: loc,
                 onSeekToLine: { seconds in
                     if track.supportsSeeking {
@@ -545,31 +551,33 @@ public struct NotchExpandedContentView: View {
                         .stroke(Color.white.opacity(0.20), lineWidth: 0.85)
                 )
                 .shadow(
-                    color: prefs.showAmbientArtworkGlow ? accentColor.opacity(0.45) : Color.black.opacity(0.55),
+                    color: prefs.showAmbientArtworkGlow ? accentColor.opacity(0.68 * prefs.ambientGlowIntensity) : Color.black.opacity(0.55),
                     radius: prefs.showAmbientArtworkGlow ? 14 : 8,
                     x: 0,
                     y: 5
                 )
 
-                // Mini-insignia de la app de origen en esquina inferior derecha
-                ZStack {
-                    Circle()
-                        .fill(Color.black.opacity(0.86))
-                    if let appIcon {
-                        Image(nsImage: appIcon)
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .frame(width: 15, height: 15)
-                            .clipShape(Circle())
-                    } else {
-                        Image(systemName: track.sourceApp.symbolName)
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundStyle(track.sourceApp.swiftUIAccentColor)
+                // Mini-insignia de la app de origen en esquina inferior derecha (configurable)
+                if prefs.showSourceBadgeOnArtwork {
+                    ZStack {
+                        Circle()
+                            .fill(Color.black.opacity(0.86))
+                        if let appIcon {
+                            Image(nsImage: appIcon)
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .frame(width: 15, height: 15)
+                                .clipShape(Circle())
+                        } else {
+                            Image(systemName: track.sourceApp.symbolName)
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundStyle(track.sourceApp.swiftUIAccentColor)
+                        }
                     }
+                    .frame(width: 21, height: 21)
+                    .overlay(Circle().stroke(Color.white.opacity(0.22), lineWidth: 0.75))
+                    .offset(x: 4, y: 4)
                 }
-                .frame(width: 21, height: 21)
-                .overlay(Circle().stroke(Color.white.opacity(0.22), lineWidth: 0.75))
-                .offset(x: 4, y: 4)
             }
             .scaleEffect(
                 prefs.enableAnimations
@@ -577,15 +585,15 @@ public struct NotchExpandedContentView: View {
                     : 1.0
             )
             .animation(
-                prefs.enableAnimations ? .spring(response: 0.36, dampingFraction: 0.72) : nil,
+                prefs.resolvedAnimation(baseResponse: 0.36),
                 value: track.isPlaying
             )
             .animation(
-                prefs.enableAnimations ? .spring(response: 0.28, dampingFraction: 0.75) : nil,
+                prefs.resolvedAnimation(baseResponse: 0.28),
                 value: isArtworkHovered
             )
             .animation(
-                prefs.enableAnimations ? .spring(response: 0.38, dampingFraction: 0.80) : nil,
+                prefs.resolvedAnimation(baseResponse: 0.38),
                 value: track.id
             )
         }
@@ -1059,6 +1067,7 @@ public struct NotchScrubberBarView: View {
     @ViewState private var isHovered: Bool = false
     @ViewState private var isDragging: Bool = false
     @ViewState private var dragProgress: Double = 0
+    @ViewState private var didPushCursor: Bool = false
 
     public init(
         elapsed: TimeInterval,
@@ -1153,14 +1162,29 @@ public struct NotchScrubberBarView: View {
                         }
                 )
             }
-            .frame(height: 14)
+            .frame(height: 18)
             .onHover { hovering in
+                if isSeekable {
+                    if hovering && !didPushCursor {
+                        NSCursor.pointingHand.push()
+                        didPushCursor = true
+                    } else if !hovering && didPushCursor {
+                        NSCursor.pop()
+                        didPushCursor = false
+                    }
+                }
                 if enableAnimations {
                     withAnimation(.spring(response: 0.22, dampingFraction: 0.78)) {
                         isHovered = hovering
                     }
                 } else {
                     isHovered = hovering
+                }
+            }
+            .onDisappear {
+                if didPushCursor {
+                    NSCursor.pop()
+                    didPushCursor = false
                 }
             }
 
@@ -1203,6 +1227,7 @@ public struct NotchSyncedLyricsColumnView: View {
     public let accentColor: Color
     public let supportsSeeking: Bool
     public let enableAnimations: Bool
+    public let lyricsFontSize: NotchLyricsFontSize
     public let loc: LocalizationManager
     public let onSeekToLine: (TimeInterval) -> Void
 
@@ -1212,6 +1237,7 @@ public struct NotchSyncedLyricsColumnView: View {
         accentColor: Color,
         supportsSeeking: Bool,
         enableAnimations: Bool,
+        lyricsFontSize: NotchLyricsFontSize = .normal,
         loc: LocalizationManager,
         onSeekToLine: @escaping (TimeInterval) -> Void
     ) {
@@ -1220,6 +1246,7 @@ public struct NotchSyncedLyricsColumnView: View {
         self.accentColor = accentColor
         self.supportsSeeking = supportsSeeking
         self.enableAnimations = enableAnimations
+        self.lyricsFontSize = lyricsFontSize
         self.loc = loc
         self.onSeekToLine = onSeekToLine
     }
@@ -1231,10 +1258,10 @@ public struct NotchSyncedLyricsColumnView: View {
 
         case .plain(let lines):
             ScrollView(.vertical, showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 7) {
+                VStack(alignment: .leading, spacing: lyricsFontSize.lineSpacing - 2) {
                     ForEach(Array(lines.enumerated()), id: \.offset) { _, line in
                         Text(line)
-                            .font(.system(size: 12.2, weight: .medium))
+                            .font(.system(size: lyricsFontSize.inactiveFontSize, weight: .medium))
                             .foregroundStyle(Color.white.opacity(0.76))
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
@@ -1292,7 +1319,7 @@ public struct NotchSyncedLyricsColumnView: View {
 
         return ScrollViewReader { proxy in
             ScrollView(.vertical, showsIndicators: false) {
-                LazyVStack(alignment: .leading, spacing: 9) {
+                LazyVStack(alignment: .leading, spacing: lyricsFontSize.lineSpacing) {
                     Color.clear.frame(height: 18)
 
                     ForEach(Array(lines.enumerated()), id: \.element.id) { index, line in
@@ -1304,7 +1331,7 @@ public struct NotchSyncedLyricsColumnView: View {
                             onSeekToLine(line.time)
                         } label: {
                             Text(line.text)
-                                .font(.system(size: isActive ? 13.5 : 12.2, weight: isActive ? .bold : .medium))
+                                .font(.system(size: isActive ? lyricsFontSize.activeFontSize : lyricsFontSize.inactiveFontSize, weight: isActive ? .bold : .medium))
                                 .foregroundStyle(
                                     isActive
                                         ? Color.white

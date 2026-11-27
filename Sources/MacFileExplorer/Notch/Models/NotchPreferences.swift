@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import SwiftUI
 
 /// Preferencias reactivas y persistentes del reproductor **Notch** (estilo Notchy) integrado en `MacFileExplorer`.
 ///
@@ -25,6 +26,18 @@ public final class NotchPreferences {
     public static let maxYouTubeMusicAPIPort: Int = 65535
     public static let defaultYouTubeMusicAPIPort: Int = 26538
 
+    public static let minAnimationSpeed: Double = 0.5
+    public static let maxAnimationSpeed: Double = 2.0
+    public static let defaultAnimationSpeed: Double = 1.0
+
+    public static let minAmbientGlowIntensity: Double = 0.10
+    public static let maxAmbientGlowIntensity: Double = 1.00
+    public static let defaultAmbientGlowIntensity: Double = 0.55
+
+    public static let minBackgroundOpacity: Double = 0.70
+    public static let maxBackgroundOpacity: Double = 1.00
+    public static let defaultBackgroundOpacity: Double = 1.00
+
     private let defaults: UserDefaults
     private var isBootstrapping = false
 
@@ -47,6 +60,20 @@ public final class NotchPreferences {
         static let enableSwipeToSkip = "com.macfileexplorer.notch.enableSwipeToSkip"
         static let enableAnimations = "com.macfileexplorer.notch.enableAnimations"
         static let youtubeMusicAPIPort = "com.macfileexplorer.notch.youtubeMusicAPIPort"
+        // 10 nuevas configuraciones avanzadas de personalización del Notch
+        static let accentColorMode = "com.macfileexplorer.notch.accentColorMode"
+        static let customAccentColorR = "com.macfileexplorer.notch.customAccentColor.r"
+        static let customAccentColorG = "com.macfileexplorer.notch.customAccentColor.g"
+        static let customAccentColorB = "com.macfileexplorer.notch.customAccentColor.b"
+        static let animationStyle = "com.macfileexplorer.notch.animationStyle"
+        static let animationSpeed = "com.macfileexplorer.notch.animationSpeed"
+        static let showAlbumArtwork = "com.macfileexplorer.notch.showAlbumArtwork"
+        static let showAlbumName = "com.macfileexplorer.notch.showAlbumName"
+        static let visualizerStyle = "com.macfileexplorer.notch.visualizerStyle"
+        static let ambientGlowIntensity = "com.macfileexplorer.notch.ambientGlowIntensity"
+        static let backgroundOpacity = "com.macfileexplorer.notch.backgroundOpacity"
+        static let showSourceBadgeOnArtwork = "com.macfileexplorer.notch.showSourceBadgeOnArtwork"
+        static let lyricsFontSize = "com.macfileexplorer.notch.lyricsFontSize"
         static let lastPlayedSource = "com.macfileexplorer.notch.lastPlayedSource"
         static let lastPlayedBundleID = "com.macfileexplorer.notch.lastPlayedBundleID"
         static let lastPlayedAppName = "com.macfileexplorer.notch.lastPlayedAppName"
@@ -221,6 +248,158 @@ public final class NotchPreferences {
         }
     }
 
+    // MARK: - Personalización Avanzada (10 Opciones de Color, Animación, Carátula y Letras)
+
+    /// 1. Modo de color de acento (`Carátula automática` / `Color de la app` / `Personalizado`).
+    public var accentColorMode: NotchAccentColorMode {
+        didSet {
+            guard !isBootstrapping, accentColorMode != oldValue else { return }
+            defaults.set(accentColorMode.rawValue, forKey: Keys.accentColorMode)
+            onAppearanceOrLayoutChanged?()
+        }
+    }
+
+    /// Color personalizado utilizado cuando `accentColorMode == .custom`.
+    public var customAccentColor: NotchRGBColor {
+        didSet {
+            guard !isBootstrapping, customAccentColor != oldValue else { return }
+            defaults.set(customAccentColor.r, forKey: Keys.customAccentColorR)
+            defaults.set(customAccentColor.g, forKey: Keys.customAccentColorG)
+            defaults.set(customAccentColor.b, forKey: Keys.customAccentColorB)
+            onAppearanceOrLayoutChanged?()
+        }
+    }
+
+    /// 2. Tipo / personalidad de animación (`Elástico`, `Fluido`, `Preciso`, `Suave`).
+    public var animationStyle: NotchAnimationStyle {
+        didSet {
+            guard !isBootstrapping, animationStyle != oldValue else { return }
+            defaults.set(animationStyle.rawValue, forKey: Keys.animationStyle)
+            onAppearanceOrLayoutChanged?()
+        }
+    }
+
+    /// 3. Velocidad global de las animaciones (`0.5×` a `2.0×`: expansión, ecualizador y marquee).
+    public var animationSpeed: Double {
+        didSet {
+            let clamped = min(max(animationSpeed, Self.minAnimationSpeed), Self.maxAnimationSpeed)
+            if clamped != animationSpeed {
+                animationSpeed = clamped
+                return
+            }
+            guard !isBootstrapping, clamped != oldValue else { return }
+            defaults.set(clamped, forKey: Keys.animationSpeed)
+        }
+    }
+
+    /// 4. Mostrar u ocultar la tapa del álbum (carátula) tanto en colapsado como expandido.
+    public var showAlbumArtwork: Bool {
+        didSet {
+            guard !isBootstrapping, showAlbumArtwork != oldValue else { return }
+            defaults.set(showAlbumArtwork, forKey: Keys.showAlbumArtwork)
+            onAppearanceOrLayoutChanged?()
+        }
+    }
+
+    /// 5. Mostrar u ocultar el nombre del álbum junto al artista cuando esté disponible.
+    public var showAlbumName: Bool {
+        didSet {
+            guard !isBootstrapping, showAlbumName != oldValue else { return }
+            defaults.set(showAlbumName, forKey: Keys.showAlbumName)
+            onAppearanceOrLayoutChanged?()
+        }
+    }
+
+    /// 6. Estilo visual del ecualizador animado (`Barras`, `Onda`, `Puntos`, `Pulso`).
+    public var visualizerStyle: NotchVisualizerStyle {
+        didSet {
+            guard !isBootstrapping, visualizerStyle != oldValue else { return }
+            defaults.set(visualizerStyle.rawValue, forKey: Keys.visualizerStyle)
+            onAppearanceOrLayoutChanged?()
+        }
+    }
+
+    /// 7. Intensidad del resplandor ambiental (`0.10...1.00`).
+    public var ambientGlowIntensity: Double {
+        didSet {
+            let clamped = min(max(ambientGlowIntensity, Self.minAmbientGlowIntensity), Self.maxAmbientGlowIntensity)
+            if clamped != ambientGlowIntensity {
+                ambientGlowIntensity = clamped
+                return
+            }
+            guard !isBootstrapping, clamped != oldValue else { return }
+            defaults.set(clamped, forKey: Keys.ambientGlowIntensity)
+        }
+    }
+
+    /// 8. Opacidad del fondo del Notch (`0.70` vidrio oscuro translúcido ↔ `1.00` negro OLED puro).
+    public var backgroundOpacity: Double {
+        didSet {
+            let clamped = min(max(backgroundOpacity, Self.minBackgroundOpacity), Self.maxBackgroundOpacity)
+            if clamped != backgroundOpacity {
+                backgroundOpacity = clamped
+                return
+            }
+            guard !isBootstrapping, clamped != oldValue else { return }
+            defaults.set(clamped, forKey: Keys.backgroundOpacity)
+        }
+    }
+
+    /// 9. Mostrar la mini-insignia de la app musical (YouTube Music / Spotify / Apple Music) sobre la carátula.
+    public var showSourceBadgeOnArtwork: Bool {
+        didSet {
+            guard !isBootstrapping, showSourceBadgeOnArtwork != oldValue else { return }
+            defaults.set(showSourceBadgeOnArtwork, forKey: Keys.showSourceBadgeOnArtwork)
+            onAppearanceOrLayoutChanged?()
+        }
+    }
+
+    /// 10. Tamaño tipográfico de las letras sincronizadas (`Compacto`, `Normal`, `Grande`).
+    public var lyricsFontSize: NotchLyricsFontSize {
+        didSet {
+            guard !isBootstrapping, lyricsFontSize != oldValue else { return }
+            defaults.set(lyricsFontSize.rawValue, forKey: Keys.lyricsFontSize)
+            onAppearanceOrLayoutChanged?()
+        }
+    }
+
+    // MARK: - Helpers Visuales Derivados
+
+    /// Resuelve el color de acento activo según `accentColorMode` y la pista actual.
+    public func resolvedAccentColor(for track: NotchTrackInfo?) -> Color {
+        switch accentColorMode {
+        case .dynamicArtwork:
+            if let track {
+                return track.dominantColor.swiftUIColor
+            }
+            return lastPlayedSource?.swiftUIAccentColor ?? NotchMediaSource.youtubeMusic.swiftUIAccentColor
+        case .sourceBrand:
+            if let track {
+                return track.sourceApp.swiftUIAccentColor
+            }
+            return lastPlayedSource?.swiftUIAccentColor ?? NotchMediaSource.youtubeMusic.swiftUIAccentColor
+        case .custom:
+            return customAccentColor.swiftUIColor
+        }
+    }
+
+    /// Devuelve la animación SwiftUI configurada por el usuario (o `nil` si las animaciones están apagadas).
+    public func resolvedAnimation(baseResponse: Double = 0.36) -> Animation? {
+        guard enableAnimations else { return nil }
+        return animationStyle.makeAnimation(baseResponse: baseResponse, speedMultiplier: animationSpeed)
+    }
+
+    /// Calcula la fuerza real del brillo radial ambiental según el deslizador `ambientGlowIntensity`.
+    public func effectiveGlowStrength(isExpanded: Bool) -> Double {
+        let base = isExpanded ? 0.56 : 0.36
+        return base * ambientGlowIntensity
+    }
+
+    /// Escala la velocidad del desplazamiento Marquee según `animationSpeed`.
+    public func scaledMarqueeSpeed(_ baseSpeed: CGFloat) -> CGFloat {
+        baseSpeed * CGFloat(animationSpeed)
+    }
+
     // MARK: - Integración YouTube Music Desktop API
 
     public var youtubeMusicAPIPort: Int {
@@ -318,6 +497,24 @@ public final class NotchPreferences {
         let savedPort = defaults.object(forKey: Keys.youtubeMusicAPIPort) as? Int ?? Self.defaultYouTubeMusicAPIPort
         self.youtubeMusicAPIPort = min(max(savedPort, Self.minYouTubeMusicAPIPort), Self.maxYouTubeMusicAPIPort)
 
+        self.accentColorMode = (defaults.string(forKey: Keys.accentColorMode).flatMap(NotchAccentColorMode.init(rawValue:))) ?? .dynamicArtwork
+        let savedR = defaults.object(forKey: Keys.customAccentColorR) as? Double ?? NotchRGBColor.defaultAccent.r
+        let savedG = defaults.object(forKey: Keys.customAccentColorG) as? Double ?? NotchRGBColor.defaultAccent.g
+        let savedB = defaults.object(forKey: Keys.customAccentColorB) as? Double ?? NotchRGBColor.defaultAccent.b
+        self.customAccentColor = NotchRGBColor(r: savedR, g: savedG, b: savedB)
+        self.animationStyle = (defaults.string(forKey: Keys.animationStyle).flatMap(NotchAnimationStyle.init(rawValue:))) ?? .smoothFluid
+        let savedAnimSpeed = defaults.object(forKey: Keys.animationSpeed) as? Double ?? Self.defaultAnimationSpeed
+        self.animationSpeed = min(max(savedAnimSpeed, Self.minAnimationSpeed), Self.maxAnimationSpeed)
+        self.showAlbumArtwork = defaults.object(forKey: Keys.showAlbumArtwork) as? Bool ?? true
+        self.showAlbumName = defaults.object(forKey: Keys.showAlbumName) as? Bool ?? true
+        self.visualizerStyle = (defaults.string(forKey: Keys.visualizerStyle).flatMap(NotchVisualizerStyle.init(rawValue:))) ?? .classicBars
+        let savedGlow = defaults.object(forKey: Keys.ambientGlowIntensity) as? Double ?? Self.defaultAmbientGlowIntensity
+        self.ambientGlowIntensity = min(max(savedGlow, Self.minAmbientGlowIntensity), Self.maxAmbientGlowIntensity)
+        let savedBgOpacity = defaults.object(forKey: Keys.backgroundOpacity) as? Double ?? Self.defaultBackgroundOpacity
+        self.backgroundOpacity = min(max(savedBgOpacity, Self.minBackgroundOpacity), Self.maxBackgroundOpacity)
+        self.showSourceBadgeOnArtwork = defaults.object(forKey: Keys.showSourceBadgeOnArtwork) as? Bool ?? true
+        self.lyricsFontSize = (defaults.string(forKey: Keys.lyricsFontSize).flatMap(NotchLyricsFontSize.init(rawValue:))) ?? .normal
+
         self.lastPlayedSource = defaults.string(forKey: Keys.lastPlayedSource).flatMap(NotchMediaSource.init(rawValue:))
         self.lastPlayedBundleID = defaults.string(forKey: Keys.lastPlayedBundleID)
         self.lastPlayedAppName = defaults.string(forKey: Keys.lastPlayedAppName)
@@ -349,5 +546,16 @@ public final class NotchPreferences {
         enableSwipeToSkip = true
         enableAnimations = true
         youtubeMusicAPIPort = Self.defaultYouTubeMusicAPIPort
+        accentColorMode = .dynamicArtwork
+        customAccentColor = .defaultAccent
+        animationStyle = .smoothFluid
+        animationSpeed = Self.defaultAnimationSpeed
+        showAlbumArtwork = true
+        showAlbumName = true
+        visualizerStyle = .classicBars
+        ambientGlowIntensity = Self.defaultAmbientGlowIntensity
+        backgroundOpacity = Self.defaultBackgroundOpacity
+        showSourceBadgeOnArtwork = true
+        lyricsFontSize = .normal
     }
 }

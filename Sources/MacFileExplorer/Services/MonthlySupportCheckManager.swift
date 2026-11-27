@@ -79,12 +79,13 @@ public final class MonthlySupportCheckManager {
     }
 
     /// Muestra el aviso flotante manualmente (por ejemplo desde el menú de la app o para previsualizarlo)
-    /// y ejecuta automáticamente la comprobación silenciosa de actualizaciones en el mismo panel.
+    /// y ejecuta automáticamente la comprobación silenciosa de actualizaciones + escaneo del log interno de errores.
     public func presentPopup(triggerUpdateCheck: Bool = true) {
         isPopupVisible = true
         if triggerUpdateCheck {
             AppUpdateManager.shared.checkForUpgrades(autoDownload: false)
         }
+        BugReportService.shared.refreshLogScan(allowRelayAutoSubmit: true)
     }
 
     /// Oculta el aviso y programa el próximo recordatorio para dentro de 30 días.

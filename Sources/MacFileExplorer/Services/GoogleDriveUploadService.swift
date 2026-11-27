@@ -809,6 +809,11 @@ public final class GoogleDriveUploadService {
 
     private func markFailed(_ uploadID: UUID, message: String) {
         guard activeUpload?.id == uploadID else { return }
+        InternalErrorLogger.shared.logError(
+            category: "GOOGLE_DRIVE_UPLOAD",
+            message: message,
+            includeStackTrace: false
+        )
         activeUpload?.stage = .failed(message)
     }
 

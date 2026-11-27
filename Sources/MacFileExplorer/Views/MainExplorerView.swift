@@ -6,6 +6,7 @@ public struct MainExplorerView: View {
     @Bindable private var slackPrefs: SlackPreferences = .shared
     @Bindable private var monthlySupportManager: MonthlySupportCheckManager = .shared
     @Bindable private var appShortcutPrefs: AppShortcutPreferences = .shared
+    @Bindable private var onboardingManager: AppOnboardingManager = .shared
     @Environment(\.colorScheme) private var colorScheme
 
     private var loc: LocalizationManager { LocalizationManager.shared }
@@ -19,11 +20,13 @@ public struct MainExplorerView: View {
             VStack(spacing: 0) {
                 // 1. Barra Superior Nivel 1: Command Bar (Nuevo, Cortar, Copiar, Pegar, Renombrar, Eliminar, Ordenar, Vista)
                 CommandBarView(viewModel: viewModel)
+                    .tourTarget(InteractiveTourTargetID.commandBar)
 
                 Divider()
 
                 // 2. Barra Superior Nivel 2: Navegación + Breadcrumb (Cmd+L) + Búsqueda Rápida
                 NavigationBarView(viewModel: viewModel)
+                    .tourTarget(InteractiveTourTargetID.addressBar)
 
                 Divider()
 
@@ -57,9 +60,11 @@ public struct MainExplorerView: View {
                         sidebarViewModel: viewModel.sidebarViewModel
                     )
                     .frame(minWidth: 215, idealWidth: 245, maxWidth: 360)
+                    .tourTarget(InteractiveTourTargetID.sidebar)
 
                     mainContentArea
                         .frame(minWidth: 520, maxWidth: .infinity, maxHeight: .infinity)
+                        .tourTarget(InteractiveTourTargetID.fileArea)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
 
@@ -67,6 +72,7 @@ public struct MainExplorerView: View {
 
                 // 4. Barra de Estado Inferior (Conteo total, seleccionados, suma de tamaños y conmutador de vista)
                 StatusBarView(viewModel: viewModel)
+                    .tourTarget(InteractiveTourTargetID.statusBar)
             }
 
             // 5. Aviso mensual flotante no invasivo (Comprobación automática de actualizaciones + propina opcional Ko-fi)
@@ -85,6 +91,14 @@ public struct MainExplorerView: View {
             }
         }
         .animation(.spring(response: 0.34, dampingFraction: 0.86), value: monthlySupportManager.isPopupVisible)
+        .overlayPreferenceValue(TourTargetAnchorKey.self) { anchors in
+            if onboardingManager.isTourActive {
+                InteractiveTourOverlayView(anchors: anchors, onboarding: onboardingManager)
+                    .transition(.opacity)
+                    .zIndex(100)
+            }
+        }
+        .animation(.spring(response: 0.30, dampingFraction: 0.86), value: onboardingManager.isTourActive)
         .navigationTitle(viewModel.currentFolderTitle)
         .explorerKeyboardShortcuts(viewModel: viewModel)
         .background {

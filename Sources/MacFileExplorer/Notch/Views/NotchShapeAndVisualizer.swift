@@ -212,6 +212,7 @@ public struct NotchAmbientBackdropView: View {
     public let isFloatingIsland: Bool
     public let showAmbientGlow: Bool
     public let glowStrength: Double
+    public let backgroundOpacity: Double
     public let isExpanded: Bool
 
     public init(
@@ -221,6 +222,7 @@ public struct NotchAmbientBackdropView: View {
         isFloatingIsland: Bool,
         showAmbientGlow: Bool,
         glowStrength: Double = 0.28,
+        backgroundOpacity: Double = 1.0,
         isExpanded: Bool
     ) {
         self.accentColor = accentColor
@@ -229,6 +231,7 @@ public struct NotchAmbientBackdropView: View {
         self.isFloatingIsland = isFloatingIsland
         self.showAmbientGlow = showAmbientGlow
         self.glowStrength = glowStrength
+        self.backgroundOpacity = min(max(backgroundOpacity, 0.70), 1.0)
         self.isExpanded = isExpanded
     }
 
@@ -240,8 +243,13 @@ public struct NotchAmbientBackdropView: View {
         )
 
         ZStack {
-            // Base OLED negro profundo para fusión perfecta con el notch físico
-            shape.fill(Color.black)
+            // Base translúcida estilo vidrio oscuro cuando backgroundOpacity < 0.99
+            if backgroundOpacity < 0.99 {
+                shape.fill(.ultraThinMaterial)
+            }
+
+            // Base OLED negro profundo regulable por opacidad
+            shape.fill(Color.black.opacity(backgroundOpacity))
 
             if showAmbientGlow {
                 GeometryReader { geo in
@@ -327,6 +335,8 @@ public struct NotchEqualizerVisualizerView: View {
     public let barSpacing: CGFloat
     public let maxHeight: CGFloat
     public let enableAnimations: Bool
+    public let style: NotchVisualizerStyle
+    public let speedMultiplier: Double
 
     public init(
         isPlaying: Bool,
@@ -335,7 +345,9 @@ public struct NotchEqualizerVisualizerView: View {
         barWidth: CGFloat = 2.6,
         barSpacing: CGFloat = 2.2,
         maxHeight: CGFloat = 14,
-        enableAnimations: Bool = true
+        enableAnimations: Bool = true,
+        style: NotchVisualizerStyle = .classicBars,
+        speedMultiplier: Double = 1.0
     ) {
         self.isPlaying = isPlaying
         self.accentColor = accentColor
@@ -344,35 +356,130 @@ public struct NotchEqualizerVisualizerView: View {
         self.barSpacing = barSpacing
         self.maxHeight = maxHeight
         self.enableAnimations = enableAnimations
+        self.style = style
+        self.speedMultiplier = min(max(speedMultiplier, 0.5), 2.0)
     }
 
     public var body: some View {
         TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: !isPlaying || !enableAnimations)) { context in
-            let t = context.date.timeIntervalSinceReferenceDate
-            HStack(alignment: .center, spacing: barSpacing) {
-                ForEach(0..<barCount, id: \.self) { index in
-                    let height = barHeight(for: index, time: t)
-                    Capsule(style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [
-                                    Color.white.opacity(isPlaying ? 0.92 : 0.50),
-                                    accentColor.opacity(isPlaying ? 0.95 : 0.45)
-                                ],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
-                        )
-                        .frame(width: barWidth, height: height)
-                        .shadow(color: isPlaying ? accentColor.opacity(0.45) : .clear, radius: 2.2, y: 0)
+            let t = context.date.timeIntervalSinceReferenceDate * speedMultiplier
+            Group {
+                switch style {
+                case .classicBars:
+                    classicBarsView(time: t)
+                case .waveformMirror:
+                    waveformMirrorView(time: t)
+                case .bouncingDots:
+                    bouncingDotsView(time: t)
+                case .pulseRing:
+                    pulseRingView(time: t)
                 }
             }
             .frame(height: maxHeight, alignment: .center)
             .animation(
-                enableAnimations ? .spring(response: 0.34, dampingFraction: 0.78) : nil,
+                enableAnimations ? .spring(response: max(0.14, 0.34 / speedMultiplier), dampingFraction: 0.78) : nil,
                 value: isPlaying
             )
         }
+    }
+
+    private func classicBarsView(time t: TimeInterval) -> some View {
+        HStack(alignment: .center, spacing: barSpacing) {
+            ForEach(0..<barCount, id: \.self) { index in
+                let height = barHeight(for: index, time: t)
+                Capsule(style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color.white.opacity(isPlaying ? 0.92 : 0.50),
+                                accentColor.opacity(isPlaying ? 0.95 : 0.45)
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .frame(width: barWidth, height: height)
+                    .shadow(color: isPlaying ? accentColor.opacity(0.45) : .clear, radius: 2.2, y: 0)
+            }
+        }
+    }
+
+    private func waveformMirrorView(time t: TimeInterval) -> some View {
+        let needleCount = max(5, barCount + 2)
+        let mid = Double(needleCount - 1) * 0.5
+        return HStack(alignment: .center, spacing: max(1.4, barSpacing * 0.72)) {
+            ForEach(0..<needleCount, id: \.self) { index in
+                let dist = abs(Double(index) - mid) / max(mid, 1.0)
+                let envelope = max(0.28, 1.0 - dist * 0.68)
+                let raw = barHeight(for: index, time: t)
+                let h = isPlaying ? max(2.8, raw * CGFloat(envelope)) : 2.6
+                Capsule(style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [accentColor.opacity(0.85), Color.white.opacity(0.95), accentColor.opacity(0.85)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .frame(width: max(1.8, barWidth * 0.78), height: h)
+                    .shadow(color: isPlaying ? accentColor.opacity(0.50) : .clear, radius: 2.0)
+            }
+        }
+    }
+
+    private func bouncingDotsView(time t: TimeInterval) -> some View {
+        let dotSize = max(3.2, barWidth * 1.35)
+        let travel = max(2.0, (maxHeight - dotSize) * 0.42)
+        return HStack(alignment: .center, spacing: max(2.4, barSpacing * 1.25)) {
+            ForEach(0..<barCount, id: \.self) { index in
+                let offsetY: CGFloat = {
+                    guard isPlaying else { return 0 }
+                    guard enableAnimations else {
+                        let staticOffsets: [CGFloat] = [-0.5, 0.4, -0.7, 0.3, -0.4, 0.5]
+                        return travel * staticOffsets[index % staticOffsets.count]
+                    }
+                    let phase = sin(t * 6.2 + Double(index) * 1.15)
+                    return CGFloat(phase) * travel
+                }()
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [Color.white.opacity(isPlaying ? 0.96 : 0.55), accentColor.opacity(isPlaying ? 0.95 : 0.48)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .frame(width: dotSize, height: dotSize)
+                    .offset(y: offsetY)
+                    .shadow(color: isPlaying ? accentColor.opacity(0.55) : .clear, radius: 2.2)
+            }
+        }
+    }
+
+    private func pulseRingView(time t: TimeInterval) -> some View {
+        let pulse: Double = {
+            guard isPlaying else { return 0.0 }
+            guard enableAnimations else { return 0.65 }
+            return sin(t * 5.2) * 0.5 + 0.5
+        }()
+        let ringSize = max(11, maxHeight)
+        return ZStack {
+            Circle()
+                .stroke(accentColor.opacity(isPlaying ? (0.30 + pulse * 0.55) : 0.25), lineWidth: 1.5)
+                .frame(width: ringSize * CGFloat(0.68 + pulse * 0.32), height: ringSize * CGFloat(0.68 + pulse * 0.32))
+            Circle()
+                .fill(
+                    RadialGradient(
+                        colors: [Color.white.opacity(0.95), accentColor],
+                        center: .center,
+                        startRadius: 0.5,
+                        endRadius: ringSize * 0.36
+                    )
+                )
+                .frame(width: ringSize * CGFloat(0.36 + pulse * 0.14), height: ringSize * CGFloat(0.36 + pulse * 0.14))
+                .shadow(color: isPlaying ? accentColor.opacity(0.65) : .clear, radius: 3.5)
+        }
+        .frame(width: max(ringSize + 4, CGFloat(barCount) * (barWidth + barSpacing)), height: maxHeight)
     }
 
     private func barHeight(for index: Int, time: TimeInterval) -> CGFloat {

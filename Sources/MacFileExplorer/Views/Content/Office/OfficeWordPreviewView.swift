@@ -772,9 +772,19 @@ public struct OfficeWordPreviewView: View {
                 loadedAttributedString = attr
                 controller.hasUnsavedChanges = false
             } catch {
+                InternalErrorLogger.shared.logNonFatalError(
+                    category: "OFFICE_WORD_LOAD",
+                    error: error,
+                    context: ["ext": fileURL.pathExtension.lowercased()]
+                )
                 loadError = error.localizedDescription
             }
         case .failure(let error):
+            InternalErrorLogger.shared.logNonFatalError(
+                category: "OFFICE_WORD_LOAD",
+                error: error,
+                context: ["ext": fileURL.pathExtension.lowercased()]
+            )
             loadError = error.localizedDescription
         }
         isLoading = false

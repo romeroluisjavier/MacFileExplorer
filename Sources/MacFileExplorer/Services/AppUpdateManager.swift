@@ -13,13 +13,13 @@ public enum AppVersionInfo {
     public static var currentVersion: String {
         (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String)
             .flatMap { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : $0 }
-            ?? "2.6.0"
+            ?? "2.7.0"
     }
 
     public static var currentBuild: String {
         (Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String)
             .flatMap { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : $0 }
-            ?? "15"
+            ?? "17"
     }
 }
 
@@ -559,6 +559,11 @@ public final class AppUpdateManager {
                             self.isCancellingExplicitly = false
                             self.state = .updateAvailable(info: info)
                         } else {
+                            InternalErrorLogger.shared.logNonFatalError(
+                                category: "APP_UPDATE_DOWNLOAD",
+                                error: error,
+                                context: ["targetVersion": info.versionString]
+                            )
                             self.state = .failed(message: error.localizedDescription)
                         }
                     }
