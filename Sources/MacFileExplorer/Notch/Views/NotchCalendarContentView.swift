@@ -13,12 +13,65 @@ public struct NotchImminentMeetBannerView: View {
 
     @Bindable private var loc = LocalizationManager.shared
     @Bindable private var prefs = NotchPreferences.shared
+    @ViewState private var hasAppeared: Bool = false
+    @ViewState private var sweepProgress: CGFloat = -0.35
+    @ViewState private var pulsePhase: Bool = false
 
     private var bannerAccentColor: Color {
         if prefs.calendarUseNativeEventColors {
             return event.color.swiftUIColor
         }
         return Color(red: 0.16, green: 0.78, blue: 0.44)
+    }
+
+    private var alertStyle: NotchCalendarAlertAnimationStyle {
+        prefs.calendarAlertAnimationStyle
+    }
+
+    private var entranceOffsetY: CGFloat {
+        guard enableAnimations && !hasAppeared else { return 0 }
+        switch alertStyle {
+        case .liquidCascade: return -24
+        case .cyberScanDrop: return -20
+        case .warpPortalDrop: return -28
+        case .auroraCurtainDrop: return -26
+        case .dropDownBanner: return -14
+        default: return 0
+        }
+    }
+
+    private var entranceScaleY: CGFloat {
+        guard enableAnimations && !hasAppeared else { return 1.0 }
+        switch alertStyle {
+        case .auroraCurtainDrop: return 0.72
+        case .warpPortalDrop: return 0.84
+        case .liquidCascade: return 0.90
+        default: return 1.0
+        }
+    }
+
+    private var entranceScaleX: CGFloat {
+        guard enableAnimations && !hasAppeared else { return 1.0 }
+        switch alertStyle {
+        case .warpPortalDrop: return 0.88
+        case .liquidCascade: return 0.95
+        default: return 1.0
+        }
+    }
+
+    private var entranceAnimation: Animation {
+        switch alertStyle {
+        case .liquidCascade:
+            return .spring(response: 0.52, dampingFraction: 0.74)
+        case .cyberScanDrop:
+            return .timingCurve(0.16, 1.0, 0.3, 1.0, duration: 0.46)
+        case .warpPortalDrop:
+            return .spring(response: 0.44, dampingFraction: 0.64)
+        case .auroraCurtainDrop:
+            return .timingCurve(0.22, 1.0, 0.36, 1.0, duration: 0.58)
+        default:
+            return .spring(response: 0.38, dampingFraction: 0.82)
+        }
     }
 
     public init(
@@ -135,14 +188,152 @@ public struct NotchImminentMeetBannerView: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(
+        .background(futuristicAlertBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(bannerAccentColor.opacity(0.16))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .stroke(bannerAccentColor.opacity(0.42), lineWidth: 0.9)
+                .stroke(
+                    bannerAccentColor.opacity(pulsePhase ? 0.78 : 0.40),
+                    lineWidth: alertStyle == .cyberScanDrop || alertStyle == .warpPortalDrop ? 1.25 : 0.9
                 )
         )
+        .shadow(
+            color: (alertStyle == .warpPortalDrop || alertStyle == .auroraCurtainDrop)
+                ? bannerAccentColor.opacity(pulsePhase ? 0.36 : 0.12)
+                : .clear,
+            radius: pulsePhase ? 14 : 6,
+            y: 4
+        )
+        .scaleEffect(x: entranceScaleX, y: entranceScaleY, anchor: .top)
+        .offset(y: entranceOffsetY)
+        .opacity(enableAnimations ? (hasAppeared ? 1.0 : 0.0) : 1.0)
+        .onAppear {
+            startFuturisticAnimations()
+        }
+        .onChange(of: alertStyle) { _, _ in
+            startFuturisticAnimations()
+        }
+    }
+
+    @ViewBuilder
+    private var futuristicAlertBackground: some View {
+        ZStack {
+            // Base translúcida elegante
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(bannerAccentColor.opacity(0.16))
+
+            switch alertStyle {
+            case .liquidCascade:
+                // Cascada líquida: onda especular fluida bajando suavemente por la tarjeta
+                GeometryReader { geo in
+                    LinearGradient(
+                        colors: [
+                            .clear,
+                            Color.white.opacity(0.18),
+                            bannerAccentColor.opacity(0.32),
+                            .clear
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                    .frame(height: geo.size.height * 0.65)
+                    .offset(y: sweepProgress * geo.size.height * 1.45)
+                    .blur(radius: 8)
+                }
+
+            case .cyberScanDrop:
+                // Escaneo holográfico descendente: haz láser luminoso recorriendo de arriba hacia abajo
+                GeometryReader { geo in
+                    VStack(spacing: 0) {
+                        LinearGradient(
+                            colors: [.clear, bannerAccentColor.opacity(0.28)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                        .frame(height: 22)
+                        Rectangle()
+                            .fill(
+                                LinearGradient(
+                                    colors: [.clear, Color.cyan.opacity(0.92), Color.white, Color.cyan.opacity(0.92), .clear],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .frame(height: 2)
+                            .shadow(color: Color.cyan.opacity(0.85), radius: 5)
+                    }
+                    .offset(y: sweepProgress * geo.size.height * 1.35)
+                }
+
+            case .warpPortalDrop:
+                // Despliegue cuántico: ondas concéntricas expandiéndose desde el borde superior
+                ZStack {
+                    Circle()
+                        .stroke(bannerAccentColor.opacity(pulsePhase ? 0.0 : 0.45), lineWidth: 1.8)
+                        .scaleEffect(pulsePhase ? 2.6 : 0.35)
+                        .offset(y: -36)
+                    Circle()
+                        .stroke(Color.cyan.opacity(pulsePhase ? 0.0 : 0.30), lineWidth: 1.2)
+                        .scaleEffect(pulsePhase ? 2.0 : 0.20)
+                        .offset(y: -36)
+                }
+
+            case .auroraCurtainDrop:
+                // Cortina Aurora descendente: degradado multicolor fluido cayendo desde el notch
+                LinearGradient(
+                    colors: [
+                        Color.cyan.opacity(pulsePhase ? 0.24 : 0.12),
+                        bannerAccentColor.opacity(pulsePhase ? 0.28 : 0.16),
+                        Color.indigo.opacity(pulsePhase ? 0.22 : 0.10)
+                    ],
+                    startPoint: pulsePhase ? .topLeading : .topTrailing,
+                    endPoint: .bottom
+                )
+
+            default:
+                EmptyView()
+            }
+        }
+    }
+
+    private func startFuturisticAnimations() {
+        guard enableAnimations else {
+            hasAppeared = true
+            sweepProgress = 0.5
+            pulsePhase = false
+            return
+        }
+        hasAppeared = false
+        sweepProgress = -0.40
+        pulsePhase = false
+
+        withAnimation(entranceAnimation) {
+            hasAppeared = true
+        }
+
+        switch alertStyle {
+        case .liquidCascade:
+            withAnimation(.easeInOut(duration: 2.2).repeatForever(autoreverses: false)) {
+                sweepProgress = 1.15
+            }
+        case .cyberScanDrop:
+            withAnimation(.easeInOut(duration: 1.85).repeatForever(autoreverses: false)) {
+                sweepProgress = 1.10
+            }
+            withAnimation(.easeInOut(duration: 1.1).repeatForever(autoreverses: true)) {
+                pulsePhase = true
+            }
+        case .warpPortalDrop:
+            withAnimation(.easeOut(duration: 1.75).repeatForever(autoreverses: false)) {
+                pulsePhase = true
+            }
+        case .auroraCurtainDrop:
+            withAnimation(.easeInOut(duration: 2.6).repeatForever(autoreverses: true)) {
+                pulsePhase = true
+            }
+        default:
+            break
+        }
     }
 }
 

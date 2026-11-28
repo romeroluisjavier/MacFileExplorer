@@ -2,7 +2,24 @@
 
 > ☕ **MacFileExplorer es 100% gratis y sin anuncios.** Si te resulta útil y querés colaborar con una **propina opcional** para apoyar el desarrollo, podés invitar un café en [**ko-fi.com/luisjavierromero**](https://ko-fi.com/luisjavierromero) *(o escanear el código QR desde *Acerca de MacFileExplorer* o *Ayuda → Historial de releases* dentro de la app)*.
 
-## Versión 2.8.0 (Versión Actual)
+## Versión 2.8.1 (Versión Actual)
+
+- **Instalador (GitHub Releases):** [`MacFileExplorer-2.8.1.dmg`](https://github.com/romeroluisjavier/MacFileExplorer/releases/download/v2.8.1/MacFileExplorer-2.8.1.dmg) *(copia local: [`./MacFileExplorer-2.8.1.dmg`](./MacFileExplorer-2.8.1.dmg))*
+- **Tamaño:** ~33 MB
+- **Arquitectura:** Binario Universal (`arm64` Apple Silicon + `x86_64` Intel)
+- **Requisitos del sistema:** macOS 14.0 (Sonoma) o posterior
+
+### Novedades principales en la v2.8.1:
+1. **4 nuevas animaciones futuristas hacia abajo para avisos de Meet en el «Notch»**:
+   - *Cascada líquida fluida*, *Escaneo holográfico descendente*, *Despliegue cuántico con ondas* y *Cortina Aurora descendente*, todas configurables y probables en vivo desde *Configuración de Notch → Calendario y Meet*.
+2. **Cambio en 1 clic de Calendario a Música**:
+   - Tocando la cápsula de tu app musical (*YouTube Music*, *Spotify*, etc.) mientras ves Calendar, Volumen, Ecualizador o un aviso de Meet, el Notch vuelve al instante al reproductor de música.
+3. **Selector de tamaño limpio**:
+   - Corregido el control segmentado *Tamaño del ícono / cápsula* (`Pequeño` / `Mediano` / `Grande`) para que nunca se recorte.
+
+---
+
+## Versión 2.8.0
 
 - **Instalador (GitHub Releases):** [`MacFileExplorer-2.8.0.dmg`](https://github.com/romeroluisjavier/MacFileExplorer/releases/download/v2.8.0/MacFileExplorer-2.8.0.dmg) *(copia local: [`./MacFileExplorer-2.8.0.dmg`](./MacFileExplorer-2.8.0.dmg))*
 - **Tamaño:** ~33 MB

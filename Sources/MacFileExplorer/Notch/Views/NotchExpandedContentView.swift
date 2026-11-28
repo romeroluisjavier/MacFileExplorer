@@ -559,9 +559,18 @@ public struct NotchExpandedContentView: View {
         let sourceColor = track?.sourceApp.swiftUIAccentColor ?? accentColor
         let appIcon = track.flatMap { $0.sourceApp.appIcon(bundleID: $0.sourceBundleID) }
         let label = track?.sourceAppName ?? loc.text(es: "Reproduciendo", en: "Now Playing")
+        let isViewingOtherPanel = (activeTopOverlay != .none) || (calService.activeAlertEvent != nil)
 
         return Button {
-            media.openSourceApp()
+            if activeTopOverlay != .none {
+                withAnimation(prefs.resolvedAnimation(baseResponse: 0.30)) {
+                    activeTopOverlay = .none
+                }
+            } else if calService.activeAlertEvent != nil {
+                calService.dismissActiveAlert()
+            } else {
+                media.openSourceApp()
+            }
         } label: {
             HStack(spacing: 5) {
                 if let appIcon {
@@ -585,16 +594,20 @@ public struct NotchExpandedContentView: View {
             .padding(.vertical, 3.5)
             .background(
                 Capsule(style: .continuous)
-                    .fill(sourceColor.opacity(0.20))
+                    .fill(sourceColor.opacity(isViewingOtherPanel ? 0.14 : 0.22))
                     .overlay(
                         Capsule(style: .continuous)
-                            .stroke(sourceColor.opacity(0.38), lineWidth: 0.7)
+                            .stroke(sourceColor.opacity(isViewingOtherPanel ? 0.28 : 0.44), lineWidth: 0.7)
                     )
             )
             .contentShape(Capsule())
         }
         .buttonStyle(NotchSpringPressButtonStyle(pressedScale: 0.94, enableAnimations: prefs.enableAnimations))
-        .help(loc.text(es: "Abrir aplicación de música", en: "Open Music App"))
+        .help(
+            isViewingOtherPanel
+                ? loc.text(es: "Volver al reproductor de música en el Notch", en: "Switch Notch Back to Music Player")
+                : loc.text(es: "Abrir aplicación de música", en: "Open Music App")
+        )
     }
 
     private var lyricsTogglePill: some View {

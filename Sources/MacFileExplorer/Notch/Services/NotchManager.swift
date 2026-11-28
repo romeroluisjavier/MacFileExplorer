@@ -261,12 +261,12 @@ public final class NotchManager {
         }
 
         switch prefs.calendarAlertAnimationStyle {
-        case .dropDownBanner:
+        case .dropDownBanner, .liquidCascade, .cyberScanDrop, .warpPortalDrop, .auroraCurtainDrop:
             if !isAnyPanelExpanded {
                 expand(displayID: nil, showLyrics: false)
                 peekDismissTask?.cancel()
                 peekDismissTask = Task { @MainActor [weak self] in
-                    try? await Task.sleep(for: .seconds(6.5))
+                    try? await Task.sleep(for: .seconds(7.5))
                     guard !Task.isCancelled, let self, !self.isPinnedOpen else { return }
                     self.collapse(forceUnpin: false)
                 }

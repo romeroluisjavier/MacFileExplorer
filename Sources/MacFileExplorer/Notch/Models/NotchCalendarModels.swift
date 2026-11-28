@@ -88,6 +88,10 @@ public enum NotchCalendarOpenTarget: String, CaseIterable, Identifiable, Sendabl
 
 public enum NotchCalendarAlertAnimationStyle: String, CaseIterable, Identifiable, Sendable {
     case dropDownBanner
+    case liquidCascade
+    case cyberScanDrop
+    case warpPortalDrop
+    case auroraCurtainDrop
     case greenMeetPulse
     case expandSideways
     case subtleGlow
@@ -95,10 +99,24 @@ public enum NotchCalendarAlertAnimationStyle: String, CaseIterable, Identifiable
 
     public var id: String { rawValue }
 
+    /// Indica si este estilo despliega el Notch hacia abajo de forma fluida al llegar la Meet.
+    public var expandsDownward: Bool {
+        switch self {
+        case .dropDownBanner, .liquidCascade, .cyberScanDrop, .warpPortalDrop, .auroraCurtainDrop:
+            return true
+        case .greenMeetPulse, .expandSideways, .subtleGlow, .none:
+            return false
+        }
+    }
+
     @MainActor
     public func localizedTitle(using loc: LocalizationManager = .shared) -> String {
         switch self {
         case .dropDownBanner: return loc.text(es: "Desplegar aviso hacia abajo", en: "Drop-Down Alert Banner")
+        case .liquidCascade: return loc.text(es: "Cascada líquida fluida (Futurista)", en: "Liquid Glass Cascade (Futuristic)")
+        case .cyberScanDrop: return loc.text(es: "Escaneo holográfico descendente", en: "Holographic Scan Drop")
+        case .warpPortalDrop: return loc.text(es: "Despliegue cuántico con ondas", en: "Quantum Warp Drop")
+        case .auroraCurtainDrop: return loc.text(es: "Cortina Aurora descendente", en: "Aurora Curtain Drop")
         case .greenMeetPulse: return loc.text(es: "Pulso verde de Meet", en: "Green Meet Pulse")
         case .expandSideways: return loc.text(es: "Ensanchar a los costados", en: "Expand Sideways")
         case .subtleGlow: return loc.text(es: "Brillo sutil en el borde", en: "Subtle Rim Glow")
@@ -204,9 +222,9 @@ public enum NotchCalendarIconSize: String, CaseIterable, Identifiable, Sendable 
         case .small:
             return loc.text(es: "Pequeño", en: "Small")
         case .medium:
-            return loc.text(es: "Mediano (Igual a YouTube Music)", en: "Medium (Matches YouTube Music)")
+            return loc.text(es: "Mediano", en: "Medium")
         case .large:
-            return loc.text(es: "Grande (Destacado)", en: "Large (Prominent)")
+            return loc.text(es: "Grande", en: "Large")
         }
     }
 }

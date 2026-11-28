@@ -95,13 +95,29 @@ public enum ReleaseNotesCatalog {
 
     public static let sections: [ReleaseNoteSection] = [
         ReleaseNoteSection(
-            id: "v2.8.0-notch-calendar-meet-eq-pdf-clipboard-perf",
-            semanticVersion: "2.8.0",
-            versionLabelES: "Versión 2.8.0 — Google Calendar y Meet en el Notch, Volumen y Ecualizador 5 bandas, PDF interactivo, Portapapeles con Fecha y Ordenar, Foco multi-monitor y Boost de velocidad",
-            versionLabelEN: "Version 2.8.0 — Google Calendar & Meet in Notch, Volume & 5-Band EQ, Interactive PDF Preview, Clipboard Date & Sort, Multi-Monitor Focus & Speed Boost",
+            id: "v2.8.1-notch-futuristic-meet-animations-and-music-switch",
+            semanticVersion: "2.8.1",
+            versionLabelES: "Versión 2.8.1 — Animaciones futuristas de Meet y cambio rápido a Música en el «Notch»",
+            versionLabelEN: "Version 2.8.1 — Futuristic Meet Drop-Down Animations & 1-Click Switch Back to Music in «Notch»",
             dateLabelES: "27 nov 2026",
             dateLabelEN: "Nov 27, 2026",
             items: [
+                ReleaseNoteItem(
+                    id: "notch-futuristic-meet-drop-animations-and-size-picker-fix",
+                    icon: "sparkles.tv",
+                    titleES: "4 nuevas animaciones futuristas hacia abajo para avisos de Meet y ajuste limpio de Tamaño en «Notch»",
+                    titleEN: "4 New Futuristic Fluid Drop-Down Meet Animations & Clean Size Picker in «Notch»",
+                    summaryES: "En Configuración de Notch → Calendario y Meet se sumaron 4 animaciones futuristas con despliegue fluido hacia abajo cuando está por empezar una Meet (Cascada líquida fluida, Escaneo holográfico descendente, Despliegue cuántico con ondas y Cortina Aurora descendente, todas probables en vivo con «Probar alerta Meet») y se corrigió el selector de tamaño del ícono/cápsula para que nunca se recorte.",
+                    summaryEN: "Added 4 futuristic fluid drop-down animations for upcoming Meet alerts under Notch Settings → Calendar & Meet (Liquid Glass Cascade, Holographic Scan Drop, Quantum Warp Drop, and Aurora Curtain Drop — all testable live via \"Test Meet Alert\") and fixed the Icon / Pill Size segmented control so labels fit cleanly without clipping."
+                ),
+                ReleaseNoteItem(
+                    id: "notch-music-pill-switches-back-from-calendar",
+                    icon: "music.note",
+                    titleES: "Cambio en 1 clic de Calendario a Música tocando la cápsula de tu app musical en el «Notch»",
+                    titleEN: "1-Click Switch From Calendar Back to Music via the Music App Pill in «Notch»",
+                    summaryES: "Mientras estás viendo Google Calendar (o cualquier otro panel del Notch como Volumen, Ecualizador o aviso de Meet), hacer clic en el botón de tu app musical (por ejemplo, «YouTube Music») cambia al instante la vista del Notch de vuelta al reproductor de música. Si ya estás en la música, sigue abriendo la aplicación musical como siempre.",
+                    summaryEN: "While viewing Google Calendar (or any other Notch overlay such as Volume, Equalizer, or a Meet alert), clicking your music app pill (such as \"YouTube Music\") immediately switches the Notch back to the music player. When already viewing the music player, clicking it still opens your music app."
+                ),
                 ReleaseNoteItem(
                     id: "notch-exclusive-meet-alert-card",
                     icon: "video.badge.checkmark",

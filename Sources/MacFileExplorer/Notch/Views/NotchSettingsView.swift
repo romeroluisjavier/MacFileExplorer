@@ -1445,7 +1445,7 @@ public struct NotchSettingsView: View {
                             }
                         }
                         .pickerStyle(.segmented)
-                        .frame(width: 240)
+                        .frame(width: 220)
                     }
 
                     Divider()
